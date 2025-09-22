@@ -1,5 +1,5 @@
 import './App.css'
-import SideBar from './components/SideBar'
+import SideBar from './components/layout/SideBar'
 
 function App() {
   const navItems = [
