@@ -1,23 +1,25 @@
 import './App.css'
-import SideBar from './components/layout/SideBar'
+import Layout from './components/layout/Layout'
+import RecipeCard from './components/common/RecipeCard'
 
 function App() {
-  const navItems = [
-    { label: 'Home Page', href: '/' },
-    { label: 'Recipe Library', href: '/recipes' },
-    { label: 'Shopping', href: '/shopping' },
-    { label: 'Meal Planner', href: '/planner' },
-    { label: 'Health and budgeting', href: '/health' }
-  ];
-
   return (
-  <>
-    <SideBar navItems={navItems} />
-    <div style={{ marginLeft: '250px', padding: '1rem' }}>
-      {/* Your existing content */}      
-    </div>
-  </>
-)
+    <Layout>
+      {
+        Array.from({ length: 10 }).map((_, index) => (
+          <RecipeCard
+            key={index}
+            title={`Recipe ${index + 1}`}
+            subtitle="Sample Recipe Description"
+            image="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+            calories={Math.floor(Math.random() * 1000)}
+            servings={Math.floor(Math.random() * 10) + 1}
+            onClick={() => console.log(`Clicked on Recipe ${index + 1}`)}
+          />
+        ))
+      }      
+    </Layout>
+  )
 
 }
 
