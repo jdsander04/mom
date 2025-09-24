@@ -1,24 +1,25 @@
 import './App.css'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Layout from './components/layout/Layout'
-import RecipeCard from './components/common/RecipeCard'
+import HomePage from './components/pages/HomePage'
+import RecipeLibrary from './components/pages/RecipeLibrary'
+import Shopping from './components/pages/Shopping'
+import MealPlanner from './components/pages/MealPlanner'
+import Health from './components/pages/Health'
 
 function App() {
   return (
-    <Layout>
-      {
-        Array.from({ length: 10 }).map((_, index) => (
-          <RecipeCard
-            key={index}
-            title={`Recipe ${index + 1}`}
-            subtitle="Sample Recipe Description"
-            image="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-            calories={Math.floor(Math.random() * 1000)}
-            servings={Math.floor(Math.random() * 10) + 1}
-            onClick={() => console.log(`Clicked on Recipe ${index + 1}`)}
-          />
-        ))
-      }      
-    </Layout>
+    <Router>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/recipes" element={<RecipeLibrary />} />
+          <Route path="/shopping" element={<Shopping />} />
+          <Route path="/planner" element={<MealPlanner />} />
+          <Route path="/health" element={<Health />} />
+        </Routes>
+      </Layout>
+    </Router>
   )
 
 }

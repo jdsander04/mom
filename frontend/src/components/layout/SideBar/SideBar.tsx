@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { PanelRight, PanelLeft } from 'lucide-react';
 import styles from './SideBar.module.css';
 
@@ -9,10 +10,11 @@ interface NavItem {
 
 interface SideBarProps {
   navItems: NavItem[];
+  onToggle: (minimized: boolean) => void;
+  isMinimized: boolean;
 }
 
-const SideBar = ({ navItems }: SideBarProps) => {
-  const [isMinimized, setIsMinimized] = useState(false);
+const SideBar = ({ navItems, onToggle, isMinimized }: SideBarProps) => {
 
   return (
     <aside className={`${styles.sidebar} ${isMinimized ? styles.minimized : ''}`}>
@@ -21,9 +23,9 @@ const SideBar = ({ navItems }: SideBarProps) => {
           <ul className={styles.navList}>
             {navItems.map((item, index) => (
               <li key={index}>
-                <a href={item.href} className={styles.navLink}>
+                <Link to={item.href} className={styles.navLink}>
                   {item.label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
@@ -31,7 +33,7 @@ const SideBar = ({ navItems }: SideBarProps) => {
       </nav>
       <button 
         className={styles.toggleButton}
-        onClick={() => setIsMinimized(!isMinimized)}
+        onClick={() => onToggle(!isMinimized)}
       >
         {isMinimized ? <PanelRight size={30} /> : <PanelLeft size={30} />}
       </button>
