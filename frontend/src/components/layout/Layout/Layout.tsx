@@ -1,33 +1,52 @@
 import { useState } from 'react';
+import { Box } from '@mui/material';
+import { 
+  Home, 
+  MenuBook, 
+  ShoppingCart, 
+  CalendarMonth, 
+  HealthAndSafety 
+} from '@mui/icons-material';
 import SideBar from '../SideBar';
-import styles from './Layout.module.css';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
+const NAV_ITEMS = [
+  { label: 'Home Page', href: '/', icon: <Home /> },
+  { label: 'Recipe Library', href: '/recipes', icon: <MenuBook /> },
+  { label: 'Shopping', href: '/shopping', icon: <ShoppingCart /> },
+  { label: 'Meal Planner', href: '/planner', icon: <CalendarMonth /> },
+  { label: 'Health and budgeting', href: '/health', icon: <HealthAndSafety /> }
+];
+
+const CONTENT_STYLES = {
+  margin: '0 auto',
+  padding: '2rem',
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, 1fr)',
+  columnGap: '2rem',
+  rowGap: '1rem',
+  maxWidth: '1200px',
+  width: '1200px',
+  minWidth: '1200px'
+};
+
 const Layout = ({ children }: LayoutProps) => {
   const [isSidebarMinimized, setIsSidebarMinimized] = useState(false);
-  
-  const navItems = [
-    { label: 'Home Page', href: '/' },
-    { label: 'Recipe Library', href: '/recipes' },
-    { label: 'Shopping', href: '/shopping' },
-    { label: 'Meal Planner', href: '/planner' },
-    { label: 'Health and budgeting', href: '/health' }
-  ];
 
   return (
-    <>
+    <Box sx={{ display: 'flex' }}>
       <SideBar 
-        navItems={navItems} 
+        navItems={NAV_ITEMS} 
         onToggle={setIsSidebarMinimized}
         isMinimized={isSidebarMinimized}
       />
-      <main className={`${styles.content} ${isSidebarMinimized ? styles.contentMinimized : ''}`}>
+      <Box component="main" sx={CONTENT_STYLES}>
         {children}
-      </main>
-    </>
+      </Box>
+    </Box>
   );
 };
 

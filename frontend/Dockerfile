@@ -1,5 +1,5 @@
 # --- Frontend (React + Vite + SWC) ---
-FROM node:20-slim
+FROM public.ecr.aws/docker/library/node:20-alpine
 
 # Set work directory
 WORKDIR /app

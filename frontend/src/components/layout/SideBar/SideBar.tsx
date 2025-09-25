@@ -1,11 +1,20 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PanelRight, PanelLeft } from 'lucide-react';
-import styles from './SideBar.module.css';
+import { 
+  Drawer, 
+  List, 
+  ListItem, 
+  ListItemButton, 
+  ListItemText, 
+  ListItemIcon,
+  IconButton,
+  Box 
+} from '@mui/material';
+import { PanelLeft, PanelRight } from 'lucide-react';
 
 interface NavItem {
   label: string;
   href: string;
+  icon: React.ReactNode;
 }
 
 interface SideBarProps {
@@ -14,30 +23,109 @@ interface SideBarProps {
   isMinimized: boolean;
 }
 
+const SIDEBAR_WIDTH = {
+  expanded: 250,
+  collapsed: 60
+};
+
+const COLORS = {
+  background: '#f8f9fa',
+  border: '#CDCDCD',
+  text: '#333',
+  hover: '#F8EFD0',
+  hoverBorder: '#7B7565'
+};
+
 const SideBar = ({ navItems, onToggle, isMinimized }: SideBarProps) => {
+  const drawerStyles = {
+    width: isMinimized ? SIDEBAR_WIDTH.collapsed : SIDEBAR_WIDTH.expanded,
+    flexShrink: 0,
+    '& .MuiDrawer-paper': {
+      width: isMinimized ? SIDEBAR_WIDTH.collapsed : SIDEBAR_WIDTH.expanded,
+      boxSizing: 'border-box',
+      transition: 'width 0.3s ease',
+      backgroundColor: COLORS.background,
+      borderRight: `1px solid ${COLORS.border}`,
+      position: 'fixed',
+      left: 0,
+      top: 0,
+      height: '100vh'
+    },
+  };
+
+  const listItemButtonStyles = {
+    display: 'flex',
+    padding: '0.5rem 0.7rem',
+    textDecoration: 'none',
+    color: COLORS.text,
+    borderRadius: 0,
+    transition: 'background-color 0.2s',
+    textAlign: 'left',
+    fontFamily: 'Lexend, sans-serif',
+    justifyContent: isMinimized ? 'center' : 'flex-start',
+    '&:hover': {
+      backgroundColor: COLORS.hover,
+      color: '#000000',
+      borderRight: isMinimized ? 'none' : `3px solid ${COLORS.hoverBorder}`
+    }
+  };
+
+  const iconStyles = {
+    minWidth: isMinimized ? 'auto' : '0px',
+    color: 'inherit',
+    opacity: isMinimized ? 1 : 0,
+    transition: 'opacity 0.3s ease',
+    transitionDelay: isMinimized ? '0.2s' : '0s'
+  };
+
+  const textStyles = {
+    marginLeft: '-16px',
+    '& .MuiListItemText-primary': {
+      fontFamily: 'Lexend, sans-serif',
+      fontSize: 'inherit',
+      whiteSpace: 'nowrap'
+    }
+  };
+
+  const toggleButtonStyles = {
+    position: 'absolute',
+    bottom: '0.5rem',
+    right: isMinimized ? 'auto' : '0.5rem',
+    left: isMinimized ? '50%' : 'auto',
+    transform: isMinimized ? 'translateX(-50%)' : 'none',
+    backgroundColor: 'transparent',
+    border: 'none',
+    padding: '0.15rem',
+    cursor: 'pointer',
+    color: 'black',
+    lineHeight: 1,
+    '&:hover': {
+      backgroundColor: COLORS.hover
+    }
+  };
 
   return (
-    <aside className={`${styles.sidebar} ${isMinimized ? styles.minimized : ''}`}>
-      <nav className={styles.nav}>
-        {!isMinimized && (
-          <ul className={styles.navList}>
-            {navItems.map((item, index) => (
-              <li key={index}>
-                <Link to={item.href} className={styles.navLink}>
-                  {item.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </nav>
-      <button 
-        className={styles.toggleButton}
-        onClick={() => onToggle(!isMinimized)}
-      >
-        {isMinimized ? <PanelRight size={30} /> : <PanelLeft size={30} />}
-      </button>
-    </aside>
+    <Drawer variant="permanent" sx={drawerStyles}>
+      <Box sx={{ padding: '0.5rem', overflow: 'hidden' }}>
+        <List sx={{ padding: 0, margin: 0 }}>
+          {navItems.map((item, index) => (
+            <ListItem key={index} sx={{ marginBottom: '0.5rem', padding: 0 }}>
+              <ListItemButton component={Link} to={item.href} sx={listItemButtonStyles}>
+                <ListItemIcon sx={iconStyles}>
+                  {item.icon}
+                </ListItemIcon>
+                {!isMinimized && (
+                  <ListItemText primary={item.label} sx={textStyles} />
+                )}
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+      </Box>
+      <IconButton onClick={() => onToggle(!isMinimized)} sx={toggleButtonStyles}>
+        {isMinimized ? <PanelRight size={20} /> : <PanelLeft size={20} />}
+      </IconButton>
+    </Drawer>
   );
 };
 

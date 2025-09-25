@@ -1,5 +1,5 @@
-import { ExternalLink } from 'lucide-react';
-import styles from './RecipeCard.module.css';
+import { Card, CardContent, CardMedia, Typography, IconButton, Box } from '@mui/material';
+import { OpenInNew } from '@mui/icons-material';
 
 interface RecipeCardProps {
   title: string;
@@ -10,24 +10,110 @@ interface RecipeCardProps {
   onClick: () => void;
 }
 
+const CARD_STYLES = {
+  position: 'relative',
+  backgroundColor: 'white',
+  border: '1px solid #e0e0e0',
+  borderRadius: '14px',
+  padding: '16px',
+  display: 'flex',
+  alignItems: 'center',
+  cursor: 'pointer',
+  boxShadow: 'none',
+  '&:hover': {
+    boxShadow: 1
+  }
+};
+
+const IMAGE_STYLES = {
+  width: 64,
+  height: 64,
+  borderRadius: '8px',
+  objectFit: 'cover',
+  marginRight: '16px'
+};
+
+const CONTENT_STYLES = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
+  padding: 0,
+  '&:last-child': { paddingBottom: 0 }
+};
+
+const TITLE_STYLES = {
+  fontSize: '16px',
+  fontWeight: 600,
+  color: 'black',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis'
+};
+
+const SUBTITLE_STYLES = {
+  fontSize: '14px',
+  fontWeight: 400,
+  color: '#555',
+  marginLeft: '4px'
+};
+
+const METADATA_STYLES = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  fontSize: '13px',
+  color: '#666',
+  whiteSpace: 'nowrap'
+};
+
+const ICON_BUTTON_STYLES = {
+  position: 'absolute',
+  top: '8px',
+  right: '8px',
+  backgroundColor: 'transparent',
+  border: 'none',
+  cursor: 'pointer',
+  color: '#666',
+  padding: '4px',
+  '&:hover': {
+    color: '#333',
+    backgroundColor: 'transparent'
+  }
+};
+
 const RecipeCard = ({ title, subtitle, image, calories, servings, onClick }: RecipeCardProps) => {
   return (
-    <div className={styles.recipeCard}>
-      <img src={"https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ffamiliakitchen.com%2Fwp-content%2Fuploads%2F2023%2F03%2FPollo-guisado-Dominican-Belqui-1536x1028.jpg&f=1&nofb=1&ipt=217a0c1b5af0e1b1c94c847690ca19e040431c291a55d51c20f62bbf7f012271"} alt={title} className={styles.recipeImage} />
-      <div className={styles.recipeContent}>
-        <div className={styles.titleSection}>
-          <span className={styles.title}>{title}</span>
-          {subtitle && <span className={styles.subtitle}>({subtitle})</span>}
-        </div>
-        <div className={styles.metadata}>
-          <span>{calories} kcal</span>
-          <span>Serves {servings}</span>
-        </div>
-      </div>
-      <button className={styles.actionIcon} onClick={onClick}>
-        <ExternalLink size={16} />
-      </button>
-    </div>
+    <Card sx={CARD_STYLES}>
+      <CardMedia
+        component="img"
+        sx={IMAGE_STYLES}
+        image={image}
+        alt={title}
+      />
+      <CardContent sx={CONTENT_STYLES}>
+        <Box sx={{ marginBottom: '8px' }}>
+          <Typography variant="body1" component="span" sx={TITLE_STYLES}>
+            {title}
+          </Typography>
+          {subtitle && (
+            <Typography variant="body2" component="span" sx={SUBTITLE_STYLES}>
+              ({subtitle})
+            </Typography>
+          )}
+        </Box>
+        <Box sx={METADATA_STYLES}>
+          <Typography variant="body2" sx={{ fontSize: '13px', color: '#666' }}>
+            {calories} kcal
+          </Typography>
+          <Typography variant="body2" sx={{ fontSize: '13px', color: '#666' }}>
+            Serves {servings}
+          </Typography>
+        </Box>
+      </CardContent>
+      <IconButton onClick={onClick} sx={ICON_BUTTON_STYLES} size="small">
+        <OpenInNew sx={{ fontSize: '16px' }} />
+      </IconButton>
+    </Card>
   );
 };
 
