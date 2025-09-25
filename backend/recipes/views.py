@@ -10,5 +10,9 @@ def recipe_list(request):
 def recipe_detail(request, recipe_id):
     if request.method == 'GET':
         return JsonResponse({'recipe_id': recipe_id, 'title': f'Recipe {recipe_id}'})
+    elif request.method =='PATCH':
+        return JsonResponse({'message': f'Recipe {recipe_id} edited'})
     elif request.method == 'DELETE':
         return JsonResponse({'message': f'Recipe {recipe_id} deleted'})
+    
+
