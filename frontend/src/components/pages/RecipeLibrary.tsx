@@ -1,19 +1,10 @@
-import { Typography } from '@mui/material';
-
-const PAGE_TITLE_STYLES = {
-  gridColumn: '1 / -1',
-  mb: 2
-};
+import styles from './RecipeLibrary.module.css';
 
 const RecipeLibrary = () => {
   return (
-    <Typography 
-      variant="h4" 
-      component="h1" 
-      sx={PAGE_TITLE_STYLES}
-    >
+    <h1 className={styles.pageTitle}>
       Recipe Library
-    </Typography>
+    </h1>
   );
 };
 

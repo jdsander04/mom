@@ -1,23 +1,16 @@
-import { Typography, Box } from '@mui/material';
-
-const PAGE_CONTAINER_STYLES = {
-  gridColumn: '1 / -1'
-};
-
-const PAGE_TITLE_STYLES = {
-  mb: 2
-};
+import { Typography } from '@mui/material';
+import styles from './Health.module.css';
 
 const Health = () => {
   return (
-    <Box sx={PAGE_CONTAINER_STYLES}>
-      <Typography variant="h4" component="h1" sx={PAGE_TITLE_STYLES}>
+    <>
+      <h1 className={styles.pageTitle}>
         Health and Budgeting
-      </Typography>
+      </h1>
       <Typography variant="body1" color="text.secondary">
         Track your health and budget
       </Typography>
-    </Box>
+    </>
   );
 };
 

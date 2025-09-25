@@ -15,7 +15,7 @@ const CARD_STYLES = {
   backgroundColor: 'white',
   border: '1px solid #e0e0e0',
   borderRadius: '14px',
-  padding: '16px',
+  padding: '12px',
   display: 'flex',
   alignItems: 'center',
   cursor: 'pointer',
@@ -26,8 +26,8 @@ const CARD_STYLES = {
 };
 
 const IMAGE_STYLES = {
-  width: 64,
-  height: 64,
+  width: 96,
+  height: 96,
   borderRadius: '8px',
   objectFit: 'cover',
   marginRight: '16px'

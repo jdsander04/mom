@@ -1,11 +1,5 @@
-import { Typography } from '@mui/material';
 import RecipeCard from '../common/RecipeCard';
-
-const SECTION_TITLE_STYLES = {
-  gridColumn: '1 / -1',
-  mb: 2,
-  mt: (index: number) => index > 0 ? 4 : 0
-};
+import styles from './HomePage.module.css';
 
 const MOCK_RECIPES = {
   popular: Array.from({ length: 5 }, (_, index) => ({
@@ -38,31 +32,22 @@ const HomePage = () => {
 
   return (
     <>
-      {SECTIONS.map((section, sectionIndex) => (
-        <div key={section.title}>
-          <Typography 
-            variant="h4" 
-            component="h1" 
-            sx={{
-              ...SECTION_TITLE_STYLES,
-              mt: sectionIndex > 0 ? 4 : 0
-            }}
-          >
-            {section.title}
-          </Typography>
-          {section.recipes.map((recipe) => (
-            <RecipeCard
-              key={recipe.id}
-              title={recipe.title}
-              subtitle={recipe.subtitle}
-              image={recipe.image}
-              calories={recipe.calories}
-              servings={recipe.servings}
-              onClick={() => handleRecipeClick(recipe.title)}
-            />
-          ))}
-        </div>
-      ))}
+      {SECTIONS.map((section, sectionIndex) => [
+        <h1 key={`${section.title}-title`} className={styles.pageTitle}>
+          {section.title}
+        </h1>,
+        ...section.recipes.map((recipe) => (
+          <RecipeCard
+            key={recipe.id}
+            title={recipe.title}
+            subtitle={recipe.subtitle}
+            image={recipe.image}
+            calories={recipe.calories}
+            servings={recipe.servings}
+            onClick={() => handleRecipeClick(recipe.title)}
+          />
+        ))
+      ])}
     </>
   );
 };
