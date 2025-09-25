@@ -11,3 +11,10 @@ def recipe_create(request):
         # Logic to create a new recipe would go here
         return JsonResponse({'message': 'Recipe created successfully!'}, status=201)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+def recipe_delete(request, recipe_id):
+    if request.method == 'DELETE':
+        # Logic to delete the recipe with the given recipe_id would go here
+        return JsonResponse({'message': f'Recipe {recipe_id} deleted successfully!'}, status=200)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
