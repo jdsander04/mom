@@ -93,7 +93,7 @@ def recipe_list(request):
             },
             'required': ['recipe_id']
         },
-    }
+    },
     responses={200: {'description': 'Recipe details'}}
 )
 @extend_schema(
