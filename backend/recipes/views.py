@@ -26,10 +26,33 @@ def process_recipe_data(data) -> Recipe:
                     'description': 'Source type for the recipe'
                 },
                 'name': {'type': 'string', 'description': 'Recipe name'},
-                'description': {'type': 'string', 'description': 'Recipe description'}
+                'description': {'type': 'string', 'description': 'Recipe description'},
+                'ingredients': {
+                    'type': 'array',
+                    'description': 'Variable number of ingredients, each with name, quantity, unit',
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            'name': {'type': 'string'},
+                            'quantity': {'type': 'number'},
+                            'unit': {'type': 'string'}
+                        }
+                    }
+                },
+                'steps': {
+                    'type': 'array',
+                    'description': 'Variable number of steps, each with description',
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            'description': {'type': 'string'}
+                        }
+                    }
+                }
+                    
             },
             'required': ['recipe_source']
-        }
+        },
     },
     responses={201: {'description': 'Recipe created successfully'}}
 )
@@ -57,6 +80,78 @@ def recipe_list(request):
 
         return Response({'id': recipe.id, 'name': recipe.name}, status=201)
 
+@extend_schema(
+    methods=['GET'], #parameters: recipe id
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'recipe_id': {
+                    'type': 'integer',
+                    'description': 'Recipe ID'
+                }
+            },
+            'required': ['recipe_id']
+        },
+    }
+    responses={200: {'description': 'Recipe details'}}
+)
+@extend_schema(
+    methods=['PATCH'], #parameters: recipe id
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'recipe_id': {
+                    'type': 'integer',
+                    'description': 'Recipe ID'
+                },
+                'name': {'type': 'string', 'description': 'Recipe name'},
+                'description': {'type': 'string', 'description': 'Recipe description'},
+                'ingredients': {
+                    'type': 'array',
+                    'description': 'Variable number of ingredients, each with name, quantity, unit',
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            'name': {'type': 'string'},
+                            'quantity': {'type': 'number'},
+                            'unit': {'type': 'string'}
+                        }
+                    }
+                },
+                'steps': {
+                    'type': 'array',
+                    'description': 'Variable number of steps, each with description',
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            'description': {'type': 'string'}
+                        }
+                    }
+                }
+            },
+            'required': ['recipe_id']
+        },
+    },
+    responses={200: {'description': 'Recipe updated successfully'}}
+)
+@extend_schema(
+    methods=['DELETE'], #parameters: recipe id
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'recipe_id': {
+                    'type': 'integer',
+                    'description': 'Recipe ID'
+                }
+            },
+            'required': ['recipe_id']
+        },
+    },
+    responses={200: {'description': 'Recipe deleted successfully'}}
+)
 @api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def recipe_detail(request, recipe_id):
