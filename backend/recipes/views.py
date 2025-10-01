@@ -35,11 +35,15 @@ def process_recipe_data(data) -> Recipe:
 )
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
+# General recipe endpoints
 def recipe_list(request):
+    # Get list of all recipe IDs
     if request.method == 'GET':
         recipes = Recipe.objects.filter(user=request.user)
         recipe_data = [{'id': r.id, 'name': r.name} for r in recipes]
         return Response({'recipes': recipe_data})
+    
+    # Create new recipe
     elif request.method == 'POST':
         recipe_source = request.data.get('recipe_source')
         if recipe_source == 'url':
@@ -61,10 +65,16 @@ def recipe_detail(request, recipe_id):
     except Recipe.DoesNotExist:
         return Response({'error': 'Recipe not found'}, status=404)
     
+
+    # Get specific recipe info
     if request.method == 'GET':
         return Response({'recipe_id': recipe.id, 'name': recipe.name, 'description': recipe.description})
+    
+    # Update existing recipe
     elif request.method == 'PATCH':
         return Response({'message': f'Recipe {recipe_id} edited'})
+    
+    # Delete specific recipe
     elif request.method == 'DELETE':
         return Response({'message': f'Recipe {recipe_id} deleted'})
 
