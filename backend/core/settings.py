@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
 
     'recipes',
+    'shoppinglist',
 ]
 
 MIDDLEWARE = [
@@ -146,6 +147,10 @@ SPECTACULAR_SETTINGS = {
     'TITLE': 'Mom API',
     'DESCRIPTION': 'Recipe management API',
     'VERSION': '1.0.0',
+    # Mark all endpoints as requiring TokenAuth in the docs so the UI sends the header after Authorize
+    'SECURITY': [
+        {'TokenAuth': []},
+    ],
 }
 
 
