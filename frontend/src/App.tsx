@@ -6,6 +6,7 @@ import RecipeLibrary from './components/pages/RecipeLibrary'
 import Shopping from './components/pages/Shopping'
 import MealPlanner from './components/pages/MealPlanner'
 import Health from './components/pages/Health'
+import UserProfile from './components/pages/UserProfile'
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
           <Route path="/shopping" element={<Shopping />} />
           <Route path="/planner" element={<MealPlanner />} />
           <Route path="/health" element={<Health />} />
+          <Route path="/profile" element={<UserProfile />} />
         </Routes>
       </Layout>
     </Router>
