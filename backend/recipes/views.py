@@ -1,5 +1,6 @@
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import TokenAuthentication
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
@@ -58,6 +59,7 @@ def process_recipe_data(data) -> Recipe:
 )
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
 # General recipe endpoints
 def recipe_list(request):
     # Get list of all recipe IDs
@@ -154,6 +156,7 @@ def recipe_list(request):
 )
 @api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
 def recipe_detail(request, recipe_id):
     try:
         recipe = Recipe.objects.get(id=recipe_id, user=request.user)
