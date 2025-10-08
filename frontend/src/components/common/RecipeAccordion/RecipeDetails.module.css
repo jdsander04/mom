@@ -1,0 +1,81 @@
+.details {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+}
+
+.left {
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.image {
+  width: 220px;
+  height: 220px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.placeholder {
+  width: 220px;
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  color: #64748b;
+  border-radius: 10px;
+}
+
+.nutrition {
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.nutritionTitle {
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.right {
+  flex: 1 1 auto;
+  display: flex;
+  gap: 1rem;
+}
+
+.col {
+  flex: 1 1 50%;
+}
+
+.sectionTitle {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+ul, ol {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+li {
+  margin-bottom: 0.55rem;
+  line-height: 1.5;
+}
+
+.empty {
+  color: #6b7280;
+}
+
+@media (max-width: 780px) {
+  .details {
+    flex-direction: column;
+  }
+
+  .left, .image, .placeholder {
+    width: 100%;
+    height: auto;
+  }
+}
