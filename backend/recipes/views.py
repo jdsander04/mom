@@ -4,12 +4,8 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
-from .models import Recipe
-
-def process_recipe_data(data) -> Recipe:
-    # Process recipe data here
-    recipe: Recipe
-    return recipe
+from .models import Recipe, Ingredient, Step
+from .services import recipe_from_url, recipe_from_file
 
 @extend_schema(
     methods=['GET'],
@@ -24,13 +20,27 @@ def process_recipe_data(data) -> Recipe:
                 'recipe_source': {
                     'type': 'string',
                     'enum': ['url', 'file', 'explicit'],
-                    'description': 'Source type for the recipe'
+                    'description': 'Source type for the recipe',
+                    'example': 'explicit'
                 },
-                'name': {'type': 'string', 'description': 'Recipe name'},
-                'description': {'type': 'string', 'description': 'Recipe description'},
+                'name': {
+                    'type': 'string', 
+                    'description': 'Recipe name',
+                    'example': 'Chocolate Chip Cookies'
+                },
+                'description': {
+                    'type': 'string', 
+                    'description': 'Recipe description',
+                    'example': 'Classic homemade chocolate chip cookies'
+                },
                 'ingredients': {
                     'type': 'array',
                     'description': 'Variable number of ingredients, each with name, quantity, unit',
+                    'example': [
+                        {'name': 'flour', 'quantity': 2, 'unit': 'cups'},
+                        {'name': 'sugar', 'quantity': 1, 'unit': 'cup'},
+                        {'name': 'chocolate chips', 'quantity': 1, 'unit': 'cup'}
+                    ],
                     'items': {
                         'type': 'object',
                         'properties': {
@@ -43,6 +53,12 @@ def process_recipe_data(data) -> Recipe:
                 'steps': {
                     'type': 'array',
                     'description': 'Variable number of steps, each with description',
+                    'example': [
+                        {'description': 'Preheat oven to 375°F'},
+                        {'description': 'Mix dry ingredients in a bowl'},
+                        {'description': 'Add chocolate chips and mix'},
+                        {'description': 'Bake for 10-12 minutes'}
+                    ],
                     'items': {
                         'type': 'object',
                         'properties': {
@@ -71,14 +87,53 @@ def recipe_list(request):
     # Create new recipe
     elif request.method == 'POST':
         recipe_source = request.data.get('recipe_source')
+
         if recipe_source == 'url':
-            pass
+            url = request.data.get('url')
+            if not url:
+                return Response({'error': 'URL required for url source'}, status=400)
+            recipe_data = recipe_from_url(url, request.user)
+            recipe = Recipe.objects.create(
+                user=request.user,
+                name=recipe_data.get('title', ''),
+                description=recipe_data.get('description', '')
+            )
+            
         elif recipe_source == 'file':
-            pass
+            file = request.FILES.get('file')
+            if not file:
+                return Response({'error': 'File required for file source'}, status=400)
+            recipe_data = recipe_from_file(file, request.user)
+            recipe = Recipe.objects.create(
+                user=request.user,
+                name=recipe_data.get('title', ''),
+                description=recipe_data.get('description', '')
+            )
+            
         elif recipe_source == 'explicit':
-            pass
+            recipe = Recipe.objects.create(
+                user=request.user,
+                name=request.data.get('name', ''),
+                description=request.data.get('description', '')
+            )
+            
+            for ing_data in request.data.get('ingredients', []):
+                Ingredient.objects.create(
+                    recipe=recipe,
+                    name=ing_data.get('name', ''),
+                    quantity=ing_data.get('quantity', 0),
+                    unit=ing_data.get('unit', '')
+                )
+            
+            for i, step_data in enumerate(request.data.get('steps', []), 1):
+                Step.objects.create(
+                    recipe=recipe,
+                    description=step_data.get('description', ''),
+                    order=i
+                )
+                
         else:
-            return Response({'error': 'Expected "url", "file", or '}, status=400)
+            return Response({'error': 'Expected "url", "file", or "explicit"'}, status=400)
 
         return Response({'id': recipe.id, 'name': recipe.name}, status=201)
 
