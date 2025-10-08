@@ -1,0 +1,59 @@
+.accordion {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+}
+
+.header {
+  width: 100%;
+  padding: 1rem;
+  background: #ffffff;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 10px;
+}
+
+.header:hover {
+  background: #e9e9e9;
+}
+
+.arrow {
+  transition: transform 0.2s;
+}
+
+.arrow.open {
+  transform: rotate(180deg);
+}
+
+.content {
+  padding: 1rem;
+}
+
+.headerContent {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.title {
+  font-weight: 600;
+  flex: 1;
+}
+
+.calories {
+  font-size: 0.875rem;
+  color: #666;
+  width: 80px;
+  text-align: center;
+}
+
+.serves {
+  font-size: 0.875rem;
+  color: #666;
+  width: 100px;
+  text-align: center;
+  margin-right: 25rem;
+}
