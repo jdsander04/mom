@@ -25,6 +25,7 @@ urlpatterns = [
     path('api/auth/login/', views.login, name='login'),
 
     # Standard path
+    path('api/', include('cart.urls')),
     path('api/', include('recipes.urls')),
     path('api/', include('shoppinglist.urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
