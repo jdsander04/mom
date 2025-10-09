@@ -7,9 +7,12 @@ import {
   ListItemText, 
   ListItemIcon,
   IconButton,
-  Box 
+  Box,
+  Avatar,
+  ButtonBase 
 } from '@mui/material';
 import { PanelLeft, PanelRight } from 'lucide-react';
+import * as React from 'react';
 
 interface NavItem {
   label: string;
@@ -107,6 +110,17 @@ const SideBar = ({ navItems, onToggle, isMinimized }: SideBarProps) => {
   return (
     <Drawer variant="permanent" sx={drawerStyles}>
       <Box sx={{ padding: '0.5rem', overflow: 'hidden' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+          <ButtonBase
+            component={Link}
+            to="/profile"
+            aria-label="User profile"
+          >
+            <Avatar
+              sx={{ width: isMinimized ? 32 : 56, height: isMinimized ? 32 : 56 }}
+            />
+          </ButtonBase>
+        </Box>
         <List sx={{ padding: 0, margin: 0 }}>
           {navItems.map((item, index) => (
             <ListItem key={index} sx={{ marginBottom: '0.5rem', padding: 0 }}>

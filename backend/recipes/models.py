@@ -17,3 +17,8 @@ class Step(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
     description = models.TextField()
     order = models.PositiveIntegerField()
+
+class Nutrient(models.Model):
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+    macro = models.CharField(max_length=255)
+    mass = models.DecimalField(max_digits=10, decimal_places=3)
