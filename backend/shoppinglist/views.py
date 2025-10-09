@@ -7,6 +7,10 @@ from .models import ShoppingList, ShoppingListItem, Cart, CartItem
 
 
 @extend_schema(
+	methods=['GET'],
+	responses={200: {'description': 'List of shopping lists for the user'}},
+)
+@extend_schema(
 	methods=['POST'],
 	request={
 		'application/json': {
@@ -30,11 +34,25 @@ from .models import ShoppingList, ShoppingListItem, Cart, CartItem
 	},
 	responses={201: {'description': 'List generated'}},
 )
-@api_view(['POST'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([TokenAuthentication])
 def list_generate(request):
-	# Create a list with provided items
+	# GET -> return all lists for the user
+	if request.method == 'GET':
+		lists = ShoppingList.objects.filter(user=request.user).order_by('-created_at')
+		data = [
+			{
+				'id': lst.id,
+				'name': lst.name,
+				'created_at': lst.created_at.isoformat(),
+				'item_count': lst.items.count(),
+			}
+			for lst in lists
+		]
+		return Response({'lists': data})
+
+	# POST -> create a list with provided items
 	name = request.data.get('name', '')
 	items = request.data.get('items', []) or []
 
@@ -53,7 +71,22 @@ def list_generate(request):
 	methods=['GET'],
 	responses={200: {'description': 'List items'}},
 )
-@api_view(['GET'])
+@extend_schema(
+	methods=['POST'],
+	request={
+		'application/json': {
+			'type': 'object',
+			'properties': {
+				'name': {'type': 'string'},
+				'quantity': {'type': 'number'},
+				'unit': {'type': 'string'},
+			},
+			'required': ['name']
+		}
+	},
+	responses={201: {'description': 'Item added to list'}},
+)
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([TokenAuthentication])
 def list_items(request, list_id: int):
@@ -62,17 +95,37 @@ def list_items(request, list_id: int):
 	except ShoppingList.DoesNotExist:
 		return Response({'error': 'List not found'}, status=404)
 
-	items = [
-		{
-			'id': it.id,
-			'name': it.name,
-			'quantity': float(it.quantity),
-			'unit': it.unit,
-			'substituted': it.substituted,
-		}
-		for it in sl.items.all()
-	]
-	return Response({'list_id': sl.id, 'name': sl.name, 'items': items})
+	if request.method == 'GET':
+		items = [
+			{
+				'id': it.id,
+				'name': it.name,
+				'quantity': float(it.quantity),
+				'unit': it.unit,
+				'substituted': it.substituted,
+			}
+			for it in sl.items.all()
+		]
+		return Response({'list_id': sl.id, 'name': sl.name, 'items': items})
+
+	# POST -> create a single item
+	data = request.data or {}
+	name = data.get('name')
+	if not name:
+		return Response({'error': 'name is required'}, status=400)
+	item = ShoppingListItem.objects.create(
+		shopping_list=sl,
+		name=name,
+		quantity=data.get('quantity') or 0,
+		unit=data.get('unit') or ''
+	)
+	return Response({
+		'id': item.id,
+		'name': item.name,
+		'quantity': float(item.quantity),
+		'unit': item.unit,
+		'substituted': item.substituted,
+	}, status=201)
 
 
 @extend_schema(
@@ -129,10 +182,26 @@ def list_item_detail(request, list_id: int, item_id: int):
 
 
 @extend_schema(
+	methods=['GET'],
+	responses={200: {'description': 'List details with items'}},
+)
+@extend_schema(
+	methods=['PATCH'],
+	request={
+		'application/json': {
+			'type': 'object',
+			'properties': {
+				'name': {'type': 'string'},
+			}
+		}
+	},
+	responses={200: {'description': 'List updated'}},
+)
+@extend_schema(
 	methods=['DELETE'],
 	responses={200: {'description': 'List deleted'}},
 )
-@api_view(['DELETE'])
+@api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([TokenAuthentication])
 def list_detail(request, list_id: int):
@@ -140,6 +209,36 @@ def list_detail(request, list_id: int):
 		sl = ShoppingList.objects.get(id=list_id, user=request.user)
 	except ShoppingList.DoesNotExist:
 		return Response({'error': 'List not found'}, status=404)
+
+	if request.method == 'GET':
+		items = [
+			{
+				'id': it.id,
+				'name': it.name,
+				'quantity': float(it.quantity),
+				'unit': it.unit,
+				'substituted': it.substituted,
+			}
+			for it in sl.items.all()
+		]
+		return Response({'list_id': sl.id, 'name': sl.name, 'items': items})
+
+	if request.method == 'PATCH':
+		data = request.data or {}
+		updated = False
+		if 'name' in data:
+			sl.name = data['name']
+			updated = True
+		if updated:
+			sl.save()
+		return Response({'message': 'List updated', 'list': {
+			'id': sl.id,
+			'name': sl.name,
+			'created_at': sl.created_at.isoformat(),
+			'item_count': sl.items.count(),
+		}})
+
+	# DELETE
 	sl.delete()
 	return Response({'message': 'List deleted'})
 
