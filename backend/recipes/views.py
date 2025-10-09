@@ -92,7 +92,7 @@ def recipe_list(request):
             url = request.data.get('url')
             if not url:
                 return Response({'error': 'URL required for url source'}, status=400)
-            recipe_data = recipe_from_url(url, request.user)
+            recipe_data = recipe_from_url(url)
             recipe = Recipe.objects.create(
                 user=request.user,
                 name=recipe_data.get('title', ''),
@@ -103,7 +103,7 @@ def recipe_list(request):
             file = request.FILES.get('file')
             if not file:
                 return Response({'error': 'File required for file source'}, status=400)
-            recipe_data = recipe_from_file(file, request.user)
+            recipe_data = recipe_from_file(file)
             recipe = Recipe.objects.create(
                 user=request.user,
                 name=recipe_data.get('title', ''),
