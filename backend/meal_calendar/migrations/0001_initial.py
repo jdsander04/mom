@@ -19,10 +19,10 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('date', models.DateField()),
-                ('breakfast', models.JSONField(default=list)),
-                ('lunch', models.JSONField(default=list)),
-                ('dinner', models.JSONField(default=list)),
-                ('snacks', models.JSONField(default=list)),
+                ('breakfast', models.JSONField(default=lambda: [])),
+                ('lunch', models.JSONField(default=lambda: [])),
+                ('dinner', models.JSONField(default=lambda: [])),
+                ('snacks', models.JSONField(default=lambda: [])),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],
             options={
