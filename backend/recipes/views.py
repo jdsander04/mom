@@ -4,7 +4,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
-from .models import Recipe, Ingredient, Step
+from .models import Recipe, Ingredient, Step, Nutrient
 from .services import recipe_from_url, recipe_from_file
 
 @extend_schema(
@@ -99,6 +99,31 @@ def recipe_list(request):
                 description=recipe_data.get('description', '')
             )
             
+            # Create ingredients
+            for ingredient in recipe_data.get('ingredients', []):
+                Ingredient.objects.create(
+                    recipe=recipe,
+                    name=ingredient,
+                    quantity=0,
+                    unit=''
+                )
+            
+            # Create steps
+            for i, instruction in enumerate(recipe_data.get('instructions_list', []), 1):
+                Step.objects.create(
+                    recipe=recipe,
+                    description=instruction,
+                    order=i
+                )
+            
+            # Create nutrients
+            for macro, mass in recipe_data.get('nutrients', {}).items():
+                Nutrient.objects.create(
+                    recipe=recipe,
+                    macro=macro,
+                    mass=float(mass.split()[0]) if mass and mass.split() else 0
+                )
+            
         elif recipe_source == 'file':
             file = request.FILES.get('file')
             if not file:
@@ -109,6 +134,23 @@ def recipe_list(request):
                 name=recipe_data.get('title', ''),
                 description=recipe_data.get('description', '')
             )
+            
+            # Create ingredients
+            for ingredient in recipe_data.get('ingredients', []):
+                Ingredient.objects.create(
+                    recipe=recipe,
+                    name=ingredient.get('name', ''),
+                    quantity=ingredient.get('quantity', 0),
+                    unit=ingredient.get('unit', '')
+                )
+            
+            # Create steps
+            for i, instruction in enumerate(recipe_data.get('instructions', []), 1):
+                Step.objects.create(
+                    recipe=recipe,
+                    description=instruction,
+                    order=i
+                )
             
         elif recipe_source == 'explicit':
             recipe = Recipe.objects.create(
