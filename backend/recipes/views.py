@@ -263,13 +263,58 @@ def recipe_detail(request, recipe_id):
 
     # Get specific recipe info
     if request.method == 'GET':
-        return Response({'recipe_id': recipe.id, 'name': recipe.name, 'description': recipe.description})
+        recipe_data = {
+            'id': recipe.id,
+            'name': recipe.name,
+            'description': recipe.description,
+            'ingredients': [
+                {'name': i.name, 'quantity': i.quantity, 'unit': i.unit}
+                for i in recipe.ingredients.all()
+            ],
+            'steps': [
+                {'description': s.description}
+                for s in recipe.steps.all().order_by('order')
+            ]
+        }
+        return Response(recipe_data)
     
     # Update existing recipe
     elif request.method == 'PATCH':
+        # based on recipe id, update fields if provided
+        name = request.data.get('name')
+        description = request.data.get('description')
+        ingredients = request.data.get('ingredients')
+        steps = request.data.get('steps')
+
+        if name:
+            recipe.name = name
+        if description:
+            recipe.description = description
+        recipe.save()
+
+        if ingredients is not None:
+            recipe.ingredients.all().delete()
+            for ing_data in ingredients:
+                Ingredient.objects.create(
+                    recipe=recipe,
+                    name=ing_data.get('name', ''),
+                    quantity=ing_data.get('quantity', 0),
+                    unit=ing_data.get('unit', '')
+                )
+        if steps is not None:
+            recipe.steps.all().delete()
+            for i, step_data in enumerate(steps, 1):
+                Step.objects.create(
+                    recipe=recipe,
+                    description=step_data.get('description', ''),
+                    order=i
+                )
+        
         return Response({'message': f'Recipe {recipe_id} edited'})
     
     # Delete specific recipe
     elif request.method == 'DELETE':
+        # delete recipe based on recipe id
+        recipe.delete()
         return Response({'message': f'Recipe {recipe_id} deleted'})
 
