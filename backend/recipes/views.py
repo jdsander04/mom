@@ -20,26 +20,29 @@ from .services import recipe_from_url, recipe_from_file
                 'recipe_source': {
                     'type': 'string',
                     'enum': ['url', 'file', 'explicit'],
-                    'description': 'Source type for the recipe',
-                    'example': 'explicit'
+                    'description': 'Source type for the recipe'
+                },
+                'url': {
+                    'type': 'string',
+                    'description': 'Recipe URL (required for url source)',
+                    'example': 'https://example.com/recipe'
                 },
                 'name': {
                     'type': 'string', 
-                    'description': 'Recipe name',
+                    'description': 'Recipe name (required for explicit source)',
                     'example': 'Chocolate Chip Cookies'
                 },
                 'description': {
                     'type': 'string', 
-                    'description': 'Recipe description',
+                    'description': 'Recipe description (for explicit source)',
                     'example': 'Classic homemade chocolate chip cookies'
                 },
                 'ingredients': {
                     'type': 'array',
-                    'description': 'Variable number of ingredients, each with name, quantity, unit',
+                    'description': 'Ingredients list (for explicit source)',
                     'example': [
                         {'name': 'flour', 'quantity': 2, 'unit': 'cups'},
-                        {'name': 'sugar', 'quantity': 1, 'unit': 'cup'},
-                        {'name': 'chocolate chips', 'quantity': 1, 'unit': 'cup'}
+                        {'name': 'sugar', 'quantity': 1, 'unit': 'cup'}
                     ],
                     'items': {
                         'type': 'object',
@@ -52,12 +55,10 @@ from .services import recipe_from_url, recipe_from_file
                 },
                 'steps': {
                     'type': 'array',
-                    'description': 'Variable number of steps, each with description',
+                    'description': 'Cooking steps (for explicit source)',
                     'example': [
                         {'description': 'Preheat oven to 375°F'},
-                        {'description': 'Mix dry ingredients in a bowl'},
-                        {'description': 'Add chocolate chips and mix'},
-                        {'description': 'Bake for 10-12 minutes'}
+                        {'description': 'Mix ingredients and bake'}
                     ],
                     'items': {
                         'type': 'object',
@@ -66,12 +67,20 @@ from .services import recipe_from_url, recipe_from_file
                         }
                     }
                 }
-                    
             },
             'required': ['recipe_source']
         },
     },
-    responses={201: {'description': 'Recipe created successfully'}}
+    responses={
+        201: {
+            'description': 'Recipe created successfully',
+            'content': {
+                'application/json': {
+                    'example': {'id': 1, 'name': 'Recipe Name'}
+                }
+            }
+        }
+    }
 )
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
@@ -180,36 +189,35 @@ def recipe_list(request):
         return Response({'id': recipe.id, 'name': recipe.name}, status=201)
 
 @extend_schema(
-    methods=['GET'], #parameters: recipe id
-    request={
-        'application/json': {
-            'type': 'object',
-            'properties': {
-                'recipe_id': {
-                    'type': 'integer',
-                    'description': 'Recipe ID'
+    methods=['GET'],
+    responses={
+        200: {
+            'description': 'Recipe details',
+            'content': {
+                'application/json': {
+                    'example': {
+                        'id': 1,
+                        'name': 'Recipe Name',
+                        'description': 'Recipe description',
+                        'ingredients': [{'name': 'flour', 'quantity': 2, 'unit': 'cups'}],
+                        'steps': [{'description': 'Mix ingredients'}]
+                    }
                 }
-            },
-            'required': ['recipe_id']
-        },
-    },
-    responses={200: {'description': 'Recipe details'}}
+            }
+        }
+    }
 )
 @extend_schema(
-    methods=['PATCH'], #parameters: recipe id
+    methods=['PATCH'],
     request={
         'application/json': {
             'type': 'object',
             'properties': {
-                'recipe_id': {
-                    'type': 'integer',
-                    'description': 'Recipe ID'
-                },
                 'name': {'type': 'string', 'description': 'Recipe name'},
                 'description': {'type': 'string', 'description': 'Recipe description'},
                 'ingredients': {
                     'type': 'array',
-                    'description': 'Variable number of ingredients, each with name, quantity, unit',
+                    'description': 'Updated ingredients list',
                     'items': {
                         'type': 'object',
                         'properties': {
@@ -221,7 +229,7 @@ def recipe_list(request):
                 },
                 'steps': {
                     'type': 'array',
-                    'description': 'Variable number of steps, each with description',
+                    'description': 'Updated cooking steps',
                     'items': {
                         'type': 'object',
                         'properties': {
@@ -229,26 +237,13 @@ def recipe_list(request):
                         }
                     }
                 }
-            },
-            'required': ['recipe_id']
+            }
         },
     },
     responses={200: {'description': 'Recipe updated successfully'}}
 )
 @extend_schema(
-    methods=['DELETE'], #parameters: recipe id
-    request={
-        'application/json': {
-            'type': 'object',
-            'properties': {
-                'recipe_id': {
-                    'type': 'integer',
-                    'description': 'Recipe ID'
-                }
-            },
-            'required': ['recipe_id']
-        },
-    },
+    methods=['DELETE'],
     responses={200: {'description': 'Recipe deleted successfully'}}
 )
 @api_view(['GET', 'PATCH', 'DELETE'])
@@ -263,13 +258,58 @@ def recipe_detail(request, recipe_id):
 
     # Get specific recipe info
     if request.method == 'GET':
-        return Response({'recipe_id': recipe.id, 'name': recipe.name, 'description': recipe.description})
+        recipe_data = {
+            'id': recipe.id,
+            'name': recipe.name,
+            'description': recipe.description,
+            'ingredients': [
+                {'name': i.name, 'quantity': i.quantity, 'unit': i.unit}
+                for i in recipe.ingredients.all()
+            ],
+            'steps': [
+                {'description': s.description}
+                for s in recipe.steps.all().order_by('order')
+            ]
+        }
+        return Response(recipe_data)
     
     # Update existing recipe
     elif request.method == 'PATCH':
+        # based on recipe id, update fields if provided
+        name = request.data.get('name')
+        description = request.data.get('description')
+        ingredients = request.data.get('ingredients')
+        steps = request.data.get('steps')
+
+        if name:
+            recipe.name = name
+        if description:
+            recipe.description = description
+        recipe.save()
+
+        if ingredients is not None:
+            recipe.ingredients.all().delete()
+            for ing_data in ingredients:
+                Ingredient.objects.create(
+                    recipe=recipe,
+                    name=ing_data.get('name', ''),
+                    quantity=ing_data.get('quantity', 0),
+                    unit=ing_data.get('unit', '')
+                )
+        if steps is not None:
+            recipe.steps.all().delete()
+            for i, step_data in enumerate(steps, 1):
+                Step.objects.create(
+                    recipe=recipe,
+                    description=step_data.get('description', ''),
+                    order=i
+                )
+        
         return Response({'message': f'Recipe {recipe_id} edited'})
     
     # Delete specific recipe
     elif request.method == 'DELETE':
+        # delete recipe based on recipe id
+        recipe.delete()
         return Response({'message': f'Recipe {recipe_id} deleted'})
 
