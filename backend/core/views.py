@@ -7,6 +7,21 @@ from django.contrib.auth.models import User
 from rest_framework import status
 from drf_spectacular.utils import extend_schema
 
+@extend_schema(
+    methods=['POST'],
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'username': {'type': 'string'},
+                'password': {'type': 'string', 'format': 'password'},
+                'email': {'type': 'string', 'format': 'email'},
+            },
+            'required': ['username', 'password']
+        }
+    },
+    responses={201: {'description': 'User created successfully'}, 400: {'description': 'Username already exists'}},
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def signup(request):
@@ -21,6 +36,20 @@ def signup(request):
     token, created = Token.objects.get_or_create(user=user)
     return Response({'token': token.key, 'user_id': user.id}, status=status.HTTP_201_CREATED)
 
+@extend_schema(
+    methods=['POST'],
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'username': {'type': 'string'},
+                'password': {'type': 'string', 'format': 'password'},
+            },
+            'required': ['username', 'password']
+        }
+    },
+    responses={200: {'description': 'Token returned on valid credentials'}, 401: {'description': 'Invalid credentials'}},
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login(request):
