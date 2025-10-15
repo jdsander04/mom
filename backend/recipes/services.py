@@ -5,6 +5,9 @@ from jinja2 import Template
 import easyllm
 import json
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def _get_recipe_from_llm(text: str) -> dict:
     """Uses an LLM to extract structured recipe data from raw text."""
@@ -25,8 +28,9 @@ Extract recipe data from this text:
     
     prompt = template.render(text=text)
     response = easyllm.ChatCompletion.create(
-        model="deepseek-chat",
-        messages=[{"role": "user", "content": prompt}]
+        model="gpt-4o",
+        messages=[{"role": "user", "content": prompt}],
+        api_key=os.getenv('openai_api_key')
     )
     
     try:
