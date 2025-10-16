@@ -16,60 +16,45 @@ from .services import recipe_from_url, recipe_from_file
     methods=['POST'],
     request={
         'application/json': {
-            'type': 'object',
-            'properties': {
-                'recipe_source': {
-                    'type': 'string',
-                    'enum': ['url', 'file', 'explicit'],
-                    'description': 'Source type for the recipe'
+            'oneOf': [
+                {
+                    'type': 'object',
+                    'properties': {
+                        'recipe_source': {'type': 'string', 'enum': ['url']},
+                        'url': {'type': 'string', 'example': 'https://example.com/recipe'}
+                    },
+                    'required': ['recipe_source', 'url']
                 },
-                'url': {
-                    'type': 'string',
-                    'description': 'Recipe URL (required for url source)',
-                    'example': 'https://example.com/recipe'
-                },
-                'name': {
-                    'type': 'string', 
-                    'description': 'Recipe name (required for explicit source)',
-                    'example': 'Chocolate Chip Cookies'
-                },
-                'description': {
-                    'type': 'string', 
-                    'description': 'Recipe description (for explicit source)',
-                    'example': 'Classic homemade chocolate chip cookies'
-                },
-                'ingredients': {
-                    'type': 'array',
-                    'description': 'Ingredients list (for explicit source)',
-                    'example': [
-                        {'name': 'flour', 'quantity': 2, 'unit': 'cups'},
-                        {'name': 'sugar', 'quantity': 1, 'unit': 'cup'}
-                    ],
-                    'items': {
-                        'type': 'object',
-                        'properties': {
-                            'name': {'type': 'string'},
-                            'quantity': {'type': 'number'},
-                            'unit': {'type': 'string'}
+                {
+                    'type': 'object',
+                    'properties': {
+                        'recipe_source': {'type': 'string', 'enum': ['explicit']},
+                        'name': {'type': 'string', 'example': 'Chocolate Chip Cookies'},
+                        'description': {'type': 'string', 'example': 'Classic cookies'},
+                        'ingredients': {
+                            'type': 'array',
+                            'items': {
+                                'type': 'object',
+                                'properties': {
+                                    'name': {'type': 'string'},
+                                    'quantity': {'type': 'number'},
+                                    'unit': {'type': 'string'}
+                                }
+                            }
+                        },
+                        'steps': {
+                            'type': 'array',
+                            'items': {
+                                'type': 'object',
+                                'properties': {
+                                    'description': {'type': 'string'}
+                                }
+                            }
                         }
-                    }
-                },
-                'steps': {
-                    'type': 'array',
-                    'description': 'Cooking steps (for explicit source)',
-                    'example': [
-                        {'description': 'Preheat oven to 375°F'},
-                        {'description': 'Mix ingredients and bake'}
-                    ],
-                    'items': {
-                        'type': 'object',
-                        'properties': {
-                            'description': {'type': 'string'}
-                        }
-                    }
+                    },
+                    'required': ['recipe_source']
                 }
-            },
-            'required': ['recipe_source']
+            ]
         },
     },
     responses={
@@ -102,21 +87,51 @@ def recipe_list(request):
             url = request.data.get('url')
             if not url:
                 return Response({'error': 'URL required for url source'}, status=400)
-            recipe_data = recipe_from_url(url)
+            try:
+                recipe_data = recipe_from_url(url)
+                if not recipe_data:
+                    return Response({'error': 'Failed to scrape recipe from URL'}, status=400)
+            except Exception as e:
+                return Response({'error': f'Error processing URL: {str(e)}'}, status=400)
+            
             recipe = Recipe.objects.create(
                 user=request.user,
-                name=recipe_data.get('title', ''),
+                name=recipe_data.get('title', 'Untitled Recipe'),
                 description=recipe_data.get('description', '')
             )
             
-            # Create ingredients
-            for ingredient in recipe_data.get('ingredients', []):
-                Ingredient.objects.create(
-                    recipe=recipe,
-                    name=ingredient,
-                    quantity=0,
-                    unit=''
-                )
+            # Create ingredients - handle both string and dict formats
+            ingredients_data = recipe_data.get('ingredients', [])
+            for ingredient in ingredients_data:
+                if isinstance(ingredient, str):
+                    # Parse ingredient string (e.g., "2 cups flour")
+                    parts = ingredient.split()
+                    if len(parts) >= 3:
+                        try:
+                            quantity = float(parts[0])
+                            unit = parts[1]
+                            name = ' '.join(parts[2:])
+                        except ValueError:
+                            quantity = 0
+                            unit = ''
+                            name = ingredient
+                    else:
+                        quantity = 0
+                        unit = ''
+                        name = ingredient
+                else:
+                    # Handle dict format
+                    name = ingredient.get('name', '')
+                    quantity = ingredient.get('quantity', 0)
+                    unit = ingredient.get('unit', '')
+                
+                if name:  # Only create if name exists
+                    Ingredient.objects.create(
+                        recipe=recipe,
+                        name=name,
+                        quantity=quantity,
+                        unit=unit
+                    )
             
             # Create steps
             for i, instruction in enumerate(recipe_data.get('instructions_list', []), 1):
@@ -193,7 +208,25 @@ def recipe_list(request):
         else:
             return Response({'error': 'Expected "url", "file", or "explicit"'}, status=400)
 
-        return Response({'id': recipe.id, 'name': recipe.name}, status=201)
+        # Return complete recipe data after creation
+        created_recipe = {
+            'id': recipe.id,
+            'name': recipe.name,
+            'description': recipe.description,
+            'ingredients': [
+                {'name': i.name, 'quantity': float(i.quantity), 'unit': i.unit}
+                for i in recipe.ingredients.all()
+            ],
+            'steps': [
+                {'description': s.description, 'order': s.order}
+                for s in recipe.steps.all().order_by('order')
+            ],
+            'nutrients': [
+                {'macro': n.macro, 'mass': float(n.mass)}
+                for n in recipe.nutrients.all()
+            ]
+        }
+        return Response(created_recipe, status=201)
 
 @extend_schema(
     methods=['GET'],
@@ -280,7 +313,7 @@ def recipe_detail(request, recipe_id):
             ],
             'nutrients': [
                 {'macro': n.macro, 'mass': float(n.mass)}
-                for n in recipe.nutrient_set.all()
+                for n in recipe.nutrients.all()
             ]
         }
         return Response(recipe_data)
