@@ -12,7 +12,7 @@ import {
   ButtonBase 
 } from '@mui/material';
 import { PanelLeft, PanelRight, LogOut } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from 'src/contexts/AuthContext';
 import * as React from 'react';
 
 interface NavItem {
