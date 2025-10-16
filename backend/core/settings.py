@@ -144,7 +144,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
+        'core.authentication.BearerTokenAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -155,10 +155,18 @@ SPECTACULAR_SETTINGS = {
     'TITLE': 'Mom API',
     'DESCRIPTION': 'Recipe management API',
     'VERSION': '1.0.0',
-    # Mark all endpoints as requiring TokenAuth in the docs so the UI sends the header after Authorize
     'SECURITY': [
-        {'TokenAuth': []},
+        {'bearerAuth': []},
     ],
+    'COMPONENTS': {
+        'securitySchemes': {
+            'bearerAuth': {
+                'type': 'http',
+                'scheme': 'bearer',
+                'bearerFormat': 'Token'
+            }
+        }
+    }
 }
 
 

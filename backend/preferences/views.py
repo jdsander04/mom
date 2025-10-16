@@ -1,7 +1,7 @@
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.authentication import TokenAuthentication
+from core.authentication import BearerTokenAuthentication
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
 
@@ -37,7 +37,7 @@ def _query_list(db, q: str, limit: int = 6):
 )
 @api_view(['GET', 'PUT'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def preferences_view(request):
 	# Ensure preferences object exists
 	pref, _ = Preference.objects.get_or_create(user=request.user)
@@ -61,7 +61,7 @@ def preferences_view(request):
 )
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def diet_suggestions(request):
 	q = request.query_params.get('q', '')
 	return Response({'suggestions': _query_list(DIET_DB, q)})
@@ -73,7 +73,7 @@ def diet_suggestions(request):
 )
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def ingredient_suggestions(request):
 	q = request.query_params.get('q', '')
 	return Response({'suggestions': _query_list(INGREDIENT_DB, q)})
@@ -95,7 +95,7 @@ def ingredient_suggestions(request):
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def add_diet(request):
 	pref, _ = Preference.objects.get_or_create(user=request.user)
 	item = request.data
@@ -124,7 +124,7 @@ def add_diet(request):
 )
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def update_diet(request, item_id):
 	pref, _ = Preference.objects.get_or_create(user=request.user)
 	for i, it in enumerate(pref.diets):
@@ -148,7 +148,7 @@ def update_diet(request, item_id):
 )
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def delete_diet(request, item_id):
 	pref, _ = Preference.objects.get_or_create(user=request.user)
 	new_list = []
@@ -181,7 +181,7 @@ def delete_diet(request, item_id):
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def add_allergen(request):
 	pref, _ = Preference.objects.get_or_create(user=request.user)
 	item = request.data
@@ -209,7 +209,7 @@ def add_allergen(request):
 )
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def update_allergen(request, item_id):
 	pref, _ = Preference.objects.get_or_create(user=request.user)
 	for i, it in enumerate(pref.allergens):
@@ -233,7 +233,7 @@ def update_allergen(request, item_id):
 )
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def delete_allergen(request, item_id):
 	pref, _ = Preference.objects.get_or_create(user=request.user)
 	new_list = []

@@ -1,6 +1,6 @@
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.authentication import TokenAuthentication
+from core.authentication import BearerTokenAuthentication
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
@@ -85,7 +85,7 @@ from .services import recipe_from_url, recipe_from_file
 )
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 # General recipe endpoints
 def recipe_list(request):
     # Get list of all recipe IDs
@@ -128,10 +128,14 @@ def recipe_list(request):
             
             # Create nutrients
             for macro, mass in recipe_data.get('nutrients', {}).items():
+                try:
+                    mass_value = float(mass.split()[0]) if mass and mass.split() else 0
+                except (ValueError, AttributeError):
+                    mass_value = 0
                 Nutrient.objects.create(
                     recipe=recipe,
                     macro=macro,
-                    mass=float(mass.split()[0]) if mass and mass.split() else 0
+                    mass=mass_value
                 )
             
         elif recipe_source == 'file':
@@ -139,6 +143,8 @@ def recipe_list(request):
             if not file:
                 return Response({'error': 'File required for file source'}, status=400)
             recipe_data = recipe_from_file(file)
+            if not recipe_data:
+                return Response({'error': 'Failed to process file'}, status=400)
             recipe = Recipe.objects.create(
                 user=request.user,
                 name=recipe_data.get('title', ''),
@@ -250,7 +256,7 @@ def recipe_list(request):
 )
 @api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def recipe_detail(request, recipe_id):
     try:
         recipe = Recipe.objects.get(id=recipe_id, user=request.user)
@@ -265,12 +271,16 @@ def recipe_detail(request, recipe_id):
             'name': recipe.name,
             'description': recipe.description,
             'ingredients': [
-                {'name': i.name, 'quantity': i.quantity, 'unit': i.unit}
+                {'name': i.name, 'quantity': float(i.quantity), 'unit': i.unit}
                 for i in recipe.ingredients.all()
             ],
             'steps': [
-                {'description': s.description}
+                {'description': s.description, 'order': s.order}
                 for s in recipe.steps.all().order_by('order')
+            ],
+            'nutrients': [
+                {'macro': n.macro, 'mass': float(n.mass)}
+                for n in recipe.nutrient_set.all()
             ]
         }
         return Response(recipe_data)
@@ -313,5 +323,5 @@ def recipe_detail(request, recipe_id):
     elif request.method == 'DELETE':
         # delete recipe based on recipe id
         recipe.delete()
-        return Response({'message': f'Recipe {recipe_id} deleted'})
+        return Response({'message': f'Recipe {recipe_id} deleted'}, status=204)
 
