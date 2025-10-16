@@ -14,9 +14,12 @@ import {
   Box,
   IconButton
 } from '@mui/material';
-import { Add, Delete, Edit } from '@mui/icons-material';
+import { Add, Delete } from '@mui/icons-material';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
+import dayjs, { Dayjs } from 'dayjs';
 import styles from './MealPlanner.module.css';
-/**THIS IS ONLY A PLACEHOLDER FRONTEND!! */
 interface MealPlan {
   date: string;
   breakfast: string[];
@@ -26,28 +29,17 @@ interface MealPlan {
 }
 
 const MealPlanner = () => {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [currentMealType, setCurrentMealType] = useState<keyof Omit<MealPlan, 'date'>>('breakfast');
   const [newMeal, setNewMeal] = useState('');
-  const [weekDates, setWeekDates] = useState<string[]>([]);
 
   useEffect(() => {
-    generateWeekDates();
-    loadMealPlan(selectedDate);
+    loadMealPlan(selectedDate.format('YYYY-MM-DD'));
   }, [selectedDate]);
 
-  const generateWeekDates = () => {
-    const today = new Date();
-    const dates = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      dates.push(date.toISOString().split('T')[0]);
-    }
-    setWeekDates(dates);
-  };
+
 
   const loadMealPlan = async (date: string) => {
     try {
@@ -108,10 +100,7 @@ const MealPlanner = () => {
     setDialogOpen(true);
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-  };
+
 
   const renderMealSection = (title: string, mealType: keyof Omit<MealPlan, 'date'>, meals: string[]) => (
     <Card className={styles.mealCard}>
@@ -148,18 +137,17 @@ const MealPlanner = () => {
       
       <Box mb={3}>
         <Typography variant="h6" mb={2}>Select Date</Typography>
-        <Box display="flex" gap={1} flexWrap="wrap">
-          {weekDates.map(date => (
-            <Button
-              key={date}
-              variant={selectedDate === date ? 'contained' : 'outlined'}
-              onClick={() => setSelectedDate(date)}
-              size="small"
-            >
-              {formatDate(date)}
-            </Button>
-          ))}
+        <Box display="flex" justifyContent="center">
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <DateCalendar 
+              value={selectedDate}
+              onChange={(newValue) => newValue && setSelectedDate(newValue)}
+            />
+          </LocalizationProvider>
         </Box>
+        <Typography variant="body1" mt={2} textAlign="center">
+          Selected: {selectedDate.format('dddd, MMMM D, YYYY')}
+        </Typography>
       </Box>
 
       {mealPlan && (
