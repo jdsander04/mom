@@ -63,12 +63,20 @@ def login(request):
     else:
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
+@extend_schema(
+    methods=['POST'],
+    responses={200: {'description': 'Logged out successfully'}}
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout(request):
     request.user.auth_token.delete()
     return Response({'message': 'Logged out successfully'}, status=status.HTTP_200_OK)
 
+@extend_schema(
+    methods=['DELETE'],
+    responses={204: {'description': 'Account deleted successfully'}}
+)
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_account(request):

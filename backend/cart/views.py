@@ -125,6 +125,7 @@ def cart_entry(request, identifier: int):
 
 @extend_schema(
 	methods=['GET'],
+	operation_id='cart_list',
 	parameters=[],
 	responses={200: {'description': 'List carts for the user'}},
 )
@@ -228,6 +229,7 @@ def cart_create_from_list(request, list_id: int):
 
 @extend_schema(
 	methods=['GET'],
+	operation_id='cart_detail',
 	responses={200: {'description': 'Cart details'}},
 )
 @extend_schema(

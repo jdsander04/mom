@@ -80,6 +80,19 @@ def ingredient_suggestions(request):
 
 
 # CRUD endpoints for diets and allergens using small item objects { id, value }
+@extend_schema(
+	methods=['POST'],
+	request={
+		'application/json': {
+			'type': 'object',
+			'properties': {
+				'value': {'type': 'string'}
+			},
+			'required': ['value']
+		}
+	},
+	responses={200: {'description': 'Diet added'}}
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([TokenAuthentication])
@@ -96,6 +109,19 @@ def add_diet(request):
 	return Response({'diets': pref.diets})
 
 
+@extend_schema(
+	methods=['PATCH'],
+	request={
+		'application/json': {
+			'type': 'object',
+			'properties': {
+				'value': {'type': 'string'}
+			},
+			'required': ['value']
+		}
+	},
+	responses={200: {'description': 'Diet updated'}}
+)
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([TokenAuthentication])
@@ -116,6 +142,10 @@ def update_diet(request, item_id):
 	return Response({'error': 'Item not found'}, status=404)
 
 
+@extend_schema(
+	methods=['DELETE'],
+	responses={200: {'description': 'Diet deleted'}}
+)
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([TokenAuthentication])
@@ -136,6 +166,19 @@ def delete_diet(request, item_id):
 
 
 # Allergens CRUD
+@extend_schema(
+	methods=['POST'],
+	request={
+		'application/json': {
+			'type': 'object',
+			'properties': {
+				'value': {'type': 'string'}
+			},
+			'required': ['value']
+		}
+	},
+	responses={200: {'description': 'Allergen added'}}
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([TokenAuthentication])
@@ -151,6 +194,19 @@ def add_allergen(request):
 	return Response({'allergens': pref.allergens})
 
 
+@extend_schema(
+	methods=['PATCH'],
+	request={
+		'application/json': {
+			'type': 'object',
+			'properties': {
+				'value': {'type': 'string'}
+			},
+			'required': ['value']
+		}
+	},
+	responses={200: {'description': 'Allergen updated'}}
+)
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([TokenAuthentication])
@@ -171,6 +227,10 @@ def update_allergen(request, item_id):
 	return Response({'error': 'Item not found'}, status=404)
 
 
+@extend_schema(
+	methods=['DELETE'],
+	responses={200: {'description': 'Allergen deleted'}}
+)
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([TokenAuthentication])

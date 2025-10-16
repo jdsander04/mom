@@ -9,6 +9,7 @@ from .services import recipe_from_url, recipe_from_file
 
 @extend_schema(
     methods=['GET'],
+    operation_id='recipe_list',
     responses={200: {'description': 'List of recipes'}}
 )
 @extend_schema(
@@ -190,6 +191,7 @@ def recipe_list(request):
 
 @extend_schema(
     methods=['GET'],
+    operation_id='recipe_detail',
     responses={
         200: {
             'description': 'Recipe details',

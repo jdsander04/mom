@@ -8,6 +8,7 @@ from .models import ShoppingList, ShoppingListItem, Cart, CartItem
 
 @extend_schema(
 	methods=['GET'],
+	operation_id='shopping_list_list',
 	responses={200: {'description': 'List of shopping lists for the user'}},
 )
 @extend_schema(
@@ -183,6 +184,7 @@ def list_item_detail(request, list_id: int, item_id: int):
 
 @extend_schema(
 	methods=['GET'],
+	operation_id='shopping_list_detail',
 	responses={200: {'description': 'List details with items'}},
 )
 @extend_schema(

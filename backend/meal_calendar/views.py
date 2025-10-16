@@ -9,10 +9,12 @@ from .serializers import MealPlanSerializer
 
 @extend_schema(
     methods=['GET'],
+    operation_id='meal_plan_list',
     responses={200: {'description': 'List of meal plans'}}
 )
 @extend_schema(
     methods=['DELETE'],
+    operation_id='meal_plan_delete_all',
     responses={200: {'description': 'All meal plans deleted successfully'}}
 )
 @api_view(['GET', 'DELETE'])
@@ -29,6 +31,7 @@ def meal_plan_list(request):
 
 @extend_schema(
     methods=['GET'],
+    operation_id='meal_plan_detail',
     responses={200: {'description': 'Meal plan details'}}
 )
 @extend_schema(
@@ -63,6 +66,7 @@ def meal_plan_list(request):
 )
 @extend_schema(
     methods=['DELETE'],
+    operation_id='meal_plan_delete',
     responses={200: {'description': 'Meal plan deleted successfully'}}
 )
 @api_view(['GET', 'POST', 'PATCH', 'DELETE'])
