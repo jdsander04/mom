@@ -11,7 +11,8 @@ import {
   Avatar,
   ButtonBase 
 } from '@mui/material';
-import { PanelLeft, PanelRight } from 'lucide-react';
+import { PanelLeft, PanelRight, LogOut } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 import * as React from 'react';
 
 interface NavItem {
@@ -40,6 +41,7 @@ const COLORS = {
 };
 
 const SideBar = ({ navItems, onToggle, isMinimized }: SideBarProps) => {
+  const { logout, user } = useAuth();
   const drawerStyles = {
     width: isMinimized ? SIDEBAR_WIDTH.collapsed : SIDEBAR_WIDTH.expanded,
     flexShrink: 0,
@@ -134,6 +136,16 @@ const SideBar = ({ navItems, onToggle, isMinimized }: SideBarProps) => {
               </ListItemButton>
             </ListItem>
           ))}
+          <ListItem sx={{ marginBottom: '0.5rem', padding: 0 }}>
+            <ListItemButton onClick={logout} sx={listItemButtonStyles}>
+              <ListItemIcon sx={iconStyles}>
+                <LogOut />
+              </ListItemIcon>
+              {!isMinimized && (
+                <ListItemText primary="Logout" sx={textStyles} />
+              )}
+            </ListItemButton>
+          </ListItem>
         </List>
       </Box>
       <IconButton onClick={() => onToggle(!isMinimized)} sx={toggleButtonStyles}>
