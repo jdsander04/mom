@@ -1,32 +1,165 @@
+import { useState, useEffect } from 'react';
+import { TextField, Button, Dialog, DialogTitle, DialogContent, DialogActions, Typography } from '@mui/material';
 import styles from './RecipeLibrary.module.css';
 import VerticalContainer from '../common/VerticalContainer/VerticalContainer';
 import RecipeAccordion from '../common/RecipeAccordion/RecipeAccordion';
 import RecipeDetails from '../common/RecipeAccordion/RecipeDetails';
+import { useAuth } from '../../contexts/AuthContext';
+
+interface Recipe {
+  id: number;
+  name: string;
+  description: string;
+  ingredients: Array<{ name: string; quantity: number; unit: string }>;
+  steps: Array<{ description: string; order: number }>;
+  nutrients: Array<{ macro: string; mass: number }>;
+}
 
 const RecipeLibrary = () => {
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [newRecipeUrl, setNewRecipeUrl] = useState('');
+  const { token } = useAuth();
+
+  useEffect(() => {
+    fetchRecipes();
+  }, []);
+
+  const fetchRecipes = async () => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    try {
+      const response = await fetch('/api/recipes/', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const detailedRecipes = await Promise.all(
+          data.recipes.map(async (recipe: { id: number }) => {
+            const detailResponse = await fetch(`/api/recipes/${recipe.id}/`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return detailResponse.ok ? await detailResponse.json() : null;
+          })
+        );
+        setRecipes(detailedRecipes.filter(Boolean));
+      }
+    } catch (error) {
+      console.error('Failed to fetch recipes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addRecipeFromUrl = async () => {
+    if (!newRecipeUrl.trim() || !token) return;
+    
+    try {
+      const response = await fetch('/api/recipes/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          recipe_source: 'url',
+          url: newRecipeUrl
+        })
+      });
+      
+      if (response.ok) {
+        const newRecipe = await response.json();
+        setRecipes(prev => [...prev, newRecipe]);
+        setNewRecipeUrl('');
+        setDialogOpen(false);
+      }
+    } catch (error) {
+      console.error('Failed to add recipe:', error);
+    }
+  };
+
+  const getCalories = (nutrients: Recipe['nutrients']) => {
+    const calorieNutrient = nutrients.find(n => n.macro === 'calories');
+    return calorieNutrient ? Math.round(calorieNutrient.mass) : 0;
+  };
+
+  const formatIngredients = (ingredients: Recipe['ingredients']) => 
+    ingredients.map(ing => `${ing.quantity} ${ing.unit} ${ing.name}`.trim());
+
+  const formatInstructions = (steps: Recipe['steps']) => 
+    steps.sort((a, b) => a.order - b.order).map(step => step.description);
+
+  if (loading) return <div>Loading recipes...</div>;
+  if (!token) return <div>Please log in to view recipes.</div>;
+
   return (
     <div className={styles.container}>
-      <h1 className={styles.pageTitle}>
-        Recipe Library
-      </h1>
+      <h1 className={styles.pageTitle}>Recipe Library</h1>
+      
+      <Button 
+        variant="contained" 
+        onClick={() => setDialogOpen(true)}
+        style={{ marginBottom: '20px' }}
+      >
+        Add Recipe from URL
+      </Button>
+
       <VerticalContainer>
-        <RecipeAccordion title="Pollo Guisado" calories={450} serves={4} added={true} quantity={1} ingredients={['1 lb chicken', '2 cups rice']} instructions={['Cook chicken', 'Prepare rice']} imageUrl="https://example.com/pollo.jpg">
-          <RecipeDetails
-            imageUrl="https://example.com/pollo.jpg"
-            ingredients={['1 lb chicken', '2 cups rice']}
-            instructions={['Cook chicken', 'Prepare rice']}
-            nutrition={{ calories: 331 }}
-          />
-        </RecipeAccordion>
-        <RecipeAccordion title="Pineapple Upside-Down Cake" calories={300} serves={8} added={false} quantity={1} ingredients={['1 can pineapple', '1 box cake mix']} instructions={['Prepare cake mix', 'Add pineapple on top']} imageUrl="https://www.recipetineats.com/tachyon/2021/03/Pineapple-Upside-Down-Cake-2_8.jpg?resize=900%2C1260&zoom=1">
-          <RecipeDetails
-            imageUrl="https://www.recipetineats.com/tachyon/2021/03/Pineapple-Upside-Down-Cake-2_8.jpg?resize=900%2C1260&zoom=1"
-            ingredients={['1 can pineapple', '1 box cake mix']}
-            instructions={['Prepare cake mix', 'Add pineapple on top']}
-            nutrition={{ calories: 361, fat: '13g', cholesterol: '88mg', sodium: '193mg', carbs: '58g', protein: '4g' }}
-          />
-        </RecipeAccordion>
+        {recipes.map(recipe => {
+          const ingredients = formatIngredients(recipe.ingredients);
+          const instructions = formatInstructions(recipe.steps);
+          const calories = getCalories(recipe.nutrients);
+          
+          return (
+            <RecipeAccordion 
+              key={recipe.id}
+              title={recipe.name}
+              calories={calories}
+              serves={1}
+              added={true}
+              quantity={1}
+              ingredients={ingredients}
+              instructions={instructions}
+              imageUrl=""
+            >
+              <RecipeDetails
+                imageUrl=""
+                ingredients={ingredients}
+                instructions={instructions}
+                nutrition={{ calories }}
+              />
+            </RecipeAccordion>
+          );
+        })}
+        {recipes.length === 0 && (
+          <Typography variant="body1" color="text.secondary">
+            No recipes found. Add some recipes to get started!
+          </Typography>
+        )}
       </VerticalContainer>
+
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add Recipe from URL</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Recipe URL"
+            fullWidth
+            variant="outlined"
+            value={newRecipeUrl}
+            onChange={(e) => setNewRecipeUrl(e.target.value)}
+            placeholder="https://example.com/recipe"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <Button onClick={addRecipeFromUrl} variant="contained">Add Recipe</Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

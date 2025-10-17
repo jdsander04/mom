@@ -9,5 +9,13 @@ export default defineConfig({
     alias: {
       'src': path.resolve(__dirname, './src')
     }
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://django-backend:8000',
+        changeOrigin: true
+      }
+    }
   }
 })
