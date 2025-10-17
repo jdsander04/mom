@@ -35,3 +35,11 @@ class CartItem(models.Model):
 	checked = models.BooleanField(default=False)
 	source_list_item = models.ForeignKey(ShoppingListItem, on_delete=models.SET_NULL, null=True, blank=True)
 
+
+class CartRecipe(models.Model):
+	"""Tracks recipes added to cart with their quantities."""
+	cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name="recipes")
+	recipe = models.ForeignKey('recipes.Recipe', on_delete=models.CASCADE)
+	quantity = models.DecimalField(max_digits=5, decimal_places=2, default=1.0)
+	created_at = models.DateTimeField(auto_now_add=True)
+

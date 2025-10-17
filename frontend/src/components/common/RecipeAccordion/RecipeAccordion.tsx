@@ -12,9 +12,11 @@ interface RecipeAccordionProps {
   instructions: string[]
   imageUrl?: string
   children: React.ReactNode
+  onAddToCart?: () => void
+  onQuantityChange?: (quantity: number) => void
 }
 
-const RecipeAccordion = ({ title, calories, serves, added, quantity, ingredients, instructions, imageUrl, children}: RecipeAccordionProps) => {
+const RecipeAccordion = ({ title, calories, serves, added, quantity, ingredients, instructions, imageUrl, children, onAddToCart, onQuantityChange}: RecipeAccordionProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const [isAdded, setIsAdded] = useState(added)
   const [currentQuantity, setCurrentQuantity] = useState(quantity)
@@ -22,11 +24,18 @@ const RecipeAccordion = ({ title, calories, serves, added, quantity, ingredients
   const handleAddClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     setIsAdded(!isAdded)
+    if (!isAdded && onAddToCart) {
+      onAddToCart()
+    }
   }
 
   const handleQuantityChange = (e: React.MouseEvent, delta: number) => {
     e.stopPropagation()
-    setCurrentQuantity(prev => Math.max(0.5, prev + delta))
+    const newQuantity = Math.max(0.5, currentQuantity + delta)
+    setCurrentQuantity(newQuantity)
+    if (onQuantityChange) {
+      onQuantityChange(newQuantity)
+    }
   }
 
   return (

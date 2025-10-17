@@ -4,7 +4,8 @@ from rest_framework.response import Response
 from core.authentication import BearerTokenAuthentication
 from drf_spectacular.utils import extend_schema
 
-from shoppinglist.models import ShoppingList, Cart, CartItem
+from shoppinglist.models import ShoppingList, Cart, CartItem, CartRecipe
+from recipes.models import Recipe
 
 
 @extend_schema(
@@ -580,4 +581,159 @@ def cart_items_check(request, cart_id: int):
 			ci.save(update_fields=['checked'])
 			updated += 1
 	return Response({'updated': updated})
+
+
+@extend_schema(
+	methods=['GET'],
+	responses={200: {'description': 'List recipes in cart'}},
+)
+@extend_schema(
+	methods=['POST'],
+	request={
+		'application/json': {
+			'type': 'object',
+			'properties': {
+				'recipe_id': {'type': 'integer'},
+				'quantity': {'type': 'number', 'default': 1.0},
+			},
+			'required': ['recipe_id']
+		}
+	},
+	responses={201: {'description': 'Recipe added to cart'}},
+)
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([BearerTokenAuthentication])
+def cart_recipes(request, cart_id: int):
+	try:
+		cart = Cart.objects.get(id=cart_id, user=request.user)
+	except Cart.DoesNotExist:
+		return Response({'error': 'Cart not found'}, status=404)
+
+	if request.method == 'GET':
+		try:
+			recipes = [
+				{
+					'recipe_id': cr.recipe.id,
+					'recipe_name': cr.recipe.name,
+					'quantity': float(cr.quantity),
+				}
+				for cr in cart.recipes.all()
+			]
+		except:
+			recipes = []
+		return Response({'recipes': recipes})
+
+	data = request.data or {}
+	recipe_id = data.get('recipe_id')
+	quantity = data.get('quantity', 1.0)
+	
+	try:
+		recipe = Recipe.objects.get(id=recipe_id, user=request.user)
+	except Recipe.DoesNotExist:
+		return Response({'error': 'Recipe not found'}, status=404)
+
+	# Check if recipe already in cart
+	cart_recipe, created = CartRecipe.objects.get_or_create(
+		cart=cart,
+		recipe=recipe,
+		defaults={'quantity': quantity}
+	)
+	
+	if not created:
+		cart_recipe.quantity = quantity
+		cart_recipe.save()
+
+	# Add/update cart items for recipe ingredients
+	for ingredient in recipe.ingredients.all():
+		item_name = f"{recipe.name} - {ingredient.name}"
+		scaled_quantity = float(ingredient.quantity) * float(quantity)
+		
+		# Find existing item or create new one
+		cart_item, item_created = CartItem.objects.get_or_create(
+			cart=cart,
+			name=item_name,
+			defaults={
+				'quantity': scaled_quantity,
+				'unit': ingredient.unit,
+				'checked': False
+			}
+		)
+		
+		if not item_created:
+			cart_item.quantity = scaled_quantity
+			cart_item.save()
+
+	return Response({
+		'recipe_id': recipe.id,
+		'recipe_name': recipe.name,
+		'quantity': float(cart_recipe.quantity),
+	}, status=201)
+
+
+@extend_schema(
+	methods=['PATCH'],
+	request={
+		'application/json': {
+			'type': 'object',
+			'properties': {
+				'quantity': {'type': 'number'},
+			},
+			'required': ['quantity']
+		}
+	},
+	responses={200: {'description': 'Recipe quantity updated'}},
+)
+@extend_schema(
+	methods=['DELETE'],
+	responses={204: {'description': 'Recipe removed from cart'}},
+)
+@api_view(['PATCH', 'DELETE'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([BearerTokenAuthentication])
+def cart_recipe_detail(request, cart_id: int, recipe_id: int):
+	try:
+		cart = Cart.objects.get(id=cart_id, user=request.user)
+	except Cart.DoesNotExist:
+		return Response({'error': 'Cart not found'}, status=404)
+	
+	try:
+		cart_recipe = CartRecipe.objects.get(cart=cart, recipe_id=recipe_id)
+	except CartRecipe.DoesNotExist:
+		return Response({'error': 'Recipe not in cart'}, status=404)
+
+	if request.method == 'DELETE':
+		# Remove recipe items from cart
+		recipe_name = cart_recipe.recipe.name
+		CartItem.objects.filter(cart=cart, name__startswith=f"{recipe_name} - ").delete()
+		cart_recipe.delete()
+		return Response(status=204)
+
+	# PATCH - update quantity
+	data = request.data or {}
+	new_quantity = data.get('quantity')
+	if new_quantity is None:
+		return Response({'error': 'quantity is required'}, status=400)
+
+	cart_recipe.quantity = new_quantity
+	cart_recipe.save()
+
+	# Update cart items quantities
+	recipe_name = cart_recipe.recipe.name
+	for ingredient in cart_recipe.recipe.ingredients.all():
+		item_name = f"{recipe_name} - {ingredient.name}"
+		scaled_quantity = float(ingredient.quantity) * float(new_quantity)
+		
+		try:
+			cart_item = CartItem.objects.get(cart=cart, name=item_name)
+			cart_item.quantity = scaled_quantity
+			cart_item.save()
+		except CartItem.DoesNotExist:
+			pass
+
+	return Response({
+		'recipe_id': cart_recipe.recipe.id,
+		'recipe_name': cart_recipe.recipe.name,
+		'quantity': float(cart_recipe.quantity),
+	})
 

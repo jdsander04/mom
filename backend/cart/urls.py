@@ -15,4 +15,8 @@ urlpatterns = [
 
     # Bulk check/uncheck (kept as convenience)
     path('carts/<int:cart_id>/items/check/', views.cart_items_check, name='cart_items_check'),  # POST
+    
+    # Recipe management
+    path('carts/<int:cart_id>/recipes/', views.cart_recipes, name='cart_recipes'),  # GET, POST
+    path('carts/<int:cart_id>/recipes/<int:recipe_id>/', views.cart_recipe_detail, name='cart_recipe_detail'),  # PATCH, DELETE
 ]
