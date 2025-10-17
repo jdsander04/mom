@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.authentication import TokenAuthentication
+from core.authentication import BearerTokenAuthentication
 from drf_spectacular.utils import extend_schema
 
 from shoppinglist.models import ShoppingList, Cart, CartItem
@@ -35,7 +35,7 @@ from shoppinglist.models import ShoppingList, Cart, CartItem
 )
 @api_view(['POST', 'GET', 'DELETE', 'PATCH'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def cart_entry(request, identifier: int):
 	"""
 	Unified cart endpoint compatible with legacy route semantics:
@@ -144,7 +144,7 @@ def cart_entry(request, identifier: int):
 )
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def cart_list(request):
 	if request.method == 'GET':
 		status_filter = request.query_params.get('status')
@@ -202,7 +202,7 @@ def cart_list(request):
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def cart_create_from_list(request, list_id: int):
 	try:
 		sl = ShoppingList.objects.get(id=list_id, user=request.user)
@@ -250,7 +250,7 @@ def cart_create_from_list(request, list_id: int):
 )
 @api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def cart_detail(request, cart_id: int):
 	try:
 		cart = Cart.objects.get(id=cart_id, user=request.user)
@@ -329,7 +329,7 @@ def cart_detail(request, cart_id: int):
 )
 @api_view(['POST', 'PATCH'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def cart_items_collection(request, cart_id: int):
 	try:
 		cart = Cart.objects.get(id=cart_id, user=request.user)
@@ -439,7 +439,7 @@ def cart_items_collection(request, cart_id: int):
 )
 @api_view(['GET', 'POST', 'PATCH'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def cart_items_collection(request, cart_id: int):
 	try:
 		cart = Cart.objects.get(id=cart_id, user=request.user)
@@ -507,7 +507,7 @@ def cart_items_collection(request, cart_id: int):
 )
 @api_view(['PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def cart_item_update_delete(request, cart_id: int, item_id: int):
 	try:
 		cart = Cart.objects.get(id=cart_id, user=request.user)
@@ -560,7 +560,7 @@ def cart_item_update_delete(request, cart_id: int, item_id: int):
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def cart_items_check(request, cart_id: int):
 	try:
 		cart = Cart.objects.get(id=cart_id, user=request.user)

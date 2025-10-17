@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.authentication import TokenAuthentication
+from core.authentication import BearerTokenAuthentication
 from drf_spectacular.utils import extend_schema
 from .models import ShoppingList, ShoppingListItem, Cart, CartItem
 
@@ -37,7 +37,7 @@ from .models import ShoppingList, ShoppingListItem, Cart, CartItem
 )
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def list_generate(request):
 	# GET -> return all lists for the user
 	if request.method == 'GET':
@@ -89,7 +89,7 @@ def list_generate(request):
 )
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def list_items(request, list_id: int):
 	try:
 		sl = ShoppingList.objects.get(id=list_id, user=request.user)
@@ -145,7 +145,7 @@ def list_items(request, list_id: int):
 )
 @api_view(['DELETE', 'PATCH'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def list_item_detail(request, list_id: int, item_id: int):
 	try:
 		sl = ShoppingList.objects.get(id=list_id, user=request.user)
@@ -205,7 +205,7 @@ def list_item_detail(request, list_id: int, item_id: int):
 )
 @api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def list_detail(request, list_id: int):
 	try:
 		sl = ShoppingList.objects.get(id=list_id, user=request.user)
@@ -272,7 +272,7 @@ def list_detail(request, list_id: int):
 )
 @api_view(['POST', 'GET', 'DELETE', 'PATCH'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def cart_entry(request, identifier: int):
 	"""
 	Unified cart endpoint to satisfy routes:

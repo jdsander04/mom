@@ -1,6 +1,6 @@
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.authentication import TokenAuthentication
+from core.authentication import BearerTokenAuthentication
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
 from datetime import datetime
@@ -19,7 +19,7 @@ from .serializers import MealPlanSerializer
 )
 @api_view(['GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([BearerTokenAuthentication])
 def meal_plan_list(request):
     if request.method == 'GET':
         meal_plans = MealPlan.objects.filter(user=request.user)
@@ -71,12 +71,8 @@ def meal_plan_list(request):
 )
 @api_view(['GET', 'POST', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
-def meal_plan_detail(request, userid, date):
-    # Validate that the userid matches the authenticated user
-    if request.user.id != userid:
-        return Response({'error': 'Unauthorized access'}, status=403)
-    
+@authentication_classes([BearerTokenAuthentication])
+def meal_plan_detail(request, date):
     if request.method == 'GET':
         try:
             meal_plan = MealPlan.objects.get(user=request.user, date=date)
