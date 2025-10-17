@@ -10,6 +10,7 @@ interface Recipe {
   id: number;
   name: string;
   description: string;
+  image_url: string;
   ingredients: Array<{ name: string; quantity: number; unit: string }>;
   steps: Array<{ description: string; order: number }>;
   nutrients: Array<{ macro: string; mass: number }>;
@@ -123,10 +124,10 @@ const RecipeLibrary = () => {
               quantity={1}
               ingredients={ingredients}
               instructions={instructions}
-              imageUrl=""
+              imageUrl={recipe.image_url || ''}
             >
               <RecipeDetails
-                imageUrl=""
+                imageUrl={recipe.image_url || ''}
                 ingredients={ingredients}
                 instructions={instructions}
                 nutrition={{ calories }}
