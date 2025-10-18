@@ -22,7 +22,7 @@ const RecipeLibrary = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newRecipeUrl, setNewRecipeUrl] = useState('');
   const [cartId, setCartId] = useState<number | null>(null);
-  const [cartRecipes, setCartRecipes] = useState<{[key: number]: number}>({});
+
   const { token } = useAuth();
 
   useEffect(() => {
@@ -30,11 +30,7 @@ const RecipeLibrary = () => {
     getOrCreateCart();
   }, []);
 
-  useEffect(() => {
-    if (cartId) {
-      fetchCartRecipes();
-    }
-  }, [cartId]);
+
 
   const getOrCreateCart = async () => {
     try {
@@ -64,25 +60,7 @@ const RecipeLibrary = () => {
     }
   };
 
-  const fetchCartRecipes = async () => {
-    if (!cartId) return;
-    
-    try {
-      const response = await fetch(`/api/carts/${cartId}/recipes/`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const cartRecipeMap: {[key: number]: number} = {};
-        data.recipes.forEach((recipe: any) => {
-          cartRecipeMap[recipe.recipe_id] = recipe.quantity;
-        });
-        setCartRecipes(cartRecipeMap);
-      }
-    } catch (error) {
-      console.error('Failed to fetch cart recipes:', error);
-    }
-  };
+
 
   const fetchRecipes = async () => {
     if (!token) {
@@ -139,44 +117,7 @@ const RecipeLibrary = () => {
     }
   };
 
-  const addRecipeToCart = async (recipeId: number, quantity: number = 1) => {
-    if (!cartId) return;
-    
-    try {
-      await fetch(`/api/carts/${cartId}/recipes/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          recipe_id: recipeId,
-          quantity: quantity
-        })
-      });
-      setCartRecipes(prev => ({ ...prev, [recipeId]: quantity }));
-    } catch (error) {
-      console.error('Failed to add recipe to cart:', error);
-    }
-  };
 
-  const updateRecipeQuantity = async (recipeId: number, quantity: number) => {
-    if (!cartId) return;
-    
-    try {
-      await fetch(`/api/carts/${cartId}/recipes/${recipeId}/`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ quantity })
-      });
-      setCartRecipes(prev => ({ ...prev, [recipeId]: quantity }));
-    } catch (error) {
-      console.error('Failed to update recipe quantity:', error);
-    }
-  };
 
   const getCalories = (nutrients: Recipe['nutrients']) => {
     const calorieNutrient = nutrients.find(n => n.macro === 'calories');
@@ -209,22 +150,15 @@ const RecipeLibrary = () => {
           const ingredients = formatIngredients(recipe.ingredients);
           const instructions = formatInstructions(recipe.steps);
           const calories = getCalories(recipe.nutrients);
-          const isInCart = recipe.id in cartRecipes;
-          const cartQuantity = cartRecipes[recipe.id] || 1;
           
           return (
             <RecipeAccordion 
               key={recipe.id}
+              recipeId={recipe.id}
               title={recipe.name}
               calories={calories}
               serves={1}
-              added={isInCart}
-              quantity={cartQuantity}
-              onAddToCart={() => addRecipeToCart(recipe.id)}
-              onQuantityChange={(qty) => updateRecipeQuantity(recipe.id, qty)}
-              ingredients={ingredients}
-              instructions={instructions}
-              imageUrl={recipe.image_url || ''}
+              cartId={cartId || undefined}
             >
               <RecipeDetails
                 imageUrl={recipe.image_url || ''}
