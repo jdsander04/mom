@@ -11,9 +11,9 @@ class Recipe(models.Model):
 
 class Ingredient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='ingredients')
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=500)
     quantity = models.DecimalField(max_digits=10, decimal_places=3)
-    unit = models.CharField(max_length=255)
+    unit = models.CharField(max_length=100)
 
 class Step(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='steps')
@@ -22,5 +22,5 @@ class Step(models.Model):
 
 class Nutrient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='nutrients')
-    macro = models.CharField(max_length=255)
+    macro = models.CharField(max_length=100)
     mass = models.DecimalField(max_digits=10, decimal_places=3)
