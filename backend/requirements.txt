@@ -7,7 +7,7 @@ charset-normalizer==3.4.3
 Django==5.2.6
 djangorestframework==3.16.1
 drf-spectacular==0.28.0
-easyllm==0.6.2
+openai==1.54.5
 extruct==0.18.0
 filelock==3.20.0
 fsspec==2025.9.0
