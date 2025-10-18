@@ -48,8 +48,10 @@ INSTALLED_APPS = [
 
     'meal_plan',
     'diet',
+    'cart',
     'meal_calendar',
     'recipes',
+    'shoppinglist',
     'preferences',
 ]
 

@@ -30,9 +30,10 @@ urlpatterns = [
     path('api/auth/account/', views.delete_account, name='delete_account'),
 
     # Standard path
+    path('api/', include('cart.urls')),
     path('api/', include('recipes.urls')),
+
     path('api/', include('meal_calendar.urls')),
-    path('api/', include('ingredient.urls')),
     path('api/', include('preferences.urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
