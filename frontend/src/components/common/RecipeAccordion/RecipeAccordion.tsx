@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { ExpandMore, CheckCircle, AddCircleOutline } from '@mui/icons-material'
+import { ExpandMore, CheckCircle, AddCircleOutline, Delete } from '@mui/icons-material'
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material'
 import { useAuth } from '../../../contexts/AuthContext'
 import styles from './RecipeAccordion.module.css'
 
@@ -10,12 +11,15 @@ interface RecipeAccordionProps {
   serves: number
   children: React.ReactNode
   cartId?: number
+  sourceUrl?: string
+  onRecipeDeleted?: () => void
 }
 
-const RecipeAccordion = ({ recipeId, title, calories, serves, children, cartId }: RecipeAccordionProps) => {
+const RecipeAccordion = ({ recipeId, title, calories, serves, children, cartId, sourceUrl, onRecipeDeleted }: RecipeAccordionProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const [isAdded, setIsAdded] = useState(false)
   const [currentQuantity, setCurrentQuantity] = useState(1)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const { token } = useAuth()
 
   useEffect(() => {
@@ -128,6 +132,28 @@ const RecipeAccordion = ({ recipeId, title, calories, serves, children, cartId }
     }
   }
 
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!token) return
+
+    try {
+      await fetch(`/api/recipes/${recipeId}/`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      setDeleteDialogOpen(false)
+      if (onRecipeDeleted) {
+        onRecipeDeleted()
+      }
+    } catch (error) {
+      console.error('Failed to delete recipe:', error)
+    }
+  }
+
   return (
     <div className={styles.accordion}>
       <button 
@@ -135,7 +161,13 @@ const RecipeAccordion = ({ recipeId, title, calories, serves, children, cartId }
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className={styles.headerContent}>
-          <span className={styles.title}>{title}</span>
+          {sourceUrl ? (
+            <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className={`${styles.title} ${styles.titleLink}`}>
+              {title}
+            </a>
+          ) : (
+            <span className={styles.title}>{title}</span>
+          )}
           <span className={styles.calories}>{calories} cal</span>
           <span className={styles.serves}>Serves {serves}</span>
           <div className={styles.quantitySelector}>
@@ -159,6 +191,12 @@ const RecipeAccordion = ({ recipeId, title, calories, serves, children, cartId }
           >
             {isAdded ? <CheckCircle /> : <AddCircleOutline />}
           </button>
+          <button 
+            className={styles.deleteButton}
+            onClick={handleDeleteClick}
+          >
+            <Delete />
+          </button>
         </div>
         <ExpandMore className={`${styles.arrow} ${isOpen ? styles.open : ''}`} />
       </button>
@@ -167,6 +205,17 @@ const RecipeAccordion = ({ recipeId, title, calories, serves, children, cartId }
           {children}
         </div>
       )}
+      
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Delete Recipe</DialogTitle>
+        <DialogContent>
+          Are you sure you want to delete "{title}"? This action cannot be undone.
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleDeleteConfirm} color="error">Delete</Button>
+        </DialogActions>
+      </Dialog>
     </div>
   )
 }

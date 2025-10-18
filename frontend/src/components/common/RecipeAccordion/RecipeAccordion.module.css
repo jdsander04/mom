@@ -53,6 +53,13 @@
   flex: 1;
   /* clamp(min, preferred, max) — adapts to viewport */
   font-size: clamp(0.8rem, .9rem, 1.15rem);
+  color: inherit;
+  text-decoration: none;
+}
+
+.titleLink:hover {
+  color: #1976d2;
+  text-decoration: underline;
 }
 
 .calories {
@@ -78,7 +85,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: .75rem;
+  margin-right: .25rem;
   padding: 0;
 }
 
@@ -94,6 +101,28 @@
 
 .addButton:hover svg {
   color: #4CAF50;
+}
+
+.deleteButton {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.deleteButton svg {
+  width: 20px;
+  height: 20px;
+  color: #666;
+}
+
+.deleteButton:hover svg {
+  color: #f44336;
 }
 
 .quantitySelector {

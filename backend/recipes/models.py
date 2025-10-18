@@ -7,6 +7,7 @@ class Recipe(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
     image_url = models.URLField(blank=True, null=True)
+    source_url = models.URLField(blank=True, null=True)
 
 class Ingredient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='ingredients')

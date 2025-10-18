@@ -11,6 +11,7 @@ interface Recipe {
   name: string;
   description: string;
   image_url: string;
+  source_url?: string;
   ingredients: Array<{ name: string; quantity: number; unit: string }>;
   steps: Array<{ description: string; order: number }>;
   nutrients: Array<{ macro: string; mass: number }>;
@@ -159,6 +160,8 @@ const RecipeLibrary = () => {
               calories={calories}
               serves={1}
               cartId={cartId || undefined}
+              sourceUrl={recipe.source_url}
+              onRecipeDeleted={fetchRecipes}
             >
               <RecipeDetails
                 imageUrl={recipe.image_url || ''}

@@ -98,7 +98,8 @@ def recipe_list(request):
                 user=request.user,
                 name=recipe_data.get('title', 'Untitled Recipe'),
                 description=recipe_data.get('description', ''),
-                image_url=recipe_data.get('image', '')
+                image_url=recipe_data.get('image', ''),
+                source_url=url
             )
             
             # Create ingredients - handle both string and dict formats
@@ -215,6 +216,7 @@ def recipe_list(request):
             'name': recipe.name,
             'description': recipe.description,
             'image_url': recipe.image_url,
+            'source_url': recipe.source_url,
             'ingredients': [
                 {'name': i.name, 'quantity': float(i.quantity), 'unit': i.unit}
                 for i in recipe.ingredients.all()
@@ -306,6 +308,7 @@ def recipe_detail(request, recipe_id):
             'name': recipe.name,
             'description': recipe.description,
             'image_url': recipe.image_url,
+            'source_url': recipe.source_url,
             'ingredients': [
                 {'name': i.name, 'quantity': float(i.quantity), 'unit': i.unit}
                 for i in recipe.ingredients.all()
