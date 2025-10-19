@@ -20,7 +20,7 @@ from .serializers import MealPlanSerializer
 @api_view(['GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([BearerTokenAuthentication])
-def meal_plan_list(request):
+def meal_plan_list(request, userid):
     if request.method == 'GET':
         meal_plans = MealPlan.objects.filter(user=request.user)
         serializer = MealPlanSerializer(meal_plans, many=True)
@@ -72,7 +72,7 @@ def meal_plan_list(request):
 @api_view(['GET', 'POST', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([BearerTokenAuthentication])
-def meal_plan_detail(request, date):
+def meal_plan_detail(request, userid, date):
     if request.method == 'GET':
         try:
             meal_plan = MealPlan.objects.get(user=request.user, date=date)
