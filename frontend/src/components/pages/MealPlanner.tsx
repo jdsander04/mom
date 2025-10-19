@@ -19,6 +19,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
 import dayjs, { Dayjs } from 'dayjs';
+import { useAuth } from '../../contexts/AuthContext';
 import styles from './MealPlanner.module.css';
 interface MealPlan {
   date: string;
@@ -29,6 +30,7 @@ interface MealPlan {
 }
 
 const MealPlanner = () => {
+  const { token, user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -37,34 +39,62 @@ const MealPlanner = () => {
 
   useEffect(() => {
     loadMealPlan(selectedDate.format('YYYY-MM-DD'));
-  }, [selectedDate]);
+  }, [selectedDate, token, user]);
 
 
 
   const loadMealPlan = async (date: string) => {
+    if (!token) {
+      setMealPlan({ date, breakfast: [], lunch: [], dinner: [], snacks: [] });
+      return;
+    }
+    
     try {
-      const response = await fetch(`/api/calendar/1/${date}/`);
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/calendar/1/${date}/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
       if (response.ok) {
         const data = await response.json();
         setMealPlan(data);
+      } else if (response.status === 404) {
+        setMealPlan({ date, breakfast: [], lunch: [], dinner: [], snacks: [] });
       } else {
+        console.error('Failed to load meal plan:', response.status);
         setMealPlan({ date, breakfast: [], lunch: [], dinner: [], snacks: [] });
       }
     } catch (error) {
+      console.error('Error loading meal plan:', error);
       setMealPlan({ date, breakfast: [], lunch: [], dinner: [], snacks: [] });
     }
   };
 
   const saveMealPlan = async (updatedPlan: MealPlan) => {
+    if (!token) return;
+    
     try {
-      await fetch(`/api/calendar/1/${updatedPlan.date}/`, {
+      const { date, ...mealData } = updatedPlan;
+      
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/calendar/1/${date}/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedPlan)
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(mealData)
       });
-      setMealPlan(updatedPlan);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setMealPlan(data);
+      } else {
+        console.error('Failed to save meal plan:', response.status);
+      }
     } catch (error) {
-      console.error('Failed to save meal plan:', error);
+      console.error('Error saving meal plan:', error);
     }
   };
 
@@ -75,6 +105,8 @@ const MealPlanner = () => {
       ...mealPlan,
       [currentMealType]: [...mealPlan[currentMealType], newMeal.trim()]
     };
+    
+
     
     saveMealPlan(updatedPlan);
     setNewMeal('');
@@ -152,16 +184,16 @@ const MealPlanner = () => {
 
       {mealPlan && (
         <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             {renderMealSection('Breakfast', 'breakfast', mealPlan.breakfast)}
           </Grid>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             {renderMealSection('Lunch', 'lunch', mealPlan.lunch)}
           </Grid>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             {renderMealSection('Dinner', 'dinner', mealPlan.dinner)}
           </Grid>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             {renderMealSection('Snacks', 'snacks', mealPlan.snacks)}
           </Grid>
         </Grid>
