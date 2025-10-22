@@ -6,8 +6,8 @@ class Recipe(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     description = models.TextField()
-    image_url = models.URLField(blank=True, null=True)
-    source_url = models.URLField(blank=True, null=True)
+    image_url = models.TextField(blank=True, null=True)
+    source_url = models.TextField(blank=True, null=True)
 
 class Ingredient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='ingredients')
