@@ -402,5 +402,5 @@ def recipe_detail(request, recipe_id):
     elif request.method == 'DELETE':
         # delete recipe based on recipe id
         recipe.delete()
-        return Response({'message': f'Recipe {recipe_id} deleted'}, status=204)
+        return Response(status=204)
 
