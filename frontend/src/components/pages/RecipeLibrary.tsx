@@ -22,6 +22,7 @@ const RecipeLibrary = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newRecipeUrl, setNewRecipeUrl] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [cartId, setCartId] = useState<number | null>(null);
 
   const { token } = useAuth();
@@ -92,8 +93,9 @@ const RecipeLibrary = () => {
   };
 
   const addRecipeFromUrl = async () => {
-    if (!newRecipeUrl.trim() || !token) return;
+    if (!newRecipeUrl.trim() || !token || submitting) return;
     
+    setSubmitting(true);
     try {
       const response = await fetch('/api/recipes/', {
         method: 'POST',
@@ -115,6 +117,8 @@ const RecipeLibrary = () => {
       }
     } catch (error) {
       console.error('Failed to add recipe:', error);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -194,8 +198,10 @@ const RecipeLibrary = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button onClick={addRecipeFromUrl} variant="contained">Add Recipe</Button>
+          <Button onClick={() => setDialogOpen(false)} disabled={submitting}>Cancel</Button>
+          <Button onClick={addRecipeFromUrl} variant="contained" disabled={submitting}>
+            {submitting ? 'Processing...' : 'Add Recipe'}
+          </Button>
         </DialogActions>
       </Dialog>
     </div>
