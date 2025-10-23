@@ -1,56 +1,143 @@
 from recipe_scrapers import scrape_me
 import requests
 from bs4 import BeautifulSoup
-from jinja2 import Template
-import easyllm
 import json
 import os
 from dotenv import load_dotenv
+from urllib.parse import urlparse
+import html
+from openai import OpenAI
 
 load_dotenv()
 
-def _get_recipe_from_llm(text: str) -> dict:
-    """Uses an LLM to extract structured recipe data from raw text."""
-    template = Template("""
-# System
-You are a recipe extraction assistant. Extract recipe information from the provided text and respond in JSON format:
-{
-  "title": string,
-  "description": string,
-  "ingredients": [{"name": string, "quantity": number, "unit": string}],
-  "instructions": [string]
-}
+def _get_openai_client():
+    """Get OpenAI client with lazy initialization."""
+    api_key = os.getenv('OPENAI_API_KEY')
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY not found in environment")
+    return OpenAI(api_key=api_key)
 
-# User
-Extract recipe data from this text:
-{{ text }}
-    """)
+def _get_recipe_from_llm(text: str) -> dict:
+    """Uses OpenAI to extract structured recipe data from raw text."""
+    print(f"LLM: Starting extraction with text length: {len(text) if text else 0}")
     
-    prompt = template.render(text=text)
-    response = easyllm.ChatCompletion.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": prompt}],
-        api_key=os.getenv('openai_api_key')
-    )
+    if not text or len(text.strip()) < 10:
+        print("LLM: Text too short, returning empty result")
+        return {"title": "", "description": "", "ingredients": [], "instructions_list": []}
+    
+    # Sanitize and limit input text
+    sanitized_text = html.escape(text[:5000])
+    print(f"LLM: Sanitized text length: {len(sanitized_text)}")
     
     try:
-        return json.loads(response) if isinstance(response, str) else response
-    except:
-        return {"title": "", "description": "", "ingredients": [], "instructions": []}
+        print("LLM: Getting OpenAI client...")
+        client = _get_openai_client()
+        
+        print("LLM: Making API call to OpenAI...")
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Extract recipe information and respond with valid JSON only."},
+                {"role": "user", "content": f"Extract recipe data from this text and return JSON with title, description, ingredients array (with name, quantity, unit), and instructions_list array: {sanitized_text}"}
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=1000,
+            temperature=0
+        )
+        
+        print("LLM: Received response from OpenAI")
+        content = response.choices[0].message.content
+        print(f"LLM: Raw response content: {content}")
+        
+        result = json.loads(content)
+        print(f"LLM: Parsed JSON result: {result}")
+        
+        # Ensure required fields exist
+        result.setdefault('title', '')
+        result.setdefault('description', '')
+        result.setdefault('ingredients', [])
+        result.setdefault('instructions_list', [])
+        
+        print(f"LLM: Final result with defaults: {result}")
+        return result
+    except Exception as e:
+        print(f"LLM extraction failed: {e}")
+        import traceback
+        print(f"LLM traceback: {traceback.format_exc()}")
+        return {"title": "", "description": "", "ingredients": [], "instructions_list": []}
 
 def _get_text_from_website(url):
     """Fetches the raw text content from the given URL. readable by LLM."""
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, 'html.parser')
-    return soup.get_text(strip=True)
+    try:
+        # Validate URL
+        parsed = urlparse(url)
+        if not parsed.scheme in ['http', 'https'] or not parsed.netloc:
+            raise ValueError("Invalid URL")
+        
+        response = requests.get(
+            url, 
+            timeout=10,
+            headers={'User-Agent': 'Mozilla/5.0 (compatible; RecipeBot/1.0)'},
+            allow_redirects=True
+        )
+        response.raise_for_status()
+        
+        soup = BeautifulSoup(response.content, 'html.parser')
+        # Remove script and style elements
+        for script in soup(["script", "style"]):
+            script.decompose()
+        
+        text = soup.get_text(strip=True)
+        return text[:10000]  # Limit text length
+    except Exception as e:
+        print(f"Failed to fetch website content: {e}")
+        return ""
 
 def recipe_from_url(url):
+    """Extract recipe from URL using scraper first, then AI fallback."""
+    if not url:
+        print("RECIPE_EXTRACT: No URL provided")
+        return None
+    
+    print(f"RECIPE_EXTRACT: Attempting to extract recipe from: {url}")
+    
     try:
+        # Validate URL format
+        parsed = urlparse(url)
+        if not parsed.scheme in ['http', 'https'] or not parsed.netloc:
+            raise ValueError("Invalid URL format")
+        
+        print("RECIPE_EXTRACT: Trying recipe scraper...")
         scraper = scrape_me(url)
-        return scraper.to_json()
+        result = scraper.to_json()
+        print(f"RECIPE_EXTRACT: Scraper result keys: {list(result.keys()) if result else 'None'}")
+        print(f"RECIPE_EXTRACT: Scraper title: {result.get('title') if result else 'None'}")
+        print(f"RECIPE_EXTRACT: Scraper ingredients count: {len(result.get('ingredients', [])) if result else 0}")
+        
+        # Check if scraper result is actually useful
+        if result and result.get('title') and (result.get('ingredients') or result.get('instructions_list')):
+            print(f"RECIPE_EXTRACT: Returning scraper result")
+            return result
+        else:
+            print(f"RECIPE_EXTRACT: Scraper result incomplete, will try AI fallback")
     except Exception as e:
+        print(f"RECIPE_EXTRACT: Recipe scraping failed: {e}")
+        result = None
+    
+    # Fallback to AI extraction
+    print("RECIPE_EXTRACT: Falling back to AI extraction...")
+    try:
         text = _get_text_from_website(url)
-        return _get_recipe_from_llm(text)
+        print(f"RECIPE_EXTRACT: Extracted text length: {len(text) if text else 0}")
+        if text:
+            ai_result = _get_recipe_from_llm(text)
+            print(f"RECIPE_EXTRACT: AI result: {ai_result}")
+            return ai_result
+    except Exception as e:
+        print(f"RECIPE_EXTRACT: AI fallback failed: {e}")
+    
+    print("RECIPE_EXTRACT: All extraction methods failed")
+    return None
 
 def recipe_from_file(file):
     pass

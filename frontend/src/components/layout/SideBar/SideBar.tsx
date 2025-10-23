@@ -11,7 +11,7 @@ import {
   Avatar,
   ButtonBase 
 } from '@mui/material';
-import { PanelLeft, PanelRight, LogOut } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Logout } from '@mui/icons-material';
 import { useAuth } from 'src/contexts/AuthContext';
 import * as React from 'react';
 
@@ -111,7 +111,7 @@ const SideBar = ({ navItems, onToggle, isMinimized }: SideBarProps) => {
 
   return (
     <Drawer variant="permanent" sx={drawerStyles}>
-      <Box sx={{ padding: '0.5rem', overflow: 'hidden' }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '0.5rem', overflow: 'hidden' }}>
         <Box sx={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
           <ButtonBase
             component={Link}
@@ -123,7 +123,7 @@ const SideBar = ({ navItems, onToggle, isMinimized }: SideBarProps) => {
             />
           </ButtonBase>
         </Box>
-        <List sx={{ padding: 0, margin: 0 }}>
+        <List sx={{ padding: 0, margin: 0, flex: 1 }}>
           {navItems.map((item, index) => (
             <ListItem key={index} sx={{ marginBottom: '0.5rem', padding: 0 }}>
               <ListItemButton component={Link} to={item.href} sx={listItemButtonStyles}>
@@ -136,20 +136,22 @@ const SideBar = ({ navItems, onToggle, isMinimized }: SideBarProps) => {
               </ListItemButton>
             </ListItem>
           ))}
-          <ListItem sx={{ marginBottom: '0.5rem', padding: 0 }}>
+        </List>
+        <Box sx={{ marginTop: 'auto', marginBottom: '3rem' }}>
+          <ListItem sx={{ padding: 0 }}>
             <ListItemButton onClick={logout} sx={listItemButtonStyles}>
               <ListItemIcon sx={iconStyles}>
-                <LogOut />
+                <Logout />
               </ListItemIcon>
               {!isMinimized && (
                 <ListItemText primary="Logout" sx={textStyles} />
               )}
             </ListItemButton>
           </ListItem>
-        </List>
+        </Box>
       </Box>
       <IconButton onClick={() => onToggle(!isMinimized)} sx={toggleButtonStyles}>
-        {isMinimized ? <PanelRight size={20} /> : <PanelLeft size={20} />}
+        {isMinimized ? <ChevronRight /> : <ChevronLeft />}
       </IconButton>
     </Drawer>
   );

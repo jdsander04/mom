@@ -84,75 +84,116 @@ def recipe_list(request):
         recipe_source = request.data.get('recipe_source')
 
         if recipe_source == 'url':
-            url = request.data.get('url')
+            url = request.data.get('url', '').strip()
             if not url:
                 return Response({'error': 'URL required for url source'}, status=400)
+            
+            # Basic URL validation
+            from urllib.parse import urlparse
+            try:
+                parsed = urlparse(url)
+                if not parsed.scheme in ['http', 'https'] or not parsed.netloc:
+                    return Response({'error': 'Invalid URL format'}, status=400)
+            except Exception:
+                return Response({'error': 'Invalid URL format'}, status=400)
+            
             try:
                 recipe_data = recipe_from_url(url)
+                print(f"VIEWS: Recipe data received: {recipe_data}")
+                print(f"VIEWS: Recipe data type: {type(recipe_data)}")
+                if recipe_data:
+                    print(f"VIEWS: Recipe data keys: {list(recipe_data.keys())}")
+                    print(f"VIEWS: Title: {recipe_data.get('title')}")
+                    print(f"VIEWS: Ingredients: {recipe_data.get('ingredients')}")
+                    print(f"VIEWS: Instructions: {recipe_data.get('instructions_list')}")
+                
                 if not recipe_data:
-                    return Response({'error': 'Failed to scrape recipe from URL'}, status=400)
+                    return Response({'error': 'No recipe data returned from URL'}, status=400)
+                # Make title validation less strict - allow empty title
+                title = recipe_data.get('title') or recipe_data.get('name') or 'Untitled Recipe'
+                print(f"VIEWS: Final title: {title}")
             except Exception as e:
-                return Response({'error': f'Error processing URL: {str(e)}'}, status=400)
+                print(f"VIEWS: Recipe extraction error: {e}")
+                import traceback
+                print(f"VIEWS: Traceback: {traceback.format_exc()}")
+                return Response({'error': f'Failed to process recipe URL: {str(e)}'}, status=500)
             
             recipe = Recipe.objects.create(
                 user=request.user,
-                name=recipe_data.get('title', 'Untitled Recipe'),
+                name=title,
                 description=recipe_data.get('description', ''),
-                image_url=recipe_data.get('image', '')
+                image_url=recipe_data.get('image', ''),
+                source_url=url
             )
             
             # Create ingredients - handle both string and dict formats
             ingredients_data = recipe_data.get('ingredients', [])
             for ingredient in ingredients_data:
-                if isinstance(ingredient, str):
-                    # Parse ingredient string (e.g., "2 cups flour")
-                    parts = ingredient.split()
-                    if len(parts) >= 3:
-                        try:
-                            quantity = float(parts[0])
-                            unit = parts[1]
-                            name = ' '.join(parts[2:])
-                        except ValueError:
+                try:
+                    if isinstance(ingredient, str):
+                        # Parse ingredient string (e.g., "2 cups flour")
+                        parts = ingredient.split()
+                        if len(parts) >= 3:
+                            try:
+                                quantity = float(parts[0])
+                                unit = parts[1][:50]  # Limit length
+                                name = ' '.join(parts[2:])[:255]  # Limit length
+                            except ValueError:
+                                quantity = 0
+                                unit = ''
+                                name = ingredient[:255]
+                        else:
                             quantity = 0
                             unit = ''
-                            name = ingredient
+                            name = ingredient[:255]
                     else:
-                        quantity = 0
-                        unit = ''
-                        name = ingredient
-                else:
-                    # Handle dict format
-                    name = ingredient.get('name', '')
-                    quantity = ingredient.get('quantity', 0)
-                    unit = ingredient.get('unit', '')
-                
-                if name:  # Only create if name exists
-                    Ingredient.objects.create(
-                        recipe=recipe,
-                        name=name,
-                        quantity=quantity,
-                        unit=unit
-                    )
+                        # Handle dict format
+                        name = str(ingredient.get('name', ''))[:255]
+                        quantity = float(ingredient.get('quantity', 0))
+                        unit = str(ingredient.get('unit', ''))[:50]
+                    
+                    if name.strip():  # Only create if name exists
+                        Ingredient.objects.create(
+                            recipe=recipe,
+                            name=name.strip(),
+                            quantity=max(0, quantity),
+                            unit=unit.strip()
+                        )
+                except (ValueError, TypeError) as e:
+                    continue  # Skip invalid ingredients
             
             # Create steps
-            for i, instruction in enumerate(recipe_data.get('instructions_list', []), 1):
-                Step.objects.create(
-                    recipe=recipe,
-                    description=instruction,
-                    order=i
-                )
+            instructions = recipe_data.get('instructions_list', [])
+            if not instructions and recipe_data.get('instructions'):
+                # Handle single instruction string
+                instructions = [recipe_data.get('instructions')]
+            
+            for i, instruction in enumerate(instructions, 1):
+                if instruction and isinstance(instruction, str):
+                    Step.objects.create(
+                        recipe=recipe,
+                        description=str(instruction)[:1000],  # Limit length
+                        order=i
+                    )
             
             # Create nutrients
-            for macro, mass in recipe_data.get('nutrients', {}).items():
-                try:
-                    mass_value = float(mass.split()[0]) if mass and mass.split() else 0
-                except (ValueError, AttributeError):
-                    mass_value = 0
-                Nutrient.objects.create(
-                    recipe=recipe,
-                    macro=macro,
-                    mass=mass_value
-                )
+            nutrients = recipe_data.get('nutrients', {})
+            if isinstance(nutrients, dict):
+                for macro, mass in nutrients.items():
+                    try:
+                        if isinstance(mass, str):
+                            mass_value = float(mass.split()[0]) if mass and mass.split() else 0
+                        else:
+                            mass_value = float(mass) if mass else 0
+                        
+                        if macro and mass_value >= 0:
+                            Nutrient.objects.create(
+                                recipe=recipe,
+                                macro=str(macro)[:255],
+                                mass=mass_value
+                            )
+                    except (ValueError, TypeError, AttributeError):
+                        continue  # Skip invalid nutrients
             
         elif recipe_source == 'file':
             file = request.FILES.get('file')
@@ -215,6 +256,7 @@ def recipe_list(request):
             'name': recipe.name,
             'description': recipe.description,
             'image_url': recipe.image_url,
+            'source_url': recipe.source_url,
             'ingredients': [
                 {'name': i.name, 'quantity': float(i.quantity), 'unit': i.unit}
                 for i in recipe.ingredients.all()
@@ -306,6 +348,7 @@ def recipe_detail(request, recipe_id):
             'name': recipe.name,
             'description': recipe.description,
             'image_url': recipe.image_url,
+            'source_url': recipe.source_url,
             'ingredients': [
                 {'name': i.name, 'quantity': float(i.quantity), 'unit': i.unit}
                 for i in recipe.ingredients.all()
