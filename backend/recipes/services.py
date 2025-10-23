@@ -189,7 +189,7 @@ def recipe_from_url(url):
         
         logger.info("RECIPE_EXTRACT: Trying recipe scraper...")
         scraper = scrape_me(url)
-        result = json.loads(scraper.to_json())
+        result = scraper.to_json()  # This already returns a dict, no need to json.loads()
         logger.debug(f"RECIPE_EXTRACT: Scraper result keys: {list(result.keys()) if result else 'None'}")
         logger.debug(f"RECIPE_EXTRACT: Scraper title: {result.get('title') if result else 'None'}")
         logger.debug(f"RECIPE_EXTRACT: Scraper ingredients count: {len(result.get('ingredients', [])) if result else 0}")
