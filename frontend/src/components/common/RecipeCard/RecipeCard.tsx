@@ -1,5 +1,5 @@
 import { Card, CardContent, CardMedia, Typography, IconButton, Box } from '@mui/material';
-import { OpenInNew } from '@mui/icons-material';
+import { OpenInNew, Restaurant } from '@mui/icons-material';
 
 interface RecipeCardProps {
   title: string;
@@ -84,12 +84,27 @@ const ICON_BUTTON_STYLES = {
 const RecipeCard = ({ title, subtitle, image, calories, servings, onClick }: RecipeCardProps) => {
   return (
     <Card sx={CARD_STYLES}>
-      <CardMedia
-        component="img"
-        sx={IMAGE_STYLES}
-        image={image}
-        alt={title}
-      />
+      {image ? (
+        <CardMedia
+          component="img"
+          sx={IMAGE_STYLES}
+          image={image}
+          alt={title}
+        />
+      ) : (
+        <Box
+          sx={{
+            ...IMAGE_STYLES,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#f5f5f5',
+            color: '#999'
+          }}
+        >
+          <Restaurant sx={{ fontSize: '32px' }} />
+        </Box>
+      )}
       <CardContent sx={CONTENT_STYLES}>
         <Box sx={{ marginBottom: '8px' }}>
           <Typography variant="body1" component="span" sx={TITLE_STYLES}>
@@ -103,7 +118,7 @@ const RecipeCard = ({ title, subtitle, image, calories, servings, onClick }: Rec
         </Box>
         <Box sx={METADATA_STYLES}>
           <Typography variant="body2" sx={{ fontSize: '13px', color: '#666' }}>
-            {calories} kcal
+            {calories > 0 ? `${calories} kcal` : 'Calories N/A'}
           </Typography>
           <Typography variant="body2" sx={{ fontSize: '13px', color: '#666' }}>
             Serves {servings}

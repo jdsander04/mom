@@ -257,6 +257,8 @@ def recipe_list(request):
             'description': recipe.description,
             'image_url': recipe.image_url,
             'source_url': recipe.source_url,
+            'date_added': recipe.date_added.isoformat(),
+            'times_made': recipe.times_made,
             'ingredients': [
                 {'name': i.name, 'quantity': float(i.quantity), 'unit': i.unit}
                 for i in recipe.ingredients.all()
@@ -349,6 +351,8 @@ def recipe_detail(request, recipe_id):
             'description': recipe.description,
             'image_url': recipe.image_url,
             'source_url': recipe.source_url,
+            'date_added': recipe.date_added.isoformat(),
+            'times_made': recipe.times_made,
             'ingredients': [
                 {'name': i.name, 'quantity': float(i.quantity), 'unit': i.unit}
                 for i in recipe.ingredients.all()
@@ -402,5 +406,37 @@ def recipe_detail(request, recipe_id):
     elif request.method == 'DELETE':
         # delete recipe based on recipe id
         recipe.delete()
-        return Response({'message': f'Recipe {recipe_id} deleted'}, status=204)
+        return Response(status=204)
+
+@extend_schema(
+    methods=['POST'],
+    operation_id='recipe_made',
+    responses={
+        200: {
+            'description': 'Recipe times_made incremented successfully',
+            'content': {
+                'application/json': {
+                    'example': {'message': 'Recipe made count updated', 'times_made': 3}
+                }
+            }
+        }
+    }
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([BearerTokenAuthentication])
+def recipe_made(request, recipe_id):
+    """Increment the times_made counter for a recipe when it's used."""
+    try:
+        recipe = Recipe.objects.get(id=recipe_id, user=request.user)
+    except Recipe.DoesNotExist:
+        return Response({'error': 'Recipe not found'}, status=404)
+    
+    recipe.times_made += 1
+    recipe.save()
+    
+    return Response({
+        'message': 'Recipe made count updated',
+        'times_made': recipe.times_made
+    })
 
