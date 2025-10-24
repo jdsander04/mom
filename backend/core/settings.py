@@ -48,15 +48,13 @@ INSTALLED_APPS = [
 
     'corsheaders',
     
+    'cart',
     'meal_plan',
     'diet',
-    'cart',
     'meal_calendar',
     'recipes',
-    'shoppinglist',
     'preferences',
     'ingredient',
-    'shoppinglist',
 ]
 
 MIDDLEWARE = [

@@ -1,4 +1,5 @@
 import type { Recipe, RecipeListResponse, CreateRecipeRequest } from '../types/recipe';
+import type { Cart } from '../types/cart';
 
 const API_BASE_URL = '/api';
 
@@ -109,6 +110,60 @@ class ApiService {
     });
     
     return sortedRecipes.slice(0, 5);
+  }
+
+  // Cart endpoints
+  async getCart(): Promise<Cart> {
+    const response = await fetch(`${API_BASE_URL}/cart/`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<Cart>(response);
+  }
+
+  async addRecipeToCart(recipeId: number, servingSize: number = 1): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/cart/recipes/`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ recipe_id: recipeId, serving_size: servingSize })
+    });
+    await this.handleResponse(response);
+  }
+
+  async updateRecipeServingSize(recipeId: number, servingSize: number): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/cart/recipes/`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ recipe_id: recipeId, serving_size: servingSize })
+    });
+    await this.handleResponse(response);
+  }
+
+  async removeRecipeFromCart(recipeId: number): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/cart/recipes/`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ recipe_id: recipeId })
+    });
+    await this.handleResponse(response);
+  }
+
+  async updateItemQuantity(itemId: number, quantity: number): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/cart/items/`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ item_id: itemId, quantity })
+    });
+    await this.handleResponse(response);
+  }
+
+  async removeItemFromCart(itemId: number): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/cart/items/`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ item_id: itemId })
+    });
+    await this.handleResponse(response);
   }
 }
 

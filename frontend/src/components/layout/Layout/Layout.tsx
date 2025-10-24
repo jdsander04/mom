@@ -16,7 +16,7 @@ interface LayoutProps {
 const NAV_ITEMS = [
   { label: 'Home Page', href: '/', icon: <Home /> },
   { label: 'Recipe Library', href: '/recipes', icon: <MenuBook /> },
-  { label: 'Shopping', href: '/shopping', icon: <ShoppingCart /> },
+  { label: 'Cart', href: '/cart', icon: <ShoppingCart /> },
   { label: 'Meal Planner', href: '/planner', icon: <CalendarMonth /> },
   { label: 'Health and budgeting', href: '/health', icon: <HealthAndSafety /> }
 ];

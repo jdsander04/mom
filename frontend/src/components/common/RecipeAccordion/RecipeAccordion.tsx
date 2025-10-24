@@ -10,12 +10,11 @@ interface RecipeAccordionProps {
   calories: number
   serves: number
   children: React.ReactNode
-  cartId?: number
   sourceUrl?: string
   onRecipeDeleted?: () => void
 }
 
-const RecipeAccordion = ({ recipeId, title, calories, serves, children, cartId, sourceUrl, onRecipeDeleted }: RecipeAccordionProps) => {
+const RecipeAccordion = ({ recipeId, title, calories, serves, children, sourceUrl, onRecipeDeleted }: RecipeAccordionProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const [isAdded, setIsAdded] = useState(false)
   const [currentQuantity, setCurrentQuantity] = useState(1)
@@ -23,113 +22,41 @@ const RecipeAccordion = ({ recipeId, title, calories, serves, children, cartId, 
   const { token } = useAuth()
 
   useEffect(() => {
-    if (cartId) {
-      checkRecipeInCart()
-    }
-  }, [cartId, recipeId])
+    checkRecipeInCart()
+  }, [recipeId])
 
   const checkRecipeInCart = async () => {
-    if (!cartId || !token) return
-    
-    try {
-      const response = await fetch(`/api/carts/${cartId}/recipes/`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      if (response.ok) {
-        const data = await response.json()
-        const recipe = data.recipes.find((r: any) => r.recipe_id === recipeId)
-        if (recipe) {
-          setIsAdded(true)
-          setCurrentQuantity(recipe.quantity)
-        } else {
-          setIsAdded(false)
-          setCurrentQuantity(1)
-        }
-      }
-    } catch (error) {
-      console.error('Failed to check recipe in cart:', error)
-    }
+    // Since we don't track recipes separately anymore, just reset state
+    setIsAdded(false)
+    setCurrentQuantity(1)
   }
 
   const handleAddClick = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!cartId || !token) return
+    if (!token) return
 
     try {
-      if (isAdded) {
-        // DELETE - remove from cart
-        await fetch(`/api/carts/${cartId}/recipes/${recipeId}/`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
+      await fetch('/api/cart/recipes/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          recipe_id: recipeId,
+          serving_size: currentQuantity
         })
-        setIsAdded(false)
-        setCurrentQuantity(1)
-      } else {
-        // POST - add to cart
-        await fetch(`/api/carts/${cartId}/recipes/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            recipe_id: recipeId,
-            quantity: currentQuantity
-          })
-        })
-        setIsAdded(true)
-      }
+      })
+      setIsAdded(true)
     } catch (error) {
-      console.error('Failed to update cart:', error)
+      console.error('Failed to add recipe to cart:', error)
     }
   }
 
   const handleQuantityChange = async (e: React.MouseEvent, delta: number) => {
     e.stopPropagation()
-    if (!cartId || !token) return
-
     const newQuantity = Math.max(0.5, currentQuantity + delta)
     setCurrentQuantity(newQuantity)
-
-    try {
-      if (isAdded) {
-        if (newQuantity === 0) {
-          // DELETE - remove from cart when quantity becomes 0
-          await fetch(`/api/carts/${cartId}/recipes/${recipeId}/`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
-          setIsAdded(false)
-          setCurrentQuantity(1)
-        } else {
-          // PATCH - update quantity
-          await fetch(`/api/carts/${cartId}/recipes/${recipeId}/`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ quantity: newQuantity })
-          })
-        }
-      } else if (newQuantity !== 1) {
-        // POST - add to cart with non-1 quantity
-        await fetch(`/api/carts/${cartId}/recipes/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            recipe_id: recipeId,
-            quantity: newQuantity
-          })
-        })
-        setIsAdded(true)
-      }
-    } catch (error) {
-      console.error('Failed to update quantity:', error)
-    }
   }
 
   const handleDeleteClick = (e: React.MouseEvent) => {
@@ -171,32 +98,32 @@ const RecipeAccordion = ({ recipeId, title, calories, serves, children, cartId, 
           <span className={styles.calories}>{calories} cal</span>
           <span className={styles.serves}>Serves {serves}</span>
           <div className={styles.quantitySelector}>
-            <button 
+            <div 
               className={styles.quantityButton}
               onClick={(e) => handleQuantityChange(e, -0.5)}
             >
               -
-            </button>
+            </div>
             <span className={styles.quantity}>{currentQuantity}</span>
-            <button 
+            <div 
               className={styles.quantityButton}
               onClick={(e) => handleQuantityChange(e, 0.5)}
             >
               +
-            </button>
+            </div>
           </div>
-          <button 
+          <div 
             className={`${styles.addButton} ${isAdded ? styles.added : ''}`}
             onClick={handleAddClick}
           >
             {isAdded ? <CheckCircle /> : <AddCircleOutline />}
-          </button>
-          <button 
+          </div>
+          <div 
             className={styles.deleteButton}
             onClick={handleDeleteClick}
           >
             <Delete />
-          </button>
+          </div>
         </div>
         <ExpandMore className={`${styles.arrow} ${isOpen ? styles.open : ''}`} />
       </button>

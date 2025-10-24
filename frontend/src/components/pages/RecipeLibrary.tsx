@@ -14,7 +14,6 @@ const RecipeLibrary = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newRecipeUrl, setNewRecipeUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [cartId, setCartId] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<'date_added' | 'times_made'>('date_added');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
@@ -25,40 +24,6 @@ const RecipeLibrary = () => {
 
   const { token } = useAuth();
   const { recipes, loading, error, refetch } = useRecipes();
-
-  useEffect(() => {
-    getOrCreateCart();
-  }, []);
-
-
-
-  const getOrCreateCart = async () => {
-    try {
-      const response = await fetch('/api/carts/', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.carts.length > 0) {
-          setCartId(data.carts[0].id);
-        } else {
-          const createResponse = await fetch('/api/carts/', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          if (createResponse.ok) {
-            const createData = await createResponse.json();
-            setCartId(createData.cart_id);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to get/create cart:', error);
-    }
-  };
 
 
 
@@ -225,7 +190,6 @@ const RecipeLibrary = () => {
               title={recipe.name}
               calories={calories}
               serves={1}
-              cartId={cartId || undefined}
               sourceUrl={recipe.source_url}
               onRecipeDeleted={refetch}
             >
