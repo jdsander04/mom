@@ -114,3 +114,25 @@
 .removeBtn:hover {
   background: #5a6268;
 }
+
+.orderButtonContainer {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+}
+
+.orderButton {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.orderButton:hover {
+  background: #45a049;
+}
