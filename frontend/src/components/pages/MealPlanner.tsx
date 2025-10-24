@@ -70,7 +70,7 @@ const MealPlanner = () => {
     }
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/calendar/1/${date}/`, {
+      const response = await fetch(`/api/calendar/1/${date}/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -114,7 +114,7 @@ const MealPlanner = () => {
     try {
       const { date, ...mealData } = updatedPlan;
       
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/calendar/1/${date}/`, {
+      const response = await fetch(`/api/calendar/1/${date}/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -138,7 +138,7 @@ const MealPlanner = () => {
     if (!token) return;
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/recipes/`, {
+      const response = await fetch(`/api/recipes/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -148,9 +148,13 @@ const MealPlanner = () => {
       if (response.ok) {
         const data = await response.json();
         setRecipes(data.recipes || []);
+      } else {
+        console.error('Failed to load recipes:', response.status);
+        setRecipes([]);
       }
     } catch (error) {
       console.error('Error loading recipes:', error);
+      setRecipes([]);
     }
   };
 
@@ -182,7 +186,7 @@ const MealPlanner = () => {
     }
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/recipes/${recipeId}/`, {
+      const response = await fetch(`/api/recipes/${recipeId}/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
