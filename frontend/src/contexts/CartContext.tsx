@@ -43,19 +43,34 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   };
 
   const removeRecipe = async (recipeId: number) => {
+    // Optimistic update
+    setCart(prev => ({
+      recipes: prev.recipes.filter(recipe => recipe.recipe_id !== recipeId)
+    }));
+    
     try {
       await apiService.removeRecipeFromCart(recipeId);
     } catch (error) {
       console.error('Failed to remove recipe:', error);
+      await refreshCart(); // Revert on error
       throw error;
     }
   };
 
   const removeItem = async (itemId: number) => {
+    // Optimistic update
+    setCart(prev => ({
+      recipes: prev.recipes.map(recipe => ({
+        ...recipe,
+        ingredients: recipe.ingredients.filter(item => item.id !== itemId)
+      }))
+    }));
+    
     try {
       await apiService.removeItemFromCart(itemId);
     } catch (error) {
       console.error('Failed to remove item:', error);
+      await refreshCart(); // Revert on error
       throw error;
     }
   };

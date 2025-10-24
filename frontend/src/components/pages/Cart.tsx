@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCartContext } from '../../contexts/CartContext';
 import type { CartRecipe, CartItem } from '../../types/cart';
 import OrderSummary from './OrderSummary';
@@ -7,19 +7,21 @@ import styles from './Cart.module.css';
 export default function Cart() {
   const { cart, loading, updateServingSize, removeRecipe, updateItemQuantity, removeItem, refreshCart } = useCartContext();
   const [orderSummaryOpen, setOrderSummaryOpen] = useState(false);
+  const refreshCartRef = useRef(refreshCart);
+  refreshCartRef.current = refreshCart;
 
   useEffect(() => {
-    refreshCart();
-  }, [refreshCart]);
+    refreshCartRef.current();
+  }, []);
+
+
 
   const handleRemoveItem = async (itemId: number) => {
     await removeItem(itemId);
-    await refreshCart();
   };
 
   const handleRemoveRecipe = async (recipeId: number) => {
     await removeRecipe(recipeId);
-    await refreshCart();
   };
 
   const handleUpdateServingSize = async (recipeId: number, servingSize: number) => {
