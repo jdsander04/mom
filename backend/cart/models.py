@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 
 class Cart(models.Model):
 	"""User's cart containing recipes and individual ingredients."""
-	user = models.ForeignKey(User, on_delete=models.CASCADE)
+	user = models.OneToOneField(User, on_delete=models.CASCADE)
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
 
