@@ -1,5 +1,256 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
 .pageTitle {
-  grid-column: 1 / -1;
-  margin: 0 0 1rem 0;
-  font-weight: normal;
+  margin: 0;
+  font-weight: 600;
+  font-size: 2rem;
+  color: #333;
+}
+
+.recipesContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 3rem 1rem;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  border: 2px dashed #ccc;
+}
+
+/* Recipe Card - Similar to RecipeAccordion */
+.recipeCard {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.cardHeader {
+  padding: 0.75rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.headerContent {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 1.5rem;
+}
+
+/* Quantity Selector - Matching RecipeAccordion */
+.quantitySelector {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  overflow: hidden;
+  background: white;
+}
+
+.quantityButton {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: #f8f9fa;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+}
+
+.quantityButton:hover {
+  background: #e9ecef;
+  color: #333;
+}
+
+.quantityButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.quantity {
+  font-size: 0.875rem;
+  min-width: 40px;
+  text-align: center;
+  padding: 0 8px;
+  background: white;
+  font-weight: 500;
+}
+
+/* Title - Matching RecipeAccordion */
+.title {
+  font-weight: 600;
+  flex: 1;
+  font-size: clamp(0.8rem, 0.9rem, 1.15rem);
+  color: inherit;
+}
+
+/* Calories - Matching RecipeAccordion */
+.calories {
+  font-size: 0.875rem;
+  color: #666;
+  width: 80px;
+  text-align: center;
+}
+
+/* Serves - Matching RecipeAccordion */
+.serves {
+  font-size: 0.875rem;
+  color: #666;
+  width: 100px;
+  text-align: center;
+}
+
+/* Action Buttons */
+.actionButton {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.25rem;
+  padding: 0;
+}
+
+.actionButton svg {
+  width: 20px;
+  height: 20px;
+  color: #666;
+}
+
+.actionButton:hover svg {
+  color: #1976d2;
+}
+
+.removeButton {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.removeButton svg {
+  width: 20px;
+  height: 20px;
+  color: #666;
+}
+
+.removeButton:hover svg {
+  color: #f44336;
+}
+
+/* Card Content - Matching RecipeAccordion */
+.cardContent {
+  padding: 1rem;
+  background: #ffffff;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+.ingredientsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ingredientItem {
+  padding: 0.25rem 0;
+  font-size: 0.9rem;
+  color: #555;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.ingredientItem:last-child {
+  border-bottom: none;
+}
+
+/* Send to Cart Button */
+.sendToCartContainer {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0;
+  margin-top: 1rem;
+}
+
+.sendToCartButton {
+  background-color: #2e7d32;
+  color: white;
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  text-transform: none;
+  min-width: 200px;
+}
+
+.sendToCartButton:hover {
+  background-color: #1b5e20;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .container {
+    padding: 0.5rem;
+  }
+  
+  .headerContent {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  
+  .title {
+    order: 1;
+    flex-basis: 100%;
+    text-align: center;
+  }
+  
+  .quantitySelector {
+    order: 2;
+  }
+  
+  .calories {
+    order: 3;
+  }
+  
+  .serves {
+    order: 4;
+  }
+  
+  .actionButton {
+    order: 5;
+  }
+  
+  .removeButton {
+    order: 6;
+  }
 }
