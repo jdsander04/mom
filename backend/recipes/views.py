@@ -463,7 +463,7 @@ def recipe_made(request, recipe_id):
             name='fuzziness',
             type=OpenApiTypes.INT,
             location=OpenApiParameter.QUERY,
-            description='Fuzziness level: 0=exact, 1=word-based, 2=typo-tolerant (default: 1)',
+            description='Fuzziness level: 0=exact, 1=word-based, 2=typo-tolerant (default: 2)',
             required=False
         )
     ],
@@ -485,7 +485,7 @@ def recipe_made(request, recipe_id):
                         ],
                         'total': 1,
                         'query': 'chocolate',
-                        'fuzziness': 1
+                        'fuzziness': 2
                     }
                 }
             }
@@ -572,7 +572,7 @@ def recipe_search(request):
     
     query = request.GET.get('q', '').strip()
     limit = int(request.GET.get('limit', 50))
-    fuzziness = int(request.GET.get('fuzziness', 1))
+    fuzziness = int(request.GET.get('fuzziness', 2))
     
     if not query:
         return Response({'error': 'Search query is required'}, status=400)
