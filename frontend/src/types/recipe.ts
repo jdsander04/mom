@@ -45,3 +45,35 @@ export interface CreateRecipeRequest {
   steps?: Array<{ description: string }>;
   file?: File;
 }
+
+// Cart-related types
+export interface CartItem {
+  id: number;
+  name: string;
+  quantity: number;
+  unit: string;
+  checked: boolean;
+}
+
+export interface CartRecipe {
+  recipe_id: number;
+  recipe_name: string;
+  quantity: number;
+}
+
+export interface Cart {
+  id: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  items: CartItem[];
+  recipes: CartRecipe[];
+}
+
+export interface CartListResponse {
+  carts: Cart[];
+}
+
+export interface CartResponse {
+  cart_id: number;
+}

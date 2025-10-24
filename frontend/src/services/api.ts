@@ -1,4 +1,4 @@
-import type { Recipe, RecipeListResponse, CreateRecipeRequest } from '../types/recipe';
+import type { Recipe, RecipeListResponse, CreateRecipeRequest, Cart, CartListResponse, CartResponse, CartItem, CartRecipe } from '../types/recipe';
 
 const API_BASE_URL = '/api';
 
@@ -109,6 +109,85 @@ class ApiService {
     });
     
     return sortedRecipes.slice(0, 5);
+  }
+
+  // Cart endpoints
+  async getCarts(): Promise<CartListResponse> {
+    const response = await fetch(`${API_BASE_URL}/carts/`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<CartListResponse>(response);
+  }
+
+  async createCart(): Promise<CartResponse> {
+    const response = await fetch(`${API_BASE_URL}/carts/`, {
+      method: 'POST',
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<CartResponse>(response);
+  }
+
+  async getCart(cartId: number): Promise<Cart> {
+    const response = await fetch(`${API_BASE_URL}/carts/${cartId}/`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<Cart>(response);
+  }
+
+  async getCartRecipes(cartId: number): Promise<{ recipes: CartRecipe[] }> {
+    const response = await fetch(`${API_BASE_URL}/carts/${cartId}/recipes/`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<{ recipes: CartRecipe[] }>(response);
+  }
+
+  async addRecipeToCart(cartId: number, recipeId: number, quantity: number = 1): Promise<CartRecipe> {
+    const response = await fetch(`${API_BASE_URL}/carts/${cartId}/recipes/`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ recipe_id: recipeId, quantity })
+    });
+    return this.handleResponse<CartRecipe>(response);
+  }
+
+  async updateRecipeQuantity(cartId: number, recipeId: number, quantity: number): Promise<CartRecipe> {
+    const response = await fetch(`${API_BASE_URL}/carts/${cartId}/recipes/${recipeId}/`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ quantity })
+    });
+    return this.handleResponse<CartRecipe>(response);
+  }
+
+  async removeRecipeFromCart(cartId: number, recipeId: number): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/carts/${cartId}/recipes/${recipeId}/`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders()
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to remove recipe from cart: ${response.statusText}`);
+    }
+  }
+
+  async getCartItems(cartId: number): Promise<{ items: CartItem[] }> {
+    const response = await fetch(`${API_BASE_URL}/carts/${cartId}/items/`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<{ items: CartItem[] }>(response);
+  }
+
+  async deleteCart(cartId: number): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/carts/${cartId}/`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders()
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to delete cart: ${response.statusText}`);
+    }
   }
 }
 
