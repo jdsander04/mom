@@ -440,3 +440,193 @@ def recipe_made(request, recipe_id):
         'times_made': recipe.times_made
     })
 
+
+@extend_schema(
+    methods=['GET'],
+    operation_id='recipe_search',
+    parameters=[
+        OpenApiParameter(
+            name='q',
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description='Search query for recipe name and description',
+            required=True
+        ),
+        OpenApiParameter(
+            name='limit',
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            description='Maximum number of results to return (default: 50)',
+            required=False
+        ),
+        OpenApiParameter(
+            name='fuzziness',
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            description='Fuzziness level: 0=exact, 1=word-based, 2=typo-tolerant (default: 1)',
+            required=False
+        )
+    ],
+    responses={
+        200: {
+            'description': 'Search results with relevance scores',
+            'content': {
+                'application/json': {
+                    'example': {
+                        'results': [
+                            {
+                                'id': 1,
+                                'name': 'Chocolate Chip Cookies',
+                                'description': 'Classic homemade cookies',
+                                'image_url': 'https://example.com/image.jpg',
+                                'times_made': 5,
+                                'score': 0.95
+                            }
+                        ],
+                        'total': 1,
+                        'query': 'chocolate',
+                        'fuzziness': 1
+                    }
+                }
+            }
+        }
+    }
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([BearerTokenAuthentication])
+def recipe_search(request):
+    """Enhanced fuzzy text search for recipes by name and description."""
+    from django.db import models
+    import re
+    from difflib import SequenceMatcher
+    
+    def levenshtein_distance(s1, s2):
+        """Calculate Levenshtein distance between two strings."""
+        if len(s1) < len(s2):
+            return levenshtein_distance(s2, s1)
+        
+        if len(s2) == 0:
+            return len(s1)
+        
+        previous_row = list(range(len(s2) + 1))
+        for i, c1 in enumerate(s1):
+            current_row = [i + 1]
+            for j, c2 in enumerate(s2):
+                insertions = previous_row[j + 1] + 1
+                deletions = current_row[j] + 1
+                substitutions = previous_row[j] + (c1 != c2)
+                current_row.append(min(insertions, deletions, substitutions))
+            previous_row = current_row
+        
+        return previous_row[-1]
+    
+    def fuzzy_match_score(query_words, text_words, fuzziness):
+        """Calculate fuzzy match score between query and text."""
+        if fuzziness == 0:
+            # Exact matching
+            text_lower = ' '.join(text_words).lower()
+            query_lower = ' '.join(query_words).lower()
+            return 1.0 if query_lower in text_lower else 0.0
+        
+        elif fuzziness == 1:
+            # Word-based matching
+            matches = 0
+            total_words = len(query_words)
+            
+            for query_word in query_words:
+                for text_word in text_words:
+                    if query_word.lower() in text_word.lower():
+                        matches += 1
+                        break
+            
+            return matches / total_words if total_words > 0 else 0.0
+        
+        elif fuzziness == 2:
+            # Typo-tolerant matching with Levenshtein distance
+            matches = 0
+            total_words = len(query_words)
+            
+            for query_word in query_words:
+                best_match = 0
+                for text_word in text_words:
+                    # Calculate similarity ratio
+                    similarity = SequenceMatcher(None, query_word.lower(), text_word.lower()).ratio()
+                    
+                    # Also check Levenshtein distance for short words
+                    if len(query_word) <= 10:
+                        distance = levenshtein_distance(query_word.lower(), text_word.lower())
+                        max_len = max(len(query_word), len(text_word))
+                        levenshtein_similarity = 1 - (distance / max_len) if max_len > 0 else 0
+                        similarity = max(similarity, levenshtein_similarity)
+                    
+                    best_match = max(best_match, similarity)
+                
+                # Consider it a match if similarity is above threshold
+                if best_match >= 0.6:  # 60% similarity threshold
+                    matches += best_match
+            
+            return matches / total_words if total_words > 0 else 0.0
+        
+        return 0.0
+    
+    query = request.GET.get('q', '').strip()
+    limit = int(request.GET.get('limit', 50))
+    fuzziness = int(request.GET.get('fuzziness', 1))
+    
+    if not query:
+        return Response({'error': 'Search query is required'}, status=400)
+    
+    # Validate fuzziness level
+    if fuzziness not in [0, 1, 2]:
+        return Response({'error': 'Fuzziness must be 0, 1, or 2'}, status=400)
+    
+    # Limit the number of results to prevent performance issues
+    limit = min(limit, 100)
+    
+    # Get all user recipes for fuzzy matching
+    all_recipes = Recipe.objects.filter(user=request.user)
+    
+    # Split query into words
+    query_words = re.findall(r'\b\w+\b', query.lower())
+    
+    scored_recipes = []
+    
+    for recipe in all_recipes:
+        # Combine name and description for searching
+        searchable_text = f"{recipe.name} {recipe.description}"
+        text_words = re.findall(r'\b\w+\b', searchable_text.lower())
+        
+        # Calculate fuzzy match score
+        score = fuzzy_match_score(query_words, text_words, fuzziness)
+        
+        # Only include recipes with some match
+        if score > 0:
+            scored_recipes.append((recipe, score))
+    
+    # Sort by score (descending), then by times_made, then by date_added
+    scored_recipes.sort(key=lambda x: (-x[1], -x[0].times_made, -x[0].date_added.timestamp()))
+    
+    # Take top results
+    top_recipes = scored_recipes[:limit]
+    
+    results = []
+    for recipe, score in top_recipes:
+        results.append({
+            'id': recipe.id,
+            'name': recipe.name,
+            'description': recipe.description,
+            'image_url': recipe.image_url,
+            'source_url': recipe.source_url,
+            'date_added': recipe.date_added.isoformat(),
+            'times_made': recipe.times_made,
+            'score': round(score, 3)  # Round to 3 decimal places
+        })
+    
+    return Response({
+        'results': results,
+        'total': len(results),
+        'query': query,
+        'fuzziness': fuzziness
+    })
+
