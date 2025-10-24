@@ -5,6 +5,7 @@ import styles from './RecipeLibrary.module.css';
 import VerticalContainer from '../common/VerticalContainer/VerticalContainer';
 import RecipeAccordion from '../common/RecipeAccordion/RecipeAccordion';
 import RecipeDetails from '../common/RecipeAccordion/RecipeDetails';
+import EditableRecipeDetails from '../common/RecipeAccordion/EditableRecipeDetails';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRecipes } from '../../hooks/useRecipes';
 import { apiService } from '../../services/api';
@@ -12,6 +13,7 @@ import type { Recipe } from '../../types/recipe';
 
 const RecipeLibrary = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [customRecipeDialogOpen, setCustomRecipeDialogOpen] = useState(false);
   const [newRecipeUrl, setNewRecipeUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [sortBy, setSortBy] = useState<'date_added' | 'times_made'>('date_added');
@@ -19,8 +21,8 @@ const RecipeLibrary = () => {
   
   // Custom recipe form state
   const [recipeName, setRecipeName] = useState('');
-  const [ingredients, setIngredients] = useState(['2 eggs', 'click to add']);
-  const [directions, setDirections] = useState(['Fry 2 eggs', 'click to add']);
+  const [ingredients, setIngredients] = useState(['']);
+  const [directions, setDirections] = useState(['']);
 
   const { token } = useAuth();
   const { recipes, loading, error, refetch } = useRecipes();
@@ -47,21 +49,37 @@ const RecipeLibrary = () => {
     }
   };
 
-  const addIngredient = () => {
-    setIngredients(prev => [...prev.slice(0, -1), '', 'click to add']);
+  const saveCustomRecipe = async () => {
+    if (!recipeName.trim() || submitting) return;
+    
+    setSubmitting(true);
+    try {
+      await apiService.createRecipe({
+        recipe_source: 'explicit',
+        name: recipeName,
+        ingredients: ingredients.filter(i => i.trim()).map((ingredient, index) => ({
+          name: ingredient,
+          quantity: 1,
+          unit: 'unit'
+        })),
+        steps: directions.filter(d => d.trim()).map((direction, index) => ({
+          description: direction
+        }))
+      });
+      
+      setRecipeName('');
+      setIngredients(['']);
+      setDirections(['']);
+      setCustomRecipeDialogOpen(false);
+      refetch();
+    } catch (error) {
+      console.error('Failed to save custom recipe:', error);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const addDirection = () => {
-    setDirections(prev => [...prev.slice(0, -1), '', 'click to add']);
-  };
 
-  const updateIngredient = (index: number, value: string) => {
-    setIngredients(prev => prev.map((item, i) => i === index ? value : item));
-  };
-
-  const updateDirection = (index: number, value: string) => {
-    setDirections(prev => prev.map((item, i) => i === index ? value : item));
-  };
 
   const sortRecipes = (sortType: 'date_added' | 'times_made') => {
     if (sortBy === sortType) {
@@ -288,82 +306,26 @@ const RecipeLibrary = () => {
               <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold' }}>
                 Custom recipe
               </Typography>
-              <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
-                Recipe Name
-              </Typography>
-              <TextField
-                fullWidth
-                value={recipeName}
-                onChange={(e) => setRecipeName(e.target.value)}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1
-                  }
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setDialogOpen(false);
+                  setCustomRecipeDialogOpen(true);
                 }}
-              />
-            </Box>
-
-            {/* Ingredients and Directions side by side */}
-            <Box sx={{ display: 'flex', gap: 3 }}>
-              {/* Ingredients */}
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold' }}>
-                  Ingredients
-                </Typography>
-                <Box sx={{ pl: 2 }}>
-                  {ingredients.map((ingredient, index) => (
-                    <Box key={index} sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
-                      <Typography sx={{ mr: 1, color: '#666' }}>•</Typography>
-                      {ingredient === 'click to add' ? (
-                        <Typography 
-                          sx={{ color: '#999', cursor: 'pointer' }}
-                          onClick={addIngredient}
-                        >
-                          click to add
-                        </Typography>
-                      ) : (
-                        <TextField
-                          value={ingredient}
-                          onChange={(e) => updateIngredient(index, e.target.value)}
-                          variant="standard"
-                          InputProps={{ disableUnderline: true }}
-                          sx={{ flex: 1 }}
-                        />
-                      )}
-                    </Box>
-                  ))}
-                </Box>
-              </Box>
-
-              {/* Directions */}
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold' }}>
-                  Directions
-                </Typography>
-                <Box sx={{ pl: 2 }}>
-                  {directions.map((direction, index) => (
-                    <Box key={index} sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
-                      <Typography sx={{ mr: 1, color: '#666' }}>•</Typography>
-                      {direction === 'click to add' ? (
-                        <Typography 
-                          sx={{ color: '#999', cursor: 'pointer' }}
-                          onClick={addDirection}
-                        >
-                          click to add
-                        </Typography>
-                      ) : (
-                        <TextField
-                          value={direction}
-                          onChange={(e) => updateDirection(index, e.target.value)}
-                          variant="standard"
-                          InputProps={{ disableUnderline: true }}
-                          sx={{ flex: 1 }}
-                        />
-                      )}
-                    </Box>
-                  ))}
-                </Box>
-              </Box>
+                sx={{
+                  borderColor: '#2e7d32',
+                  color: '#2e7d32',
+                  '&:hover': {
+                    borderColor: '#1b5e20',
+                    backgroundColor: '#f1f8e9'
+                  },
+                  borderRadius: 1,
+                  padding: '8px 16px',
+                  textTransform: 'none'
+                }}
+              >
+                Add custom recipe
+              </Button>
             </Box>
           </DialogContent>
 
@@ -385,6 +347,41 @@ const RecipeLibrary = () => {
             </Button>
           </DialogActions>
         </Box>
+      </Dialog>
+
+      {/* Custom Recipe Dialog */}
+      <Dialog 
+        open={customRecipeDialogOpen} 
+        onClose={() => setCustomRecipeDialogOpen(false)} 
+        maxWidth="md" 
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          Create Custom Recipe
+          <IconButton onClick={() => setCustomRecipeDialogOpen(false)}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <EditableRecipeDetails
+            recipeName={recipeName}
+            ingredients={ingredients}
+            instructions={directions}
+            onRecipeNameChange={setRecipeName}
+            onIngredientsChange={setIngredients}
+            onInstructionsChange={setDirections}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCustomRecipeDialogOpen(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            onClick={saveCustomRecipe}
+            disabled={!recipeName.trim() || submitting}
+          >
+            Save Recipe
+          </Button>
+        </DialogActions>
       </Dialog>
     </div>
   );

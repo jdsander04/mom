@@ -5,14 +5,17 @@ import {
   Card,
   CardContent,
   Button,
-  TextField,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Chip,
   Box,
-  IconButton
+  IconButton,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText
 } from '@mui/material';
 import { Add, Delete } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -20,13 +23,27 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
 import dayjs, { Dayjs } from 'dayjs';
 import { useAuth } from '../../contexts/AuthContext';
+import RecipeDetails from '../common/RecipeAccordion/RecipeDetails';
 import styles from './MealPlanner.module.css';
 interface MealPlan {
   date: string;
-  breakfast: string[];
-  lunch: string[];
-  dinner: string[];
-  snacks: string[];
+  breakfast: { id: number; name: string }[];
+  lunch: { id: number; name: string }[];
+  dinner: { id: number; name: string }[];
+  snacks: { id: number; name: string }[];
+}
+
+interface Recipe {
+  id: number;
+  name: string;
+}
+
+interface RecipeDetail {
+  id: number;
+  name: string;
+  description: string;
+  ingredients: { name: string; quantity: number; unit: string }[];
+  steps: { description: string; order: number }[];
 }
 
 const MealPlanner = () => {
@@ -35,10 +52,13 @@ const MealPlanner = () => {
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [currentMealType, setCurrentMealType] = useState<keyof Omit<MealPlan, 'date'>>('breakfast');
-  const [newMeal, setNewMeal] = useState('');
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [recipeDetailOpen, setRecipeDetailOpen] = useState(false);
+  const [selectedRecipeDetail, setSelectedRecipeDetail] = useState<RecipeDetail | null>(null);
 
   useEffect(() => {
     loadMealPlan(selectedDate.format('YYYY-MM-DD'));
+    loadRecipes();
   }, [selectedDate, token, user]);
 
 
@@ -59,7 +79,23 @@ const MealPlanner = () => {
       
       if (response.ok) {
         const data = await response.json();
-        setMealPlan(data);
+        // Convert string arrays to recipe objects if needed
+        const convertedData = {
+          ...data,
+          breakfast: Array.isArray(data.breakfast) ? data.breakfast.map((item: any) => 
+            typeof item === 'string' ? { id: 0, name: item } : item
+          ) : [],
+          lunch: Array.isArray(data.lunch) ? data.lunch.map((item: any) => 
+            typeof item === 'string' ? { id: 0, name: item } : item
+          ) : [],
+          dinner: Array.isArray(data.dinner) ? data.dinner.map((item: any) => 
+            typeof item === 'string' ? { id: 0, name: item } : item
+          ) : [],
+          snacks: Array.isArray(data.snacks) ? data.snacks.map((item: any) => 
+            typeof item === 'string' ? { id: 0, name: item } : item
+          ) : []
+        };
+        setMealPlan(convertedData);
       } else if (response.status === 404) {
         setMealPlan({ date, breakfast: [], lunch: [], dinner: [], snacks: [] });
       } else {
@@ -98,19 +134,71 @@ const MealPlanner = () => {
     }
   };
 
-  const addMeal = () => {
-    if (!mealPlan || !newMeal.trim()) return;
+  const loadRecipes = async () => {
+    if (!token) return;
+    
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/recipes/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setRecipes(data.recipes || []);
+      }
+    } catch (error) {
+      console.error('Error loading recipes:', error);
+    }
+  };
+
+  const addRecipe = (recipe: Recipe) => {
+    if (!mealPlan) return;
     
     const updatedPlan = {
       ...mealPlan,
-      [currentMealType]: [...mealPlan[currentMealType], newMeal.trim()]
+      [currentMealType]: [...mealPlan[currentMealType], { id: recipe.id, name: recipe.name }]
     };
     
-
-    
     saveMealPlan(updatedPlan);
-    setNewMeal('');
     setDialogOpen(false);
+  };
+
+  const viewRecipeDetail = async (recipeId: number, recipeName: string) => {
+    console.log('Clicked recipe:', { recipeId, recipeName });
+    
+    if (!token) return;
+    
+    if (recipeId === 0) {
+      // For legacy string-based entries, find the recipe by name
+      const recipe = recipes.find(r => r.name === recipeName);
+      if (!recipe) {
+        console.log('Recipe not found in library:', recipeName);
+        return;
+      }
+      recipeId = recipe.id;
+    }
+    
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/recipes/${recipeId}/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedRecipeDetail(data);
+        setRecipeDetailOpen(true);
+      } else {
+        console.error('Failed to load recipe detail:', response.status);
+      }
+    } catch (error) {
+      console.error('Error loading recipe detail:', error);
+    }
   };
 
   const removeMeal = (mealType: keyof Omit<MealPlan, 'date'>, index: number) => {
@@ -134,7 +222,7 @@ const MealPlanner = () => {
 
 
 
-  const renderMealSection = (title: string, mealType: keyof Omit<MealPlan, 'date'>, meals: string[]) => (
+  const renderMealSection = (title: string, mealType: keyof Omit<MealPlan, 'date'>, meals: { id: number; name: string }[]) => (
     <Card className={styles.mealCard}>
       <CardContent>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
@@ -147,10 +235,18 @@ const MealPlanner = () => {
           {meals.map((meal, index) => (
             <Chip
               key={index}
-              label={meal}
-              onDelete={() => removeMeal(mealType, index)}
+              label={meal.name}
+              onClick={(e) => {
+                e.stopPropagation();
+                viewRecipeDetail(meal.id, meal.name);
+              }}
+              onDelete={(e) => {
+                e.stopPropagation();
+                removeMeal(mealType, index);
+              }}
               deleteIcon={<Delete />}
               variant="outlined"
+              clickable
             />
           ))}
           {meals.length === 0 && (
@@ -200,22 +296,41 @@ const MealPlanner = () => {
       )}
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add {currentMealType}</DialogTitle>
+        <DialogTitle>Add Recipe to {currentMealType}</DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Meal"
-            fullWidth
-            variant="outlined"
-            value={newMeal}
-            onChange={(e) => setNewMeal(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && addMeal()}
-          />
+          <List>
+            {recipes.map((recipe) => (
+              <ListItem key={recipe.id} disablePadding>
+                <ListItemButton onClick={() => addRecipe(recipe)}>
+                  <ListItemText primary={recipe.name} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+            {recipes.length === 0 && (
+              <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+                No recipes found. Add recipes to your library first.
+              </Typography>
+            )}
+          </List>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button onClick={addMeal} variant="contained">Add</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={recipeDetailOpen} onClose={() => setRecipeDetailOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>{selectedRecipeDetail?.name}</DialogTitle>
+        <DialogContent>
+          {selectedRecipeDetail && (
+            <RecipeDetails
+              imageUrl={selectedRecipeDetail.image_url}
+              ingredients={selectedRecipeDetail.ingredients.map(ing => `${ing.quantity} ${ing.unit} ${ing.name}`)}
+              instructions={selectedRecipeDetail.steps.map(step => step.description)}
+            />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRecipeDetailOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </>
