@@ -32,7 +32,6 @@ urlpatterns = [
     # Standard path
     path('api/', include('cart.urls')),
     path('api/', include('recipes.urls')),
-
     path('api/', include('meal_calendar.urls')),
     path('api/', include('preferences.urls')),
     path('api/', include('diet.urls')),

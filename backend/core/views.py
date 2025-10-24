@@ -34,7 +34,17 @@ def signup(request):
     
     user = User.objects.create_user(username=username, password=password, email=email)
     token, created = Token.objects.get_or_create(user=user)
-    return Response({'token': token.key, 'user_id': user.id}, status=status.HTTP_201_CREATED)
+    return Response({
+        'token': token.key, 
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'date_joined': user.date_joined
+        }
+    }, status=status.HTTP_201_CREATED)
 
 @extend_schema(
     methods=['POST'],
@@ -59,7 +69,17 @@ def login(request):
     user = authenticate(username=username, password=password)
     if user:
         token, created = Token.objects.get_or_create(user=user)
-        return Response({'token': token.key, 'user_id': user.id})
+        return Response({
+            'token': token.key, 
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'date_joined': user.date_joined
+            }
+        })
     else:
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
