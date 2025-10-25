@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { TextField, Button, Dialog, DialogTitle, DialogContent, DialogActions, Typography, Box, IconButton } from '@mui/material';
 import { Close as CloseIcon, CloudUpload as UploadIcon, Add as AddIcon, FilterList as FilterIcon, Sort as SortIcon } from '@mui/icons-material';
 import styles from './RecipeLibrary.module.css';
@@ -11,6 +11,12 @@ import { useRecipes } from '../../hooks/useRecipes';
 import { apiService } from '../../services/api';
 import type { Recipe } from '../../types/recipe';
 
+interface Ingredient {
+  name: string;
+  quantity: number | '';
+  unit: string;
+}
+
 const RecipeLibrary = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [customRecipeDialogOpen, setCustomRecipeDialogOpen] = useState(false);
@@ -21,7 +27,7 @@ const RecipeLibrary = () => {
   
   // Custom recipe form state
   const [recipeName, setRecipeName] = useState('');
-  const [ingredients, setIngredients] = useState(['']);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([{ name: '', quantity: '', unit: '' }]);
   const [directions, setDirections] = useState(['']);
 
   const { token } = useAuth();
@@ -57,18 +63,18 @@ const RecipeLibrary = () => {
       await apiService.createRecipe({
         recipe_source: 'explicit',
         name: recipeName,
-        ingredients: ingredients.filter(i => i.trim()).map((ingredient, index) => ({
-          name: ingredient,
-          quantity: 1,
-          unit: 'unit'
+        ingredients: ingredients.filter(i => i.name.trim()).map((ingredient) => ({
+          name: ingredient.name.trim(),
+          quantity: ingredient.quantity === '' ? 0 : Number(ingredient.quantity),
+          unit: ingredient.unit.trim()
         })),
-        steps: directions.filter(d => d.trim()).map((direction, index) => ({
+        steps: directions.filter(d => d.trim()).map((direction) => ({
           description: direction
         }))
       });
       
       setRecipeName('');
-      setIngredients(['']);
+      setIngredients([{ name: '', quantity: '', unit: '' }]);
       setDirections(['']);
       setCustomRecipeDialogOpen(false);
       refetch();
@@ -353,16 +359,56 @@ const RecipeLibrary = () => {
       <Dialog 
         open={customRecipeDialogOpen} 
         onClose={() => setCustomRecipeDialogOpen(false)} 
-        maxWidth="md" 
+        maxWidth="lg" 
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            minHeight: '80vh',
+            maxHeight: '90vh'
+          }
+        }}
       >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          fontSize: '1.5rem',
+          fontWeight: 'bold',
+          padding: '24px 24px 0 24px',
+          color: '#2e7d32'
+        }}>
           Create Custom Recipe
-          <IconButton onClick={() => setCustomRecipeDialogOpen(false)}>
+          <IconButton 
+            onClick={() => setCustomRecipeDialogOpen(false)}
+            sx={{ 
+              color: 'text.secondary',
+              '&:hover': {
+                backgroundColor: '#f5f5f5'
+              }
+            }}
+          >
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ 
+          padding: '24px',
+          overflow: 'auto',
+          '&::-webkit-scrollbar': {
+            width: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            backgroundColor: '#f1f1f1',
+            borderRadius: '4px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: '#c1c1c1',
+            borderRadius: '4px',
+            '&:hover': {
+              backgroundColor: '#a8a8a8',
+            },
+          },
+        }}>
           <EditableRecipeDetails
             recipeName={recipeName}
             ingredients={ingredients}
@@ -372,14 +418,45 @@ const RecipeLibrary = () => {
             onInstructionsChange={setDirections}
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCustomRecipeDialogOpen(false)}>Cancel</Button>
+        <DialogActions sx={{ 
+          padding: '16px 24px 24px 24px',
+          justifyContent: 'space-between',
+          borderTop: '1px solid #e0e0e0',
+          backgroundColor: '#fafafa'
+        }}>
+          <Button 
+            onClick={() => setCustomRecipeDialogOpen(false)}
+            sx={{
+              color: '#666',
+              textTransform: 'none',
+              fontWeight: 500,
+              '&:hover': {
+                backgroundColor: '#f0f0f0'
+              }
+            }}
+          >
+            Cancel
+          </Button>
           <Button 
             variant="contained" 
             onClick={saveCustomRecipe}
             disabled={!recipeName.trim() || submitting}
+            sx={{
+              backgroundColor: '#2e7d32',
+              '&:hover': {
+                backgroundColor: '#1b5e20'
+              },
+              '&:disabled': {
+                backgroundColor: '#e0e0e0',
+                color: '#9e9e9e'
+              },
+              borderRadius: 2,
+              padding: '8px 24px',
+              textTransform: 'none',
+              fontWeight: 600
+            }}
           >
-            Save Recipe
+            {submitting ? 'Saving...' : 'Save Recipe'}
           </Button>
         </DialogActions>
       </Dialog>
