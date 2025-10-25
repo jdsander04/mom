@@ -3,11 +3,15 @@ import styles from './RecipeDetails.module.css';
 
 export interface Nutrition {
   calories?: number;
-  fat?: string;
-  cholesterol?: string;
-  sodium?: string;
-  carbs?: string;
-  protein?: string;
+  fat?: number;
+  cholesterol?: number;
+  sodium?: number;
+  carbs?: number;
+  protein?: number;
+  fiber?: number;
+  sugar?: number;
+  saturatedFat?: number;
+  unsaturatedFat?: number;
 }
 
 interface Props {
@@ -31,12 +35,16 @@ const RecipeDetails = ({ imageUrl, nutrition, ingredients = [], instructions = [
         {nutrition && (
           <div className={styles.nutrition}>
             <div className={styles.nutritionTitle}>1 serving:</div>
-            {nutrition.calories !== undefined && <div>{nutrition.calories} calories</div>}
-            {nutrition.fat && <div>{nutrition.fat} fat</div>}
-            {nutrition.cholesterol && <div>{nutrition.cholesterol} cholesterol</div>}
-            {nutrition.sodium && <div>{nutrition.sodium} sodium</div>}
-            {nutrition.carbs && <div>{nutrition.carbs} carbohydrate</div>}
-            {nutrition.protein && <div>{nutrition.protein} protein</div>}
+            {nutrition.calories !== undefined && <div>{Math.round(nutrition.calories)} calories</div>}
+            {nutrition.fat !== undefined && <div>{Math.round(nutrition.fat)}g fat</div>}
+            {nutrition.saturatedFat !== undefined && <div>{Math.round(nutrition.saturatedFat)}g saturated fat</div>}
+            {nutrition.unsaturatedFat !== undefined && nutrition.unsaturatedFat > 0 && <div>{Math.round(nutrition.unsaturatedFat)}g unsaturated fat</div>}
+            {nutrition.cholesterol !== undefined && <div>{Math.round(nutrition.cholesterol)}mg cholesterol</div>}
+            {nutrition.sodium !== undefined && <div>{Math.round(nutrition.sodium)}mg sodium</div>}
+            {nutrition.carbs !== undefined && <div>{Math.round(nutrition.carbs)}g carbohydrate</div>}
+            {nutrition.fiber !== undefined && <div>{Math.round(nutrition.fiber)}g fiber</div>}
+            {nutrition.sugar !== undefined && <div>{Math.round(nutrition.sugar)}g sugar</div>}
+            {nutrition.protein !== undefined && <div>{Math.round(nutrition.protein)}g protein</div>}
           </div>
         )}
       </div>

@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { TextField, Button, Dialog, DialogTitle, DialogContent, DialogActions, Typography, Box, IconButton } from '@mui/material';
-import { Close as CloseIcon, CloudUpload as UploadIcon, Add as AddIcon, FilterList as FilterIcon, Sort as SortIcon } from '@mui/icons-material';
+import { useState, useEffect } from 'react';
+import { TextField, Button, Dialog, DialogTitle, DialogContent, DialogActions, Typography, Box, IconButton, InputAdornment } from '@mui/material';
+import { Close as CloseIcon, CloudUpload as UploadIcon, Add as AddIcon, FilterList as FilterIcon, Sort as SortIcon, Search as SearchIcon } from '@mui/icons-material';
 import styles from './RecipeLibrary.module.css';
 import VerticalContainer from '../common/VerticalContainer/VerticalContainer';
 import RecipeAccordion from '../common/RecipeAccordion/RecipeAccordion';
@@ -24,6 +24,9 @@ const RecipeLibrary = () => {
   const [submitting, setSubmitting] = useState(false);
   const [sortBy, setSortBy] = useState<'date_added' | 'times_made'>('date_added');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Recipe[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   
   // Custom recipe form state
   const [recipeName, setRecipeName] = useState('');
@@ -33,7 +36,47 @@ const RecipeLibrary = () => {
   const { token } = useAuth();
   const { recipes, loading, error, refetch } = useRecipes();
 
+  // Search functionality
+  const performSearch = async (query: string) => {
+    const trimmedQuery = query.trim();
+    
+    if (!trimmedQuery) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
 
+    // Require at least 3 characters for search
+    if (trimmedQuery.length < 3) {
+      // Don't clear search results - keep showing original recipes
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const searchResults = await apiService.searchRecipes(trimmedQuery);
+      // Fetch complete recipe details for each search result
+      const completeRecipes = await Promise.all(
+        searchResults.map(recipe => apiService.getRecipe(recipe.id))
+      );
+      setSearchResults(completeRecipes);
+    } catch (error) {
+      console.error('Search failed:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      performSearch(searchQuery);
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   const addRecipeFromUrl = async () => {
     if (!newRecipeUrl.trim() || submitting) return;
@@ -98,7 +141,10 @@ const RecipeLibrary = () => {
     }
   };
 
-  const sortedRecipes = [...recipes].sort((a, b) => {
+  // Determine which recipes to display and sort
+  const recipesToDisplay = (searchQuery.trim() && searchQuery.trim().length >= 3) ? searchResults : recipes;
+  
+  const sortedRecipes = [...recipesToDisplay].sort((a, b) => {
     let comparison = 0;
     
     if (sortBy === 'date_added') {
@@ -118,15 +164,60 @@ const RecipeLibrary = () => {
 
 
   const getCalories = (nutrients: Recipe['nutrients']) => {
-    const calorieNutrient = nutrients.find(n => n.macro === 'calories');
+    const calorieNutrient = nutrients?.find(n => n.macro === 'calories');
     return calorieNutrient ? Math.round(calorieNutrient.mass) : 0;
   };
 
+  const getNutritionData = (nutrients: Recipe['nutrients']) => {
+    const nutritionMap: { [key: string]: number } = {};
+    
+    nutrients?.forEach(nutrient => {
+      const macro = nutrient.macro;
+      const mass = nutrient.mass;
+      
+      // Map backend nutrient names to frontend nutrition interface
+      switch (macro) {
+        case 'calories':
+          nutritionMap.calories = mass;
+          break;
+        case 'fatContent':
+          nutritionMap.fat = mass;
+          break;
+        case 'saturatedFatContent':
+          nutritionMap.saturatedFat = mass;
+          break;
+        case 'unsaturatedFatContent':
+          nutritionMap.unsaturatedFat = mass;
+          break;
+        case 'cholesterolContent':
+          nutritionMap.cholesterol = mass;
+          break;
+        case 'sodiumContent':
+          nutritionMap.sodium = mass;
+          break;
+        case 'carbohydrateContent':
+          nutritionMap.carbs = mass;
+          break;
+        case 'fiberContent':
+          nutritionMap.fiber = mass;
+          break;
+        case 'sugarContent':
+          nutritionMap.sugar = mass;
+          break;
+        case 'proteinContent':
+          nutritionMap.protein = mass;
+          break;
+      }
+    });
+    
+    return nutritionMap;
+  };
+
   const formatIngredients = (ingredients: Recipe['ingredients']) => 
-    ingredients.map(ing => `${ing.quantity} ${ing.unit} ${ing.name}`.trim());
+    ingredients?.map(ing => `${ing.quantity} ${ing.unit} ${ing.name}`.trim()) || [];
 
   const formatInstructions = (steps: Recipe['steps']) => 
-    steps.sort((a, b) => a.order - b.order).map(step => step.description);
+    steps?.sort((a, b) => a.order - b.order).map(step => step.description) || [];
 
   if (loading) return <div>Loading recipes...</div>;
   if (error) return <div>Error loading recipes: {error}</div>;
@@ -159,6 +250,33 @@ const RecipeLibrary = () => {
         >
           Add recipe
         </Button>
+        
+        <TextField
+          placeholder="Search recipes (min 3 chars)..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          size="small"
+          sx={{
+            minWidth: '250px',
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 2,
+              backgroundColor: '#fafafa',
+              '&:hover': {
+                backgroundColor: '#f5f5f5'
+              },
+              '&.Mui-focused': {
+                backgroundColor: 'white'
+              }
+            }
+          }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ color: '#666' }} />
+              </InputAdornment>
+            ),
+          }}
+        />
         
         <Button 
           variant="outlined"
@@ -206,6 +324,7 @@ const RecipeLibrary = () => {
           const ingredients = formatIngredients(recipe.ingredients);
           const instructions = formatInstructions(recipe.steps);
           const calories = getCalories(recipe.nutrients);
+          const nutritionData = getNutritionData(recipe.nutrients);
           
           return (
             <RecipeAccordion 
@@ -221,14 +340,24 @@ const RecipeLibrary = () => {
                 imageUrl={recipe.image_url || ''}
                 ingredients={ingredients}
                 instructions={instructions}
-                nutrition={{ calories }}
+                nutrition={nutritionData}
               />
             </RecipeAccordion>
           );
         })}
-        {sortedRecipes.length === 0 && (
+        {sortedRecipes.length === 0 && !isSearching && (
           <Typography variant="body1" color="text.secondary">
-            No recipes found. Add some recipes to get started!
+            {searchQuery.trim() 
+              ? searchQuery.trim().length < 3
+                ? "Enter at least 3 characters to search recipes."
+                : `No recipes found matching "${searchQuery}". Try a different search term.`
+              : "No recipes found. Add some recipes to get started!"
+            }
+          </Typography>
+        )}
+        {isSearching && (
+          <Typography variant="body1" color="text.secondary">
+            Searching recipes...
           </Typography>
         )}
       </VerticalContainer>

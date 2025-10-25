@@ -72,6 +72,15 @@ class ApiService {
     }
   }
 
+  async searchRecipes(query: string, limit: number = 50, fuzziness: number = 2): Promise<Recipe[]> {
+    const response = await fetch(`${API_BASE_URL}/recipes/search/?q=${encodeURIComponent(query)}&limit=${limit}&fuzziness=${fuzziness}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+    const searchResult = await this.handleResponse<{ results: Recipe[] }>(response);
+    return searchResult.results;
+  }
+
   // Helper method to get popular recipes (sorted by times_made)
   async getPopularRecipes(): Promise<Recipe[]> {
     const response = await this.getRecipes();
