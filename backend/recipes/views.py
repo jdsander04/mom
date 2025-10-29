@@ -6,6 +6,7 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 from .models import Recipe, Ingredient, Step, Nutrient
 from .services import recipe_from_url, recipe_from_file
+from .tasks import process_llm_recipe_extraction
 
 @extend_schema(
     methods=['GET'],
@@ -98,7 +99,45 @@ def recipe_list(request):
                 return Response({'error': 'Invalid URL format'}, status=400)
             
             try:
-                recipe_data = recipe_from_url(url)
+                # Try to extract recipe with async mode enabled
+                # If scraper works, recipe_data will be returned
+                # If LLM fallback is needed, recipe_data will be None
+                recipe_data = recipe_from_url(url, use_async=True)
+                
+                # If recipe_data is None, it means LLM fallback is needed - create placeholder and queue task
+                if recipe_data is None:
+                    # Create placeholder recipe
+                    placeholder_recipe = Recipe.objects.create(
+                        user=request.user,
+                        name='Processing recipe...',
+                        description='Recipe extraction in progress. Please wait.',
+                        source_url=url
+                    )
+                    
+                    # Queue the async task
+                    process_llm_recipe_extraction.delay(
+                        recipe_id=placeholder_recipe.id,
+                        url=url,
+                        user_id=request.user.id
+                    )
+                    
+                    # Return placeholder recipe immediately
+                    created_recipe = {
+                        'id': placeholder_recipe.id,
+                        'name': placeholder_recipe.name,
+                        'description': placeholder_recipe.description,
+                        'image_url': placeholder_recipe.image_url,
+                        'source_url': placeholder_recipe.source_url,
+                        'date_added': placeholder_recipe.date_added.isoformat(),
+                        'times_made': placeholder_recipe.times_made,
+                        'ingredients': [],
+                        'steps': [],
+                        'nutrients': [],
+                        'status': 'processing'
+                    }
+                    return Response(created_recipe, status=201)
+                
+                # If we have recipe_data, scraper worked - process normally
                 print(f"VIEWS: Recipe data received: {recipe_data}")
                 print(f"VIEWS: Recipe data type: {type(recipe_data)}")
                 if recipe_data:

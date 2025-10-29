@@ -173,8 +173,17 @@ def _get_text_from_website(url):
         logger.error(f'"GET {url} HTTP/1.1" 500 0')
         return ""
 
-def recipe_from_url(url):
-    """Extract recipe from URL using scraper first, then AI fallback."""
+def recipe_from_url(url, use_async=False):
+    """
+    Extract recipe from URL using scraper first, then AI fallback.
+    
+    Args:
+        url: URL to extract recipe from
+        use_async: If True and LLM fallback is needed, returns None to signal async processing
+    
+    Returns:
+        dict: Recipe data if successful, None if async processing is needed, or error dict if failed
+    """
     if not url:
         logger.warning("RECIPE_EXTRACT: No URL provided")
         return None
@@ -205,6 +214,11 @@ def recipe_from_url(url):
         result = None
     
     # Fallback to AI extraction
+    if use_async:
+        # Signal that async processing is needed
+        logger.info("RECIPE_EXTRACT: LLM fallback needed, returning None for async processing")
+        return None
+    
     logger.info("RECIPE_EXTRACT: Falling back to AI extraction...")
     try:
         text = _get_text_from_website(url)
