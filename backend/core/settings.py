@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
 
     'corsheaders',
+    'storages',
     
     'cart',
     'meal_plan',
@@ -55,6 +56,7 @@ INSTALLED_APPS = [
     'recipes',
     'preferences',
     'ingredient',
+    'users',
 ]
 
 MIDDLEWARE = [
@@ -143,6 +145,7 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+AUTH_USER_MODEL = 'users.User'
 
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
@@ -213,4 +216,30 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 
+
+# Media storage (MinIO / S3-compatible)
+MINIO_ENABLED = os.getenv('MINIO_ENABLED', 'false').lower() in ('true', '1', 'yes')
+
+if MINIO_ENABLED:
+    # django-storages S3 backend configuration for MinIO
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+    AWS_ACCESS_KEY_ID = os.getenv('MINIO_ROOT_USER', '')
+    AWS_SECRET_ACCESS_KEY = os.getenv('MINIO_ROOT_PASSWORD', '')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('MEDIA_BUCKET', 'media')
+    AWS_S3_ENDPOINT_URL = os.getenv('MINIO_ENDPOINT', 'http://minio:9000')
+    AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
+    AWS_S3_SIGNATURE_VERSION = os.getenv('AWS_S3_SIGNATURE_VERSION', 's3v4')
+    AWS_S3_ADDRESSING_STYLE = os.getenv('AWS_S3_ADDRESSING_STYLE', 'path')
+
+    # Public-read by default for images; adjust if you need private media
+    AWS_DEFAULT_ACL = os.getenv('AWS_DEFAULT_ACL', 'public-read')
+    AWS_QUERYSTRING_AUTH = os.getenv('AWS_QUERYSTRING_AUTH', 'false').lower() in ('true', '1', 'yes')
+
+    # MEDIA_URL should be absolute so frontend can reference images directly
+    MEDIA_URL = os.getenv('MEDIA_URL', f"{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/")
+else:
+    # Local development fallback (Django serves from MEDIA_ROOT)
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 

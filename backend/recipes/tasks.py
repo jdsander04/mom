@@ -1,6 +1,5 @@
 from celery import shared_task
 import logging
-from django.contrib.auth.models import User
 from .models import Recipe, Ingredient, Step, Nutrient
 from .services import _get_recipe_from_llm, _get_text_from_website
 
