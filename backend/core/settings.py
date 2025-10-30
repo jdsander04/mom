@@ -222,6 +222,16 @@ MINIO_ENABLED = os.getenv('MINIO_ENABLED', 'false').lower() in ('true', '1', 'ye
 
 if MINIO_ENABLED:
     # django-storages S3 backend configuration for MinIO
+    # Use STORAGES dict for Django 5.2+
+    STORAGES = {
+        'default': {
+            'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+        },
+        'staticfiles': {
+            'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+        },
+    }
+    # Also set for backward compatibility with older Django versions
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
     AWS_ACCESS_KEY_ID = os.getenv('MINIO_ROOT_USER', '')
@@ -238,8 +248,17 @@ if MINIO_ENABLED:
 
     # MEDIA_URL should be absolute so frontend can reference images directly
     MEDIA_URL = os.getenv('MEDIA_URL', f"{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/")
+    # Do NOT set MEDIA_ROOT when using MinIO - leave it unset to force S3 storage usage
 else:
     # Local development fallback (Django serves from MEDIA_ROOT)
+    STORAGES = {
+        'default': {
+            'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+        },
+    }
     MEDIA_URL = '/media/'
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 

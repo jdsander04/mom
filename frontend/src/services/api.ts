@@ -174,6 +174,32 @@ class ApiService {
     });
     await this.handleResponse(response);
   }
+
+  // User profile image endpoints
+  async getProfileImageUrl(): Promise<{ url: string | null }>{
+    const response = await fetch(`${API_BASE_URL}/users/me/profile-image/`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<{ url: string | null }>(response);
+  }
+
+  async uploadProfileImage(file: File): Promise<{ url: string }>{
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers: HeadersInit = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    // Intentionally do not set Content-Type so the browser sets proper multipart boundary
+
+    const response = await fetch(`${API_BASE_URL}/users/me/profile-image/`, {
+      method: 'PUT',
+      headers,
+      body: formData
+    });
+    return this.handleResponse<{ url: string }>(response);
+  }
 }
 
 export const apiService = new ApiService();

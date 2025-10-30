@@ -41,7 +41,7 @@ const COLORS = {
 };
 
 const SideBar = ({ navItems, onToggle, isMinimized }: SideBarProps) => {
-  const { logout, user } = useAuth();
+  const { logout, user, avatarUrl } = useAuth();
   const drawerStyles = {
     width: isMinimized ? SIDEBAR_WIDTH.collapsed : SIDEBAR_WIDTH.expanded,
     flexShrink: 0,
@@ -119,8 +119,11 @@ const SideBar = ({ navItems, onToggle, isMinimized }: SideBarProps) => {
             aria-label="User profile"
           >
             <Avatar
+              src={avatarUrl || undefined}
               sx={{ width: isMinimized ? 32 : 56, height: isMinimized ? 32 : 56 }}
-            />
+            >
+              {user?.username?.slice(0, 2)?.toUpperCase()}
+            </Avatar>
           </ButtonBase>
         </Box>
         <List sx={{ padding: 0, margin: 0, flex: 1 }}>

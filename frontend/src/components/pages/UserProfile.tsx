@@ -21,6 +21,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SaveIcon from '@mui/icons-material/Save';
 import { useAuth } from '../../contexts/AuthContext';
+import { apiService } from '../../services/api';
 
 type LocalItem = { id: string; value: string; serverId?: number };
 
@@ -48,13 +49,18 @@ function searchLocalDB(db: string[], q: string, limit = 6) {
 }
 
 export default function UserProfile() {
-  const { token: authToken } = useAuth() as { token?: string | null };
+  const { token: authToken, avatarUrl, refreshAvatar } = useAuth() as any;
   const token = authToken ?? null;
 
   const [dietPlans, setDietPlans] = useState<LocalItem[]>([{ id: 'd1', value: '' }]);
   const [allergens, setAllergens] = useState<LocalItem[]>([{ id: 'a1', value: '' }]);
   const [focusedDietId, setFocusedDietId] = useState<string | null>(null);
   const [focusedAllergenId, setFocusedAllergenId] = useState<string | null>(null);
+
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const DIET_DB = useMemo(() => [], []);
   const INGREDIENT_DB = useMemo(() => [], []);
@@ -255,6 +261,49 @@ export default function UserProfile() {
     }
   }, [token]);
 
+  useEffect(() => {
+    let revoke: string | null = null;
+    if (selectedFile) {
+      const url = URL.createObjectURL(selectedFile);
+      setPreviewUrl(url);
+      revoke = url;
+    } else {
+      setPreviewUrl(null);
+    }
+    return () => {
+      if (revoke) URL.revokeObjectURL(revoke);
+    };
+  }, [selectedFile]);
+
+
+  async function handleUpload() {
+    if (!selectedFile) return;
+    try {
+      setUploading(true);
+      await apiService.uploadProfileImage(selectedFile);
+      await refreshAvatar().catch(() => {});
+      setSelectedFile(null);
+      // Refresh page to show updated avatar
+      window.location.reload();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function handleFilePick(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (files && files[0]) {
+      const file = files[0];
+      setSelectedFile(file);
+    }
+  }
+
+  function openFilePicker() {
+    fileInputRef.current?.click();
+  }
+
   // derive focused queries
   const currentDietQuery = focusedDietId ? dietPlans.find((p) => p.id === focusedDietId)?.value ?? '' : '';
   const currentIngredientQuery = focusedAllergenId ? allergens.find((a) => a.id === focusedAllergenId)?.value ?? '' : '';
@@ -264,10 +313,16 @@ export default function UserProfile() {
 
   async function handleSaveAll() {
     if (!token) return;
-    setSaveAllStatus('saving');
-    setSaveAllError(null);
     const toSaveDiet = dietPlans.filter((d) => !d.serverId && d.value && d.value.trim().length > 0);
     const toSaveAllergen = allergens.filter((a) => !a.serverId && a.value && a.value.trim().length > 0);
+
+    // Only proceed if there are changes to save
+    if (toSaveDiet.length === 0 && toSaveAllergen.length === 0) {
+      return;
+    }
+
+    setSaveAllStatus('saving');
+    setSaveAllError(null);
 
     let anyError = false;
     for (const d of toSaveDiet) {
@@ -301,7 +356,10 @@ export default function UserProfile() {
       setSaveAllError('Some items failed to save — check item errors');
     } else {
       setSaveAllStatus('success');
-      setTimeout(() => setSaveAllStatus('idle'), 2000);
+      // Refresh page only if changes were successfully saved
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     }
   }
 
@@ -347,7 +405,40 @@ export default function UserProfile() {
     <Box sx={{ maxWidth: 900, mx: 'auto', p: 4 }}>
       <Card sx={{ p: 3 }}>
         <Stack direction="row" spacing={2} alignItems="center">
-          <Avatar sx={{ width: 64, height: 64 }}>JD</Avatar>
+          <Box sx={{ position: 'relative', display: 'inline-block', '&:hover .hoverOverlay': { opacity: 1 } }}>
+            <Button
+              onClick={openFilePicker}
+              disabled={!token}
+              sx={{
+                minWidth: 0,
+                p: 0,
+                borderRadius: '50%',
+                lineHeight: 0,
+              }}
+            >
+              <Avatar sx={{ width: 64, height: 64 }} src={previewUrl || avatarUrl || undefined}>
+                JD
+              </Avatar>
+            </Button>
+            <Box className="hoverOverlay" sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              borderRadius: '50%',
+              bgcolor: 'rgba(0,0,0,0.45)',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: 0,
+              transition: 'opacity 0.2s ease',
+              pointerEvents: 'none'
+            }}>
+              <Typography variant="caption">Change</Typography>
+            </Box>
+          </Box>
           <Box sx={{ flex: 1 }}>
             <Typography variant="h6">{USER_NAME}</Typography>
             <Typography variant="body2" color="text.secondary">
@@ -355,19 +446,23 @@ export default function UserProfile() {
             </Typography>
           </Box>
           <Box>
-            <Button
-              variant="contained"
-              startIcon={saveAllStatus === 'saving' ? <CircularProgress size={18} color="inherit" /> : <SaveIcon />}
-              onClick={handleSaveAll}
-              disabled={saveAllStatus === 'saving'}
-            >
-              {saveAllStatus === 'success' ? 'Saved' : 'Save changes'}
-            </Button>
-            {saveAllStatus === 'error' && saveAllError ? (
-              <Typography color="error" variant="caption" sx={{ display: 'block', mt: 1 }}>
-                {saveAllError}
-              </Typography>
-            ) : null}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleFilePick}
+            />
+            <Stack direction="row" spacing={1}>
+              <Button
+                variant="contained"
+                onClick={handleUpload}
+                disabled={!token || !selectedFile || uploading}
+                startIcon={uploading ? <CircularProgress size={18} color="inherit" /> : undefined}
+              >
+                {uploading ? 'Saving…' : 'Save changes'}
+              </Button>
+            </Stack>
           </Box>
         </Stack>
 
