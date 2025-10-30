@@ -7,6 +7,7 @@ from drf_spectacular.types import OpenApiTypes
 from .models import Recipe, Ingredient, Step, Nutrient
 from .services import recipe_from_url, recipe_from_file
 from .tasks import process_llm_recipe_extraction
+from .services import parse_ingredient_string
 import logging
 
 logger = logging.getLogger(__name__)
@@ -181,21 +182,10 @@ def recipe_list(request):
             for ingredient in ingredients_data:
                 try:
                     if isinstance(ingredient, str):
-                        # Parse ingredient string (e.g., "2 cups flour")
-                        parts = ingredient.split()
-                        if len(parts) >= 3:
-                            try:
-                                quantity = float(parts[0])
-                                unit = parts[1][:50]  # Limit length
-                                name = ' '.join(parts[2:])[:255]  # Limit length
-                            except ValueError:
-                                quantity = 0
-                                unit = ''
-                                name = ingredient[:255]
-                        else:
-                            quantity = 0
-                            unit = ''
-                            name = ingredient[:255]
+                        parsed = parse_ingredient_string(ingredient)
+                        name = parsed.get('name', '')[:255]
+                        quantity = float(parsed.get('quantity', 0))
+                        unit = parsed.get('unit', '')[:50]
                     else:
                         # Handle dict format
                         name = str(ingredient.get('name', ''))[:255]

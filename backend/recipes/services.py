@@ -6,6 +6,7 @@ import os
 import logging
 from dotenv import load_dotenv
 from urllib.parse import urlparse
+import re
 
 from openai import OpenAI
 
@@ -14,6 +15,96 @@ logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(message)s', date
 logger = logging.getLogger(__name__)
 
 load_dotenv()
+
+def _normalize_unicode_fractions(text: str) -> str:
+    """Replace unicode vulgar fractions with ascii equivalents like 1/2.
+
+    Also collapses multiple spaces and removes leading bullets.
+    """
+    if not text:
+        return ""
+    vulgar_map = {
+        '¼': '1/4', '½': '1/2', '¾': '3/4',
+        '⅐': '1/7', '⅑': '1/9', '⅒': '1/10',
+        '⅓': '1/3', '⅔': '2/3',
+        '⅕': '1/5', '⅖': '2/5', '⅗': '3/5', '⅘': '4/5',
+        '⅙': '1/6', '⅚': '5/6',
+        '⅛': '1/8', '⅜': '3/8', '⅝': '5/8', '⅞': '7/8',
+    }
+    for k, v in vulgar_map.items():
+        text = text.replace(k, v)
+    # Remove common bullet characters at the start
+    text = re.sub(r'^[\s•\-\u2022\u2023\u25E6\u2043\u2219]+', '', text)
+    # Collapse repeated spaces
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+def parse_ingredient_string(ingredient_str: str) -> dict:
+    """Parse an ingredient string into {name, quantity, unit}.
+
+    Handles cases like:
+    - "2 3/4 cup flour"
+    - "0  2/3 cup milk" (stray zero)
+    - "1-1/2 cups sugar"
+    - "1½ teaspoons salt"
+    - "3/4 tsp pepper"
+    Returns quantity as float, unit as first token after quantity, name as the rest.
+    Fallbacks to quantity=0, unit="" if not detectable.
+    """
+    s = _normalize_unicode_fractions(str(ingredient_str))
+    if not s:
+        return {"name": "", "quantity": 0.0, "unit": ""}
+
+    # Patterns to capture various leading quantity formats
+    # 1) mixed number with space: 2 3/4
+    m = re.match(r'^(?:0+\s+)?(\d+)\s+(\d+)/(\d+)\b', s)
+    if m:
+        whole = int(m.group(1))
+        num = int(m.group(2))
+        den = int(m.group(3)) or 1
+        qty = whole + (num / den)
+        rest = s[m.end():].strip()
+    else:
+        # 2) hyphen mixed: 1-1/2 or 1 – 1/2
+        m2 = re.match(r'^(?:0+\s+)?(\d+)\s*[\-–]\s*(\d+)/(\d+)\b', s)
+        if m2:
+            whole = int(m2.group(1))
+            num = int(m2.group(2))
+            den = int(m2.group(3)) or 1
+            qty = whole + (num / den)
+            rest = s[m2.end():].strip()
+        else:
+            # 3) standalone fraction: 3/4
+            m3 = re.match(r'^(?:0+\s+)?(\d+)/(\d+)\b', s)
+            if m3:
+                num = int(m3.group(1))
+                den = int(m3.group(2)) or 1
+                qty = num / den
+                rest = s[m3.end():].strip()
+            else:
+                # 4) decimal or integer: 2 or 2.5
+                m4 = re.match(r'^(?:0+\s+)?(\d+(?:\.\d+)?)\b', s)
+                if m4:
+                    qty = float(m4.group(1))
+                    rest = s[m4.end():].strip()
+                else:
+                    # 5) unicode-adjacent mixed like 1 1/2 already normalized, else none
+                    qty = 0.0
+                    rest = s
+
+    # After quantity, extract unit as first token, everything else is name
+    if qty == 0.0:
+        # No quantity found; treat entire string as name
+        return {"name": rest, "quantity": 0.0, "unit": ""}
+
+    if not rest:
+        return {"name": "", "quantity": qty, "unit": ""}
+
+    tokens = rest.split()
+    unit = tokens[0] if tokens else ""
+    name = ' '.join(tokens[1:]) if len(tokens) > 1 else ''
+
+    return {"name": name, "quantity": qty, "unit": unit}
 
 def _get_openai_client():
     """Get OpenAI client with lazy initialization."""
@@ -103,21 +194,13 @@ def _get_recipe_from_llm(text: str) -> dict:
                 len(result.get('instructions_list') or [])
             )
         
-        # Convert string ingredients to proper format if needed
+        # Convert string ingredients to proper format if needed, with fraction handling
         if result['ingredients'] and isinstance(result['ingredients'][0], str):
             formatted_ingredients = []
             for ing in result['ingredients']:
-                parts = str(ing).split()
-                if len(parts) >= 3:
-                    try:
-                        qty = float(parts[0])
-                        unit = parts[1]
-                        name = ' '.join(parts[2:])
-                        formatted_ingredients.append({"name": name, "quantity": qty, "unit": unit})
-                    except ValueError:
-                        formatted_ingredients.append({"name": str(ing), "quantity": 0, "unit": ""})
-                else:
-                    formatted_ingredients.append({"name": str(ing), "quantity": 0, "unit": ""})
+                parsed = parse_ingredient_string(ing)
+                if parsed["name"] or parsed["quantity"]:
+                    formatted_ingredients.append(parsed)
             result['ingredients'] = formatted_ingredients
         
         logger.info(f"LLM: Final result with defaults: {result}")
