@@ -7,6 +7,9 @@ from drf_spectacular.types import OpenApiTypes
 from .models import Recipe, Ingredient, Step, Nutrient
 from .services import recipe_from_url, recipe_from_file
 from .tasks import process_llm_recipe_extraction
+import logging
+
+logger = logging.getLogger(__name__)
 
 @extend_schema(
     methods=['GET'],
@@ -115,11 +118,19 @@ def recipe_list(request):
                     )
                     
                     # Queue the async task
-                    process_llm_recipe_extraction.delay(
+                    async_result = process_llm_recipe_extraction.delay(
                         recipe_id=placeholder_recipe.id,
                         url=url,
                         user_id=request.user.id
                     )
+                    try:
+                        task_id = getattr(async_result, 'id', None)
+                        logger.info(
+                            f"RECIPE_EXTRACT: Queued LLM task task_id={task_id} placeholder_id={placeholder_recipe.id} url={url}"
+                        )
+                    except Exception:
+                        # Swallow logging errors, continue
+                        pass
                     
                     # Return placeholder recipe immediately
                     created_recipe = {

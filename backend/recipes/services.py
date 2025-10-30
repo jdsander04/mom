@@ -41,7 +41,9 @@ def _get_recipe_from_llm(text: str) -> dict:
     logger.debug(f"LLM: OPENAI_API_KEY length: {len(os.getenv('OPENAI_API_KEY') or '')}")
     if not text or len(text.strip()) < 10:
         logger.warning("LLM: Text too short, returning placeholder")
-        return {"title": "Recipe from URL", "description": "Processing...", "ingredients": [], "instructions_list": []}
+        result = {"title": "Recipe from URL", "description": "Processing...", "ingredients": [], "instructions_list": [], "is_recipe": False, "reason": "Insufficient content for a recipe"}
+        logger.info(f"LLM: Decision is_recipe={result['is_recipe']} reason='{result['reason']}'")
+        return result
     
     # Limit input text (no html.escape to preserve useful characters)
     sanitized_text = text[:5000]
@@ -53,15 +55,17 @@ def _get_recipe_from_llm(text: str) -> dict:
         
         if not client:
             logger.error("LLM: OpenAI client unavailable")
-            return {"title": "Recipe from URL", "description": "OpenAI unavailable", "ingredients": [], "instructions_list": []}
+            result = {"title": "Recipe from URL", "description": "OpenAI unavailable", "ingredients": [], "instructions_list": [], "is_recipe": False, "reason": "LLM unavailable"}
+            logger.info(f"LLM: Decision is_recipe={result['is_recipe']} reason='{result['reason']}'")
+            return result
         
         logger.info("LLM: Making API call to OpenAI...")
         logger.info('"POST https://api.openai.com/v1/chat/completions HTTP/1.1" PENDING 0')
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a recipe extraction expert. Extract recipe information from text and return ONLY valid JSON."},
-                {"role": "user", "content": f"Extract recipe from this text:\n\n{sanitized_text}\n\nReturn JSON with:\n- title: recipe name (string)\n- description: brief description (string)\n- ingredients: array of objects with name, quantity (number), unit (string)\n- instructions_list: array of step strings"}
+                {"role": "system", "content": "You are a strict recipe extraction expert. Return ONLY valid JSON. If the text is not about a recipe, you MUST return {\"is_recipe\": false, \"reason\": \"brief reason\"}. If it is a recipe, return {\"is_recipe\": true, \"title\": string, \"description\": string, \"ingredients\": [{\"name\": string, \"quantity\": number, \"unit\": string}], \"instructions_list\": [string]} and nothing else."},
+                {"role": "user", "content": f"Decide if this is a recipe and extract it if so. Text follows:\n\n{sanitized_text}"}
             ],
             max_tokens=1500,
             temperature=0,
@@ -83,10 +87,21 @@ def _get_recipe_from_llm(text: str) -> dict:
         logger.debug(f"LLM: Parsed JSON result: {result}")
         
         # Ensure required fields exist with meaningful defaults
-        result.setdefault('title', 'Recipe from URL')
-        result.setdefault('description', 'Extracted recipe')
-        result.setdefault('ingredients', [])
-        result.setdefault('instructions_list', [])
+        if not isinstance(result, dict):
+            result = {"is_recipe": False, "reason": "Invalid JSON structure"}
+        result.setdefault('is_recipe', True)
+        logger.info(f"LLM: Decision is_recipe={result.get('is_recipe')} reason='{result.get('reason', '')}'")
+        if result.get('is_recipe'):
+            result.setdefault('title', 'Recipe from URL')
+            result.setdefault('description', 'Extracted recipe')
+            result.setdefault('ingredients', [])
+            result.setdefault('instructions_list', [])
+            logger.info(
+                "LLM: Extracted counts title='%s' ingredients=%d steps=%d",
+                result.get('title'),
+                len(result.get('ingredients') or []),
+                len(result.get('instructions_list') or [])
+            )
         
         # Convert string ingredients to proper format if needed
         if result['ingredients'] and isinstance(result['ingredients'][0], str):
@@ -110,7 +125,9 @@ def _get_recipe_from_llm(text: str) -> dict:
     except Exception as e:
         logger.error(f"LLM extraction failed: {e}")
         logger.error('"POST https://api.openai.com/v1/chat/completions HTTP/1.1" 500 0')
-        return {"title": "Recipe from URL", "description": "Could not extract recipe details", "ingredients": [], "instructions_list": []}
+        result = {"title": "Recipe from URL", "description": "Could not extract recipe details", "ingredients": [], "instructions_list": [], "is_recipe": False, "reason": "LLM error"}
+        logger.info(f"LLM: Decision is_recipe={result['is_recipe']} reason='{result['reason']}'")
+        return result
 
 
 
@@ -231,7 +248,9 @@ def recipe_from_url(url, use_async=False):
         logger.error(f"RECIPE_EXTRACT: AI fallback failed: {e}")
     
     logger.error("RECIPE_EXTRACT: All extraction methods failed")
-    return {"title": "Recipe from URL", "description": "Recipe extraction failed", "ingredients": [], "instructions_list": []}
+    result = {"title": "Recipe from URL", "description": "Recipe extraction failed", "ingredients": [], "instructions_list": [], "is_recipe": False, "reason": "No recipe detected"}
+    logger.info(f"RECIPE_EXTRACT: Decision is_recipe={result['is_recipe']} reason='{result['reason']}'")
+    return result
 
 def recipe_from_file(file):
     pass

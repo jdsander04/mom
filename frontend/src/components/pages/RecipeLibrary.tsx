@@ -27,6 +27,16 @@ const RecipeLibrary = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Recipe[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [nonRecipeNotice, setNonRecipeNotice] = useState<string | null>(null);
+
+  const isValidHttpUrl = (value: string) => {
+    try {
+      const u = new URL(value);
+      return u.protocol === 'http:' || u.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
   
   // Custom recipe form state
   const [recipeName, setRecipeName] = useState('');
@@ -80,10 +90,15 @@ const RecipeLibrary = () => {
 
   const addRecipeFromUrl = async () => {
     if (!newRecipeUrl.trim() || submitting) return;
+    if (!isValidHttpUrl(newRecipeUrl.trim())) {
+      setNonRecipeNotice('Please enter a valid http(s) link.');
+      setTimeout(() => setNonRecipeNotice(null), 5000);
+      return;
+    }
     
     setSubmitting(true);
     try {
-      await apiService.createRecipe({
+      const created = await apiService.createRecipe({
         recipe_source: 'url',
         url: newRecipeUrl
       });
@@ -91,6 +106,34 @@ const RecipeLibrary = () => {
       setNewRecipeUrl('');
       setDialogOpen(false);
       refetch(); // Refresh the recipes list
+
+      // If a placeholder recipe is created, poll it briefly to detect quick failure (non-recipe)
+      if (created && created.id && created.name && created.name.toLowerCase().includes('processing')) {
+        const placeholderId = created.id;
+        const startTime = Date.now();
+        const pollInterval = 2000; // 2s
+        const maxDuration = 20000; // 20s
+        const timer = setInterval(async () => {
+          try {
+            const r = await apiService.getRecipe(placeholderId);
+            // If recipe has been updated to a real name, stop polling
+            if (r && r.name && !r.name.toLowerCase().includes('processing')) {
+              clearInterval(timer);
+              return;
+            }
+          } catch (e) {
+            // If fetch fails (likely 404 because placeholder was deleted), show notice
+            clearInterval(timer);
+            setNonRecipeNotice('That link does not seem to be a recipe.');
+            // Auto-hide after 6 seconds
+            setTimeout(() => setNonRecipeNotice(null), 6000);
+            return;
+          }
+          if (Date.now() - startTime > maxDuration) {
+            clearInterval(timer);
+          }
+        }, pollInterval);
+      }
     } catch (error) {
       console.error('Failed to add recipe:', error);
     } finally {
@@ -361,6 +404,26 @@ const RecipeLibrary = () => {
           </Typography>
         )}
       </VerticalContainer>
+
+      {/* Red corner notification for non-recipe URLs */}
+      {nonRecipeNotice && (
+        <Box
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+            backgroundColor: '#d32f2f',
+            color: 'white',
+            padding: '10px 14px',
+            borderRadius: '8px',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+            zIndex: 1300,
+            fontWeight: 600,
+          }}
+        >
+          {nonRecipeNotice}
+        </Box>
+      )}
 
       <Dialog 
         open={dialogOpen} 

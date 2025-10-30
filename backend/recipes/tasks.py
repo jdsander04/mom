@@ -46,11 +46,25 @@ def process_llm_recipe_extraction(self, recipe_id, url, user_id):
         # Get recipe data from LLM
         logger.info(f"LLM_TASK: Calling LLM extraction...")
         recipe_data = _get_recipe_from_llm(text)
+        logger.info(
+            "LLM_TASK: Extraction decision is_recipe=%s reason='%s'",
+            isinstance(recipe_data, dict) and recipe_data.get('is_recipe'),
+            isinstance(recipe_data, dict) and recipe_data.get('reason', '')
+        )
         
         if not recipe_data:
             logger.error(f"LLM_TASK: LLM extraction returned None for recipe {recipe_id}")
             recipe.delete()
             logger.info(f"LLM_TASK: Deleted placeholder recipe {recipe_id} due to LLM failure")
+            return None
+        
+        # If LLM explicitly says it's not a recipe, delete placeholder and exit
+        if isinstance(recipe_data, dict) and recipe_data.get('is_recipe') is False:
+            reason = recipe_data.get('reason', '')
+            logger.warning(f"LLM_TASK: URL not a recipe for recipe {recipe_id}: {reason}")
+            logger.info(f"LLM_TASK: Deleting placeholder {recipe_id} due to NOT A RECIPE (reason='{reason}') url={url}")
+            recipe.delete()
+            logger.info(f"LLM_TASK: Deleted placeholder recipe {recipe_id} due to non-recipe content")
             return None
         
         # Check if we got meaningful data
@@ -73,6 +87,12 @@ def process_llm_recipe_extraction(self, recipe_id, url, user_id):
         recipe.image_url = recipe_data.get('image', recipe.image_url or '')
         recipe.source_url = url
         recipe.save()
+        logger.info(
+            "LLM_TASK: Saved base recipe %s (ingredients=%d, steps=%d will be created)",
+            recipe.id,
+            len(recipe_data.get('ingredients', []) or []),
+            len((recipe_data.get('instructions_list') or []) if recipe_data.get('instructions_list') else ( [recipe_data.get('instructions')] if recipe_data.get('instructions') else []))
+        )
         
         # Delete existing ingredients, steps, and nutrients
         recipe.ingredients.all().delete()
