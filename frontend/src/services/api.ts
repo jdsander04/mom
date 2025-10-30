@@ -53,7 +53,7 @@ class ApiService {
     return this.handleResponse<Recipe>(response);
   }
 
-  async updateRecipe(id: number, recipeData: Partial<CreateRecipeRequest>): Promise<{ message: string }> {
+  async updateRecipe(id: number, recipeData: Partial<Recipe>): Promise<{ message: string }> {
     const response = await fetch(`${API_BASE_URL}/recipes/${id}/`, {
       method: 'PATCH',
       headers: this.getAuthHeaders(),

@@ -81,7 +81,7 @@ def recipe_list(request):
     # Get list of all recipe IDs
     if request.method == 'GET':
         recipes = Recipe.objects.filter(user=request.user)
-        recipe_data = [{'id': r.id, 'name': r.name} for r in recipes]
+        recipe_data = [{'id': r.id, 'name': r.name, 'favorite': r.favorite} for r in recipes]
         return Response({'recipes': recipe_data})
     
     # Create new recipe
@@ -142,6 +142,7 @@ def recipe_list(request):
                         'source_url': placeholder_recipe.source_url,
                         'date_added': placeholder_recipe.date_added.isoformat(),
                         'times_made': placeholder_recipe.times_made,
+                        'favorite': placeholder_recipe.favorite,
                         'ingredients': [],
                         'steps': [],
                         'nutrients': [],
@@ -299,6 +300,7 @@ def recipe_list(request):
             'source_url': recipe.source_url,
             'date_added': recipe.date_added.isoformat(),
             'times_made': recipe.times_made,
+            'favorite': recipe.favorite,
             'ingredients': [
                 {'name': i.name, 'quantity': float(i.quantity), 'unit': i.unit}
                 for i in recipe.ingredients.all()
@@ -393,6 +395,7 @@ def recipe_detail(request, recipe_id):
             'source_url': recipe.source_url,
             'date_added': recipe.date_added.isoformat(),
             'times_made': recipe.times_made,
+            'favorite': recipe.favorite,
             'ingredients': [
                 {'name': i.name, 'quantity': float(i.quantity), 'unit': i.unit}
                 for i in recipe.ingredients.all()
@@ -415,11 +418,17 @@ def recipe_detail(request, recipe_id):
         description = request.data.get('description')
         ingredients = request.data.get('ingredients')
         steps = request.data.get('steps')
+        favorite = request.data.get('favorite')
 
         if name:
             recipe.name = name
         if description:
             recipe.description = description
+        if favorite is not None:
+            try:
+                recipe.favorite = bool(favorite)
+            except Exception:
+                pass
         recipe.save()
 
         if ingredients is not None:
@@ -660,6 +669,7 @@ def recipe_search(request):
             'source_url': recipe.source_url,
             'date_added': recipe.date_added.isoformat(),
             'times_made': recipe.times_made,
+            'favorite': recipe.favorite,
             'score': round(score, 3)  # Round to 3 decimal places
         })
     

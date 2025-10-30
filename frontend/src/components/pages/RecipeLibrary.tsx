@@ -204,6 +204,8 @@ const RecipeLibrary = () => {
     return sortOrder === 'asc' ? -comparison : comparison;
   });
 
+  const favoriteRecipes = sortedRecipes.filter(r => r.favorite);
+
 
 
   const getCalories = (nutrients: Recipe['nutrients']) => {
@@ -362,6 +364,42 @@ const RecipeLibrary = () => {
         </Button>
       </Box>
 
+      {favoriteRecipes.length > 0 && (
+        <>
+          <Typography variant="h6" sx={{ mt: 1, mb: 0.5, fontWeight: 400 }}>Favorites</Typography>
+          <VerticalContainer>
+            {favoriteRecipes.map(recipe => {
+              const ingredients = formatIngredients(recipe.ingredients);
+              const instructions = formatInstructions(recipe.steps);
+              const calories = getCalories(recipe.nutrients);
+              const nutritionData = getNutritionData(recipe.nutrients);
+
+              return (
+                <RecipeAccordion 
+                  key={`fav-${recipe.id}`}
+                  recipeId={recipe.id}
+                  title={recipe.name}
+                  calories={calories}
+                  serves={1}
+                  sourceUrl={recipe.source_url}
+                  onRecipeDeleted={refetch}
+                  onRecipeUpdated={refetch}
+                  favorite={recipe.favorite}
+                >
+                  <RecipeDetails
+                    imageUrl={recipe.image_url || ''}
+                    ingredients={ingredients}
+                    instructions={instructions}
+                    nutrition={nutritionData}
+                  />
+                </RecipeAccordion>
+              );
+            })}
+          </VerticalContainer>
+        </>
+      )}
+
+      <Typography variant="h6" sx={{ mt: 2, mb: 0.5, fontWeight: 400 }}>All recipes</Typography>
       <VerticalContainer>
         {sortedRecipes.map(recipe => {
           const ingredients = formatIngredients(recipe.ingredients);
@@ -378,6 +416,8 @@ const RecipeLibrary = () => {
               serves={1}
               sourceUrl={recipe.source_url}
               onRecipeDeleted={refetch}
+              onRecipeUpdated={refetch}
+              favorite={recipe.favorite}
             >
               <RecipeDetails
                 imageUrl={recipe.image_url || ''}

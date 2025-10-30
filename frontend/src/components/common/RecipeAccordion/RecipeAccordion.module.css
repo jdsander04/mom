@@ -39,6 +39,14 @@
   border-top: 1px solid #e6e6e6;
   border-bottom-left-radius: 10px;
   border-bottom-right-radius: 10px;
+  position: relative;
+}
+
+.contentMenu {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
 }
 
 .headerContent {

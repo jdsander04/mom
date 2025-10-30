@@ -25,6 +25,7 @@ export interface Recipe {
   nutrients: Nutrient[];
   date_added?: string; // ISO date string
   times_made?: number; // Number of times this recipe has been made
+  favorite?: boolean;
 }
 
 export interface RecipeSummary {

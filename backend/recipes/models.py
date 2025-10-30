@@ -11,6 +11,7 @@ class Recipe(models.Model):
     source_url = models.TextField(blank=True, null=True)
     date_added = models.DateTimeField(default=timezone.now)
     times_made = models.PositiveIntegerField(default=0)
+    favorite = models.BooleanField(default=False)
 
 class Ingredient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='ingredients')

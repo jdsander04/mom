@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { ExpandMore, CheckCircle, AddCircleOutline, Delete } from '@mui/icons-material'
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material'
+import { ExpandMore, CheckCircle, AddCircleOutline, Delete, MoreVert } from '@mui/icons-material'
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton, Menu, MenuItem } from '@mui/material'
 import { useAuth } from '../../../contexts/AuthContext'
 import styles from './RecipeAccordion.module.css'
 
@@ -12,18 +12,26 @@ interface RecipeAccordionProps {
   children: React.ReactNode
   sourceUrl?: string
   onRecipeDeleted?: () => void
+  favorite?: boolean
+  onRecipeUpdated?: () => void
 }
 
-const RecipeAccordion = ({ recipeId, title, calories, serves, children, sourceUrl, onRecipeDeleted }: RecipeAccordionProps) => {
+const RecipeAccordion = ({ recipeId, title, calories, serves, children, sourceUrl, onRecipeDeleted, favorite = false, onRecipeUpdated }: RecipeAccordionProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const [isAdded, setIsAdded] = useState(false)
   const [currentQuantity, setCurrentQuantity] = useState(1)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
+  const [isFavorite, setIsFavorite] = useState<boolean>(favorite)
   const { token } = useAuth()
 
   useEffect(() => {
     checkRecipeInCart()
   }, [recipeId])
+
+  useEffect(() => {
+    setIsFavorite(favorite)
+  }, [favorite, recipeId])
 
   const checkRecipeInCart = async () => {
     // Since we don't track recipes separately anymore, just reset state
@@ -62,6 +70,48 @@ const RecipeAccordion = ({ recipeId, title, calories, serves, children, sourceUr
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     setDeleteDialogOpen(true)
+  }
+
+  const handleMenuOpen = (e: React.MouseEvent<HTMLElement>) => {
+    e.stopPropagation()
+    setMenuAnchorEl(e.currentTarget)
+  }
+
+  const handleMenuClose = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    setMenuAnchorEl(null)
+  }
+
+  const handleMenuDelete = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setMenuAnchorEl(null)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleViewSource = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setMenuAnchorEl(null)
+    if (sourceUrl) window.open(sourceUrl, '_blank', 'noopener,noreferrer')
+  }
+
+  const handleToggleFavorite = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setMenuAnchorEl(null)
+    if (!token) return
+    try {
+      await fetch(`/api/recipes/${recipeId}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ favorite: !isFavorite })
+      })
+      setIsFavorite(prev => !prev)
+      if (onRecipeUpdated) onRecipeUpdated()
+    } catch (err) {
+      console.error('Failed to toggle favorite:', err)
+    }
   }
 
   const handleDeleteConfirm = async () => {
@@ -129,6 +179,26 @@ const RecipeAccordion = ({ recipeId, title, calories, serves, children, sourceUr
       </button>
       {isOpen && (
         <div className={styles.content}>
+          <div className={styles.contentMenu} onClick={(e) => e.stopPropagation()}>
+            <IconButton size="small" onClick={handleMenuOpen}>
+              <MoreVert />
+            </IconButton>
+            <Menu
+              anchorEl={menuAnchorEl}
+              open={Boolean(menuAnchorEl)}
+              onClose={handleMenuClose}
+              onClick={(e) => e.stopPropagation()}
+              anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            >
+              <MenuItem onClick={handleToggleFavorite}>{isFavorite ? 'Unfavorite' : 'Favorite'}</MenuItem>
+              {sourceUrl && (
+                <MenuItem onClick={handleViewSource}>View source</MenuItem>
+              )}
+              <MenuItem onClick={handleMenuDelete}>Delete recipe</MenuItem>
+              <MenuItem onClick={handleMenuClose}>Close</MenuItem>
+            </Menu>
+          </div>
           {children}
         </div>
       )}
