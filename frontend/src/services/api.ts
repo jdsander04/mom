@@ -187,6 +187,15 @@ class ApiService {
     await this.handleResponse(response);
   }
 
+  async post(url: string, data?: any): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: data ? JSON.stringify(data) : undefined
+    });
+    return { data: await this.handleResponse(response) };
+  }
+
   // User profile image endpoints
   async getProfileImageUrl(): Promise<{ url: string | null }>{
     const response = await fetch(`${API_BASE_URL}/users/me/profile-image/`, {

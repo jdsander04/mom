@@ -3,6 +3,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from core.authentication import BearerTokenAuthentication
 from drf_spectacular.utils import extend_schema
+import requests
+import os
 
 from .models import Cart, CartItem, CartRecipe
 from recipes.models import Recipe
@@ -258,6 +260,161 @@ def add_recipe_to_cart(request):
 			return Response({'error': 'Recipe not in cart'}, status=404)
 		
 		return Response(status=204)
+
+
+@extend_schema(
+	methods=['POST'],
+	request={
+		'application/json': {
+			'type': 'object',
+			'properties': {},
+			'description': 'No request body required - uses current cart contents'
+		}
+	},
+	responses={
+		200: {
+			'description': 'Instacart shopping list created successfully',
+			'content': {
+				'application/json': {
+					'schema': {
+						'type': 'object',
+						'properties': {
+							'success': {'type': 'boolean'},
+							'redirect_url': {'type': 'string', 'format': 'uri'}
+						}
+					}
+				}
+			}
+		},
+		400: {
+			'description': 'Bad request - API key not configured or Instacart API error',
+			'content': {
+				'application/json': {
+					'schema': {
+						'type': 'object',
+						'properties': {
+							'success': {'type': 'boolean'},
+							'error': {'type': 'string'}
+						}
+					}
+				}
+			}
+		},
+		503: {
+			'description': 'Service unavailable - Unable to connect to Instacart API',
+			'content': {
+				'application/json': {
+					'schema': {
+						'type': 'object',
+						'properties': {
+							'success': {'type': 'boolean'},
+							'error': {'type': 'string'}
+						}
+					}
+				}
+			}
+		}
+	},
+	description='Creates an Instacart shopping list from current cart contents and returns a redirect URL'
+)
+@extend_schema(tags=['Cart'])
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([BearerTokenAuthentication])
+def create_instacart_list(request):
+	"""
+	Create Instacart Shopping List
+	
+	Creates a shopping list on Instacart using the current cart contents.
+	Combines ingredients with the same name and unit, then sends them to
+	Instacart's API to generate a shopping list link.
+	
+	Returns:
+		- success: Boolean indicating if the operation was successful
+		- redirect_url: URL to the created Instacart shopping list
+	"""
+	cart, _ = Cart.objects.get_or_create(user=request.user)
+	
+	# Get combined ingredients
+	combined = {}
+	for cr in cart.recipes.select_related('recipe').all():
+		for ci in cart.items.filter(recipe_ingredient__recipe=cr.recipe):
+			key = f"{ci.name}-{ci.unit}"
+			if key in combined:
+				combined[key]['quantity'] += float(ci.quantity)
+			else:
+				combined[key] = {
+					'name': ci.name,
+					'quantity': float(ci.quantity),
+					'unit': ci.unit
+				}
+	
+	# Prepare Instacart API request
+	items = []
+	for ingredient in combined.values():
+		items.append({
+			'name': ingredient['name'],
+			'quantity': ingredient['quantity'],
+			'unit': ingredient['unit']
+		})
+	
+	payload = {
+		'name': f"Recipe Shopping List - {request.user.username}",
+		'items': items
+	}
+	
+	api_key = os.getenv('INSTACART_API_KEY')
+	if not api_key:
+		return Response({'success': False, 'error': 'API key not configured'}, status=400)
+	
+	# Format ingredients for Instacart API
+	line_items = []
+	for ingredient in combined.values():
+		line_items.append({
+			'name': ingredient['name'],
+			'quantity': int(ingredient['quantity']) if ingredient['quantity'].is_integer() else ingredient['quantity'],
+			'unit': ingredient['unit'] or 'item'
+		})
+	
+	payload = {
+		'title': f"Recipe Shopping List - {request.user.username}",
+		'line_items': line_items
+	}
+	
+	try:
+		response = requests.post(
+			'https://connect.dev.instacart.tools/idp/v1/products/products_link',
+			headers={
+				'Accept': 'application/json',
+				'Content-Type': 'application/json',
+				'Authorization': f'Bearer {api_key}'
+			},
+			json=payload,
+			timeout=10
+		)
+		
+		if response.status_code == 200:
+			data = response.json()
+			return Response({
+				'success': True,
+				'redirect_url': data.get('url')
+			})
+		else:
+			try:
+				error_data = response.json()
+				error_msg = error_data.get('message', f'Status {response.status_code}')
+			except:
+				error_msg = f'Status {response.status_code}'
+			return Response({
+				'success': False,
+				'error': f'Instacart API error: {error_msg}'
+			}, status=400)
+			
+	except requests.RequestException as e:
+		return Response({
+			'success': False,
+			'error': 'Unable to connect to Instacart API'
+		}, status=503)
 
 
 

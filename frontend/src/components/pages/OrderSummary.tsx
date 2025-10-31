@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton } from '@mui/material';
 import { Close as CloseIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useCartContext } from '../../contexts/CartContext';
+import { apiService } from '../../services/api';
 import type { CartRecipe, CartItem } from '../../types/cart';
 import styles from './OrderSummary.module.css';
 
@@ -20,6 +21,7 @@ interface CombinedIngredient {
 
 export default function OrderSummary({ open, onClose, onConfirmOrder }: OrderSummaryProps) {
   const { cart, loading, refreshCart, removeItem } = useCartContext();
+  const [instacartLoading, setInstacartLoading] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -56,6 +58,20 @@ export default function OrderSummary({ open, onClose, onConfirmOrder }: OrderSum
       await refreshCart();
     } catch (error) {
       console.log('Some items may have already been removed');
+    }
+  };
+
+  const sendToInstacart = async () => {
+    setInstacartLoading(true);
+    try {
+      const response = await apiService.post('/cart/instacart/');
+      if (response.data.success && response.data.redirect_url) {
+        window.open(response.data.redirect_url, '_blank');
+      }
+    } catch (error) {
+      console.error('Failed to create Instacart shopping list:', error);
+    } finally {
+      setInstacartLoading(false);
     }
   };
 
@@ -111,6 +127,13 @@ export default function OrderSummary({ open, onClose, onConfirmOrder }: OrderSum
 
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
+        <Button 
+          variant="outlined"
+          onClick={sendToInstacart}
+          disabled={loading || instacartLoading || cart.recipes.length === 0}
+        >
+          {instacartLoading ? 'Creating List...' : 'Send to Instacart'}
+        </Button>
         <Button 
           variant="contained" 
           onClick={onConfirmOrder}
