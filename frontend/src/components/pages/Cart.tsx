@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useCartContext } from '../../contexts/CartContext';
 import type { CartRecipe, CartItem } from '../../types/cart';
 import OrderSummary from './OrderSummary';
+import UndoPopup from '../UndoPopup';
 import styles from './Cart.module.css';
 
 export default function Cart() {
-  const { cart, loading, updateServingSize, removeRecipe, updateItemQuantity, removeItem, refreshCart } = useCartContext();
+  const { cart, loading, undoAction, updateServingSize, removeRecipe, updateItemQuantity, removeItem, refreshCart, undoRemoval, clearUndo } = useCartContext();
   const [orderSummaryOpen, setOrderSummaryOpen] = useState(false);
   const refreshCartRef = useRef(refreshCart);
   refreshCartRef.current = refreshCart;
@@ -115,6 +116,15 @@ export default function Cart() {
         onClose={() => setOrderSummaryOpen(false)}
         onConfirmOrder={handleConfirmOrder}
       />
+      
+      {undoAction && (
+        <UndoPopup
+          type={undoAction.type}
+          data={undoAction.data}
+          onUndo={undoRemoval}
+          onDismiss={clearUndo}
+        />
+      )}
     </div>
   );
 }

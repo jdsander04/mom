@@ -24,7 +24,10 @@ class ApiService {
       }
       throw new Error(errorMessage);
     }
-    return response.json();
+    
+    const text = await response.text();
+    if (!text) return {} as T;
+    return JSON.parse(text);
   }
 
   // Recipe endpoints
@@ -171,6 +174,15 @@ class ApiService {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
       body: JSON.stringify({ item_id: itemId })
+    });
+    await this.handleResponse(response);
+  }
+
+  async addItemToCart(recipeId: number, ingredientId: number, quantity: number): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/cart/items/`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ recipe_id: recipeId, ingredient_id: ingredientId, quantity })
     });
     await this.handleResponse(response);
   }

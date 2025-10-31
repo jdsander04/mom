@@ -26,6 +26,7 @@ def cart_detail(request):
 				'name': ci.name,
 				'quantity': float(ci.quantity),
 				'unit': ci.unit,
+				'recipe_ingredient_id': ci.recipe_ingredient_id,
 			}
 			for ci in cart.items.filter(recipe_ingredient__recipe=cr.recipe)
 		]

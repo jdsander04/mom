@@ -3,6 +3,7 @@ export interface CartItem {
   name: string;
   quantity: number;
   unit: string;
+  recipe_ingredient_id?: number;
 }
 
 export interface CartRecipe {
