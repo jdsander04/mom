@@ -1,7 +1,7 @@
 from celery import shared_task
 import logging
 from .models import Recipe, Ingredient, Step, Nutrient
-from .services import _get_recipe_from_llm, _get_text_from_website
+from .services import _get_recipe_from_llm, _get_text_from_website, parse_serves_value
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +86,15 @@ def process_llm_recipe_extraction(self, recipe_id, url, user_id):
         recipe.description = recipe_data.get('description', '')
         recipe.image_url = recipe_data.get('image', recipe.image_url or '')
         recipe.source_url = url
+        # Set serves if we can infer it
+        serves = None
+        for key in ['serves', 'servings', 'yields']:
+            val = recipe_data.get(key)
+            parsed = parse_serves_value(val)
+            if parsed:
+                serves = parsed
+                break
+        recipe.serves = serves
         recipe.save()
         logger.info(
             "LLM_TASK: Saved base recipe %s (ingredients=%d, steps=%d will be created)",

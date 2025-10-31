@@ -24,21 +24,10 @@ const HomePage = () => {
 
   // Helper function to get servings from recipe data
   const getServings = (recipe: Recipe): number => {
-    // Try to extract servings from description
-    const description = recipe.description.toLowerCase();
-    const servingMatch = description.match(/(\d+)\s*(servings?|people|portions?)/);
-    if (servingMatch) {
-      return parseInt(servingMatch[1], 10);
+    // Use the serves field if available
+    if (recipe.serves && recipe.serves > 0) {
+      return recipe.serves;
     }
-    
-    // Try to extract from nutrients (yields field)
-    const yieldsNutrient = recipe.nutrients.find(n => 
-      n.macro.toLowerCase().includes('yield') || n.macro.toLowerCase().includes('serving')
-    );
-    if (yieldsNutrient) {
-      return Math.round(yieldsNutrient.mass);
-    }
-    
     // Default to 1 if no serving information found
     return 1;
   };

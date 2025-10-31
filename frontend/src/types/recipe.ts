@@ -20,6 +20,7 @@ export interface Recipe {
   description: string;
   image_url?: string;
   source_url?: string;
+  serves?: number; // Number of servings
   ingredients: Ingredient[];
   steps: Step[];
   nutrients: Nutrient[];
@@ -42,6 +43,7 @@ export interface CreateRecipeRequest {
   url?: string;
   name?: string;
   description?: string;
+  serves?: number;
   ingredients?: Ingredient[];
   steps?: Array<{ description: string }>;
   file?: File;

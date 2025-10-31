@@ -9,6 +9,7 @@ class Recipe(models.Model):
     description = models.TextField()
     image_url = models.TextField(blank=True, null=True)
     source_url = models.TextField(blank=True, null=True)
+    serves = models.PositiveIntegerField(blank=True, null=True)
     date_added = models.DateTimeField(default=timezone.now)
     times_made = models.PositiveIntegerField(default=0)
     favorite = models.BooleanField(default=False)

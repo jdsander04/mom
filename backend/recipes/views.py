@@ -7,7 +7,7 @@ from drf_spectacular.types import OpenApiTypes
 from .models import Recipe, Ingredient, Step, Nutrient
 from .services import recipe_from_url, recipe_from_file
 from .tasks import process_llm_recipe_extraction
-from .services import parse_ingredient_string
+from .services import parse_ingredient_string, parse_serves_value
 import logging
 
 logger = logging.getLogger(__name__)
@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
                         'recipe_source': {'type': 'string', 'enum': ['explicit']},
                         'name': {'type': 'string', 'example': 'Chocolate Chip Cookies'},
                         'description': {'type': 'string', 'example': 'Classic cookies'},
+                        'serves': {'type': 'integer', 'example': 4},
                         'ingredients': {
                             'type': 'array',
                             'items': {
@@ -140,6 +141,7 @@ def recipe_list(request):
                         'description': placeholder_recipe.description,
                         'image_url': placeholder_recipe.image_url,
                         'source_url': placeholder_recipe.source_url,
+                        'serves': None,
                         'date_added': placeholder_recipe.date_added.isoformat(),
                         'times_made': placeholder_recipe.times_made,
                         'favorite': placeholder_recipe.favorite,
@@ -170,12 +172,22 @@ def recipe_list(request):
                 print(f"VIEWS: Traceback: {traceback.format_exc()}")
                 return Response({'error': f'Failed to process recipe URL: {str(e)}'}, status=500)
             
+            # Try to compute serves from common fields like yields/servings
+            serves = None
+            for key in ['serves', 'servings', 'yields']:
+                val = recipe_data.get(key)
+                parsed = parse_serves_value(val)
+                if parsed:
+                    serves = parsed
+                    break
+
             recipe = Recipe.objects.create(
                 user=request.user,
                 name=title,
                 description=recipe_data.get('description', ''),
                 image_url=recipe_data.get('image', ''),
-                source_url=url
+                source_url=url,
+                serves=serves
             )
             
             # Create ingredients - handle both string and dict formats
@@ -246,7 +258,8 @@ def recipe_list(request):
             recipe = Recipe.objects.create(
                 user=request.user,
                 name=recipe_data.get('title', ''),
-                description=recipe_data.get('description', '')
+                description=recipe_data.get('description', ''),
+                serves=parse_serves_value(recipe_data.get('serves')) or parse_serves_value(recipe_data.get('yields'))
             )
             
             # Create ingredients
@@ -270,7 +283,8 @@ def recipe_list(request):
             recipe = Recipe.objects.create(
                 user=request.user,
                 name=request.data.get('name', ''),
-                description=request.data.get('description', '')
+                description=request.data.get('description', ''),
+                serves=parse_serves_value(request.data.get('serves'))
             )
             
             for ing_data in request.data.get('ingredients', []):
@@ -299,6 +313,7 @@ def recipe_list(request):
             'image_url': recipe.image_url,
             'source_url': recipe.source_url,
             'date_added': recipe.date_added.isoformat(),
+            'serves': recipe.serves,
             'times_made': recipe.times_made,
             'favorite': recipe.favorite,
             'ingredients': [
@@ -344,6 +359,7 @@ def recipe_list(request):
             'properties': {
                 'name': {'type': 'string', 'description': 'Recipe name'},
                 'description': {'type': 'string', 'description': 'Recipe description'},
+                'serves': {'type': 'integer', 'description': 'Number of servings'},
                 'ingredients': {
                     'type': 'array',
                     'description': 'Updated ingredients list',
@@ -394,6 +410,7 @@ def recipe_detail(request, recipe_id):
             'image_url': recipe.image_url,
             'source_url': recipe.source_url,
             'date_added': recipe.date_added.isoformat(),
+            'serves': recipe.serves,
             'times_made': recipe.times_made,
             'favorite': recipe.favorite,
             'ingredients': [
@@ -419,6 +436,7 @@ def recipe_detail(request, recipe_id):
         ingredients = request.data.get('ingredients')
         steps = request.data.get('steps')
         favorite = request.data.get('favorite')
+        serves = request.data.get('serves')
 
         if name:
             recipe.name = name
@@ -427,6 +445,15 @@ def recipe_detail(request, recipe_id):
         if favorite is not None:
             try:
                 recipe.favorite = bool(favorite)
+            except Exception:
+                pass
+        if serves is not None:
+            try:
+                parsed = parse_serves_value(serves)
+                if parsed:
+                    recipe.serves = parsed
+                else:
+                    recipe.serves = None
             except Exception:
                 pass
         recipe.save()

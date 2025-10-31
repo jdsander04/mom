@@ -106,6 +106,30 @@ def parse_ingredient_string(ingredient_str: str) -> dict:
 
     return {"name": name, "quantity": qty, "unit": unit}
 
+def parse_serves_value(value) -> int:
+    """Parse a serves/servings/yields value into a positive integer if possible.
+
+    Accepts numbers or strings like "4", "4 servings", "Serves 6", "1 serving".
+    Returns int or None if not parseable or <= 0.
+    """
+    if value is None:
+        return None
+    try:
+        n = int(value)
+        return n if n > 0 else None
+    except Exception:
+        pass
+    try:
+        s = str(value)
+        s = _normalize_unicode_fractions(s)
+        m = re.search(r"(\d+)", s)
+        if m:
+            n = int(m.group(1))
+            return n if n > 0 else None
+    except Exception:
+        return None
+    return None
+
 def _get_openai_client():
     """Get OpenAI client with lazy initialization."""
     api_key = os.getenv('OPENAI_API_KEY')
@@ -155,7 +179,8 @@ def _get_recipe_from_llm(text: str) -> dict:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a strict recipe extraction expert. Return ONLY valid JSON. If the text is not about a recipe, you MUST return {\"is_recipe\": false, \"reason\": \"brief reason\"}. If it is a recipe, return {\"is_recipe\": true, \"title\": string, \"description\": string, \"ingredients\": [{\"name\": string, \"quantity\": number, \"unit\": string}], \"instructions_list\": [string]} and nothing else."},
+                {"role": "system", "content": "You are a strict recipe extraction expert. Return ONLY valid JSON. If the text is not about a recipe, you MUST return {\\\"is_recipe\\\": false, \\\"reason\\\": \\\"brief reason\\\"}. If it is a recipe, return {\\\"is_recipe\\\": true, \\\"title\\\": string, \\\"description\\\": string, \\\"ingredients\\\": [{\\\"name\\\": string, \\\"quantity\\\": number, \\\"unit\\\": string}], \\\"instructions_list\\\": [string], \\\"serves\\\"?: number} and nothing else."},
+                {"role": "system", "content": "If available infer servings as an integer in 'serves'; otherwise omit it."},
                 {"role": "user", "content": f"Decide if this is a recipe and extract it if so. Text follows:\n\n{sanitized_text}"}
             ],
             max_tokens=1500,
@@ -202,6 +227,18 @@ def _get_recipe_from_llm(text: str) -> dict:
                 if parsed["name"] or parsed["quantity"]:
                     formatted_ingredients.append(parsed)
             result['ingredients'] = formatted_ingredients
+
+        # Normalize serves under various possible keys
+        serves_candidates = [
+            result.get('serves'),
+            result.get('servings'),
+            result.get('yields'),
+        ]
+        for candidate in serves_candidates:
+            parsed_serves = parse_serves_value(candidate)
+            if parsed_serves:
+                result['serves'] = parsed_serves
+                break
         
         logger.info(f"LLM: Final result with defaults: {result}")
         return result
