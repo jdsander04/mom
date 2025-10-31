@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { ExpandMore, CheckCircle, AddCircleOutline, Delete, MoreVert } from '@mui/icons-material'
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton, Menu, MenuItem } from '@mui/material'
 import { useAuth } from '../../../contexts/AuthContext'
+import { useCartContext } from '../../../contexts/CartContext'
 import styles from './RecipeAccordion.module.css'
 
 interface RecipeAccordionProps {
@@ -24,19 +25,27 @@ const RecipeAccordion = ({ recipeId, title, calories, serves, children, sourceUr
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
   const [isFavorite, setIsFavorite] = useState<boolean>(favorite)
   const { token } = useAuth()
+  const { cart, refreshCart } = useCartContext()
 
   useEffect(() => {
     checkRecipeInCart()
-  }, [recipeId])
+  }, [recipeId, cart])
 
   useEffect(() => {
     setIsFavorite(favorite)
   }, [favorite, recipeId])
 
   const checkRecipeInCart = async () => {
-    // Since we don't track recipes separately anymore, just reset state
-    setIsAdded(false)
-    setCurrentQuantity(1)
+    const entry = cart?.recipes?.find(r => r.recipe_id === recipeId)
+    if (entry) {
+      setIsAdded(true)
+      const qty = entry.serving_size || 1
+      // Clamp to 1..3 for UI
+      setCurrentQuantity(Math.min(3, Math.max(1, Math.round(qty))))
+    } else {
+      setIsAdded(false)
+      setCurrentQuantity(1)
+    }
   }
 
   const handleAddClick = async (e: React.MouseEvent) => {
@@ -55,6 +64,7 @@ const RecipeAccordion = ({ recipeId, title, calories, serves, children, sourceUr
           serving_size: currentQuantity
         })
       })
+      await refreshCart()
       setIsAdded(true)
     } catch (error) {
       console.error('Failed to add recipe to cart:', error)
@@ -63,8 +73,28 @@ const RecipeAccordion = ({ recipeId, title, calories, serves, children, sourceUr
 
   const handleQuantityChange = async (e: React.MouseEvent, delta: number) => {
     e.stopPropagation()
-    const newQuantity = Math.max(0.5, currentQuantity + delta)
+    const newQuantity = Math.min(3, Math.max(1, currentQuantity + delta))
     setCurrentQuantity(newQuantity)
+
+    // If already in cart, sync change to backend
+    if (isAdded && token) {
+      try {
+        await fetch('/api/cart/recipes/', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            recipe_id: recipeId,
+            serving_size: newQuantity
+          })
+        })
+        await refreshCart()
+      } catch (err) {
+        console.error('Failed to update serving size:', err)
+      }
+    }
   }
 
   const handleDeleteClick = (e: React.MouseEvent) => {
@@ -150,14 +180,14 @@ const RecipeAccordion = ({ recipeId, title, calories, serves, children, sourceUr
           <div className={styles.quantitySelector}>
             <div 
               className={styles.quantityButton}
-              onClick={(e) => handleQuantityChange(e, -0.5)}
+              onClick={(e) => handleQuantityChange(e, -1)}
             >
               -
             </div>
             <span className={styles.quantity}>{currentQuantity}</span>
             <div 
               className={styles.quantityButton}
-              onClick={(e) => handleQuantityChange(e, 0.5)}
+              onClick={(e) => handleQuantityChange(e, 1)}
             >
               +
             </div>

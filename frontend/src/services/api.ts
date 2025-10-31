@@ -84,28 +84,20 @@ class ApiService {
     return searchResult.results;
   }
 
-  // Helper method to get popular recipes (sorted by times_made)
-  async getPopularRecipes(): Promise<Recipe[]> {
-    const response = await this.getRecipes();
-    const recipePromises = response.recipes.map(recipe => this.getRecipe(recipe.id));
-    const allRecipes = await Promise.all(recipePromises);
-    
-    // Sort by times_made (descending), then by date_added (descending) as tiebreaker
-    const sortedRecipes = allRecipes.sort((a, b) => {
-      const timesA = a.times_made || 0;
-      const timesB = b.times_made || 0;
-      
-      if (timesA !== timesB) {
-        return timesB - timesA; // Higher times_made first
-      }
-      
-      // Tiebreaker: newer recipes first
-      const dateA = new Date(a.date_added || 0).getTime();
-      const dateB = new Date(b.date_added || 0).getTime();
-      return dateB - dateA;
+  // Get globally popular recipes from the server
+  async getPopularRecipes(limit: number = 6): Promise<Recipe[]> {
+    const response = await fetch(`${API_BASE_URL}/recipes/popular/?limit=${limit}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
     });
+    const result = await this.handleResponse<{ results: Recipe[], total: number }>(response);
     
-    return sortedRecipes.slice(0, 5);
+    // Fetch full recipe details (including nutrients, ingredients, steps) for each recipe
+    const fullRecipes = await Promise.all(
+      result.results.map(recipe => this.getRecipe(recipe.id))
+    );
+    
+    return fullRecipes;
   }
 
   // Helper method to get recent recipes (sorted by date_added)

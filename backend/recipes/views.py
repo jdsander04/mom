@@ -707,3 +707,70 @@ def recipe_search(request):
         'fuzziness': fuzziness
     })
 
+
+@extend_schema(
+    methods=['GET'],
+    operation_id='recipe_popular',
+    parameters=[
+        OpenApiParameter(
+            name='limit',
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            description='Maximum number of recipes to return (default: 10, max: 100)',
+            required=False
+        )
+    ],
+    responses={
+        200: {
+            'description': 'Globally popular recipes sorted by times_made',
+            'content': {
+                'application/json': {
+                    'example': {
+                        'results': [
+                            {
+                                'id': 1,
+                                'name': 'Spaghetti Bolognese',
+                                'description': 'Hearty meat sauce',
+                                'image_url': 'https://example.com/spag.jpg',
+                                'source_url': 'https://example.com/recipe',
+                                'date_added': '2025-10-31T12:00:00Z',
+                                'times_made': 42,
+                                'serves': 4
+                            }
+                        ],
+                        'total': 1
+                    }
+                }
+            }
+        }
+    }
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([BearerTokenAuthentication])
+def recipe_popular(request):
+    """Return globally popular recipes ordered by times_made (desc), then date_added (desc)."""
+    try:
+        limit = int(request.GET.get('limit', 10))
+    except Exception:
+        limit = 10
+    limit = max(1, min(limit, 100))
+
+    # Global (no user filter)
+    recipes = Recipe.objects.all().order_by('-times_made', '-date_added')[:limit]
+
+    results = []
+    for r in recipes:
+        results.append({
+            'id': r.id,
+            'name': r.name,
+            'description': r.description,
+            'image_url': r.image_url,
+            'source_url': r.source_url,
+            'date_added': r.date_added.isoformat() if r.date_added else None,
+            'times_made': r.times_made,
+            'serves': r.serves,
+        })
+
+    return Response({'results': results, 'total': len(results)})
+
