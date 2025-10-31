@@ -40,6 +40,7 @@ const RecipeLibrary = () => {
   
   // Custom recipe form state
   const [recipeName, setRecipeName] = useState('');
+  const [recipeServes, setRecipeServes] = useState<number | ''>('');
   const [ingredients, setIngredients] = useState<Ingredient[]>([{ name: '', quantity: '', unit: '' }]);
   const [directions, setDirections] = useState(['']);
 
@@ -149,6 +150,7 @@ const RecipeLibrary = () => {
       await apiService.createRecipe({
         recipe_source: 'explicit',
         name: recipeName,
+        serves: (typeof recipeServes === 'number' && recipeServes > 0) ? recipeServes : undefined,
         ingredients: ingredients.filter(i => i.name.trim()).map((ingredient) => ({
           name: ingredient.name.trim(),
           quantity: ingredient.quantity === '' ? 0 : Number(ingredient.quantity),
@@ -160,6 +162,7 @@ const RecipeLibrary = () => {
       });
       
       setRecipeName('');
+      setRecipeServes('');
       setIngredients([{ name: '', quantity: '', unit: '' }]);
       setDirections(['']);
       setCustomRecipeDialogOpen(false);
@@ -380,7 +383,7 @@ const RecipeLibrary = () => {
                   recipeId={recipe.id}
                   title={recipe.name}
                   calories={calories}
-                  serves={1}
+                  serves={recipe.serves || 1}
                   sourceUrl={recipe.source_url}
                   onRecipeDeleted={refetch}
                   onRecipeUpdated={refetch}
@@ -413,7 +416,7 @@ const RecipeLibrary = () => {
               recipeId={recipe.id}
               title={recipe.name}
               calories={calories}
-              serves={1}
+              serves={recipe.serves || 1}
               sourceUrl={recipe.source_url}
               onRecipeDeleted={refetch}
               onRecipeUpdated={refetch}
@@ -643,9 +646,11 @@ const RecipeLibrary = () => {
         }}>
           <EditableRecipeDetails
             recipeName={recipeName}
+            serves={recipeServes}
             ingredients={ingredients}
             instructions={directions}
             onRecipeNameChange={setRecipeName}
+            onServesChange={setRecipeServes}
             onIngredientsChange={setIngredients}
             onInstructionsChange={setDirections}
           />

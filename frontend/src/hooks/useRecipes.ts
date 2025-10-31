@@ -45,7 +45,7 @@ export const useRecipes = (): UseRecipesReturn => {
       
       // Get properly sorted popular and recent recipes
       const [popular, recent] = await Promise.all([
-        apiService.getPopularRecipes(),
+        apiService.getPopularRecipes(6),
         apiService.getRecentRecipes()
       ]);
       

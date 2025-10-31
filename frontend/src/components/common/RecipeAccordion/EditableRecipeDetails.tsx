@@ -9,18 +9,22 @@ interface Ingredient {
 
 interface Props {
   recipeName: string;
+  serves?: number | '';
   ingredients: Ingredient[];
   instructions: string[];
   onRecipeNameChange: (name: string) => void;
+  onServesChange?: (serves: number | '') => void;
   onIngredientsChange: (ingredients: Ingredient[]) => void;
   onInstructionsChange: (instructions: string[]) => void;
 }
 
 const EditableRecipeDetails = ({ 
-  recipeName, 
+  recipeName,
+  serves,
   ingredients, 
   instructions, 
-  onRecipeNameChange, 
+  onRecipeNameChange,
+  onServesChange,
   onIngredientsChange, 
   onInstructionsChange 
 }: Props) => {
@@ -98,6 +102,33 @@ const EditableRecipeDetails = ({
             }
           }}
         />
+        {onServesChange && (
+          <TextField
+            fullWidth
+            value={serves || ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              onServesChange(value === '' ? '' : (parseInt(value, 10) || ''));
+            }}
+            placeholder="Serves (optional)"
+            label="Serves"
+            type="number"
+            variant="outlined"
+            sx={{
+              mt: 2,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 1.5,
+                backgroundColor: '#fafafa',
+                '&:hover': {
+                  backgroundColor: '#f5f5f5'
+                },
+                '&.Mui-focused': {
+                  backgroundColor: '#fff'
+                }
+              }
+            }}
+          />
+        )}
       </Paper>
 
       {/* Ingredients Section */}
