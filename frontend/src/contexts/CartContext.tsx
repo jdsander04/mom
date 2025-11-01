@@ -2,9 +2,13 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { apiService } from '../services/api';
 import type { Cart, CartRecipe, CartItem } from '../types/cart';
 
+interface BulkItem extends CartItem {
+  originalRecipeId: number;
+}
+
 interface UndoAction {
-  type: 'recipe' | 'item';
-  data: CartRecipe | CartItem;
+  type: 'recipe' | 'item' | 'bulk';
+  data: CartRecipe | CartItem | BulkItem[];
   recipeId?: number;
 }
 
@@ -15,6 +19,7 @@ interface CartContextType {
   refreshCart: () => Promise<void>;
   removeRecipe: (recipeId: number) => Promise<void>;
   removeItem: (itemId: number) => Promise<void>;
+  removeBulkItems: (itemIds: number[]) => Promise<void>;
   updateServingSize: (recipeId: number, servingSize: number) => Promise<void>;
   updateItemQuantity: (itemId: number, quantity: number) => Promise<void>;
   undoRemoval: () => Promise<void>;
@@ -128,6 +133,8 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const undoRemoval = async () => {
     if (!undoAction) return;
     
+    console.log('Undoing removal:', undoAction);
+    
     try {
       if (undoAction.type === 'recipe') {
         const recipe = undoAction.data as CartRecipe;
@@ -156,8 +163,18 @@ export const CartProvider = ({ children }: CartProviderProps) => {
             }
           }
         }
+      } else if (undoAction.type === 'bulk') {
+        // Restore multiple items via API
+        const items = undoAction.data as BulkItem[];
+        console.log('Restoring bulk items:', items);
+        for (const item of items) {
+          if (item.recipe_ingredient_id && item.originalRecipeId) {
+            console.log('Restoring item:', item.name, 'to recipe:', item.originalRecipeId);
+            await apiService.addItemToCart(item.originalRecipeId, item.recipe_ingredient_id, item.quantity);
+          }
+        }
       } else {
-        // Restore item via API
+        // Restore single item via API
         const item = undoAction.data as CartItem;
         if (item.recipe_ingredient_id && undoAction.recipeId) {
           await apiService.addItemToCart(undoAction.recipeId, item.recipe_ingredient_id, item.quantity);
@@ -181,6 +198,44 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     refreshCart();
   }, []);
 
+  const removeBulkItems = async (itemIds: number[]) => {
+    const removedItems: BulkItem[] = [];
+    
+    // Collect all items to be removed with their recipe IDs
+    for (const recipe of cart.recipes) {
+      for (const item of recipe.ingredients) {
+        if (itemIds.includes(item.id)) {
+          console.log('Adding item to bulk removal:', item);
+          removedItems.push({ ...item, originalRecipeId: recipe.recipe_id });
+        }
+      }
+    }
+    
+    if (removedItems.length === 0) return;
+    
+    console.log('Setting bulk undo action with items:', removedItems);
+    setUndoAction({ type: 'bulk', data: removedItems });
+    
+    // Optimistic update
+    setCart(prev => ({
+      recipes: prev.recipes.map(recipe => ({
+        ...recipe,
+        ingredients: recipe.ingredients.filter(item => !itemIds.includes(item.id))
+      }))
+    }));
+    
+    try {
+      // Remove items from backend
+      for (const itemId of itemIds) {
+        await apiService.removeItemFromCart(itemId);
+      }
+    } catch (error) {
+      console.error('Failed to remove items:', error);
+      await refreshCart(); // Revert on error
+      throw error;
+    }
+  };
+
   return (
     <CartContext.Provider value={{
       cart,
@@ -189,6 +244,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       refreshCart,
       removeRecipe,
       removeItem,
+      removeBulkItems,
       updateServingSize,
       updateItemQuantity,
       undoRemoval,

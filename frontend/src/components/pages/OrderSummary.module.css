@@ -1,78 +1,224 @@
+.dialog {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 24px 24px 16px 24px;
+  border-bottom: 1px solid #e9ecef;
+  background: white;
+}
+
+.titleSection {
+  flex: 1;
+}
+
+.title {
+  margin: 0 0 4px 0;
+  color: #2c3e50;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: 0;
+  color: #6c757d;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.closeButton {
+  color: #6c757d !important;
+}
+
+.content {
+  padding: 24px !important;
+  background: #f8f9fa;
+}
+
 .loading {
   text-align: center;
-  padding: 2rem;
+  padding: 40px;
   color: #666;
+  font-size: 16px;
 }
 
 .recipesSection {
-  margin-bottom: 2rem;
+  margin-bottom: 32px;
 }
 
-.recipesSection h3 {
-  margin: 0 0 1rem 0;
-  color: #333;
-  font-size: 1.2rem;
+.sectionTitle {
+  margin: 0 0 16px 0;
+  color: #2c3e50;
+  font-size: 18px;
   font-weight: 600;
+}
+
+.recipesList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .recipeItem {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 0.75rem;
+  gap: 16px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border: 1px solid #e9ecef;
+  transition: all 0.2s;
+}
+
+.recipeItem:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+.recipeIcon {
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: #f8f9fa;
   border-radius: 8px;
-  margin-bottom: 0.5rem;
+}
+
+.recipeInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
 }
 
 .recipeName {
-  font-weight: 500;
-  color: #333;
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 16px;
 }
 
 .servingSize {
-  color: #666;
-  font-size: 0.9rem;
+  color: #6c757d;
+  font-size: 14px;
+  font-weight: 500;
 }
 
-.ingredientsSection h3 {
-  margin: 0 0 1rem 0;
-  color: #333;
-  font-size: 1.2rem;
-  font-weight: 600;
+.ingredientsSection {
+  margin-bottom: 24px;
+}
+
+.ingredientsList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
 }
 
 .ingredientItem {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  margin-bottom: 0.5rem;
+  padding: 16px;
   background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border: 1px solid #e9ecef;
+  transition: all 0.2s;
+}
+
+.ingredientItem:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  border-color: #4caf50;
 }
 
 .ingredientInfo {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 4px;
+  flex: 1;
 }
 
 .ingredientName {
-  font-weight: 500;
-  color: #333;
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 15px;
 }
 
 .ingredientQuantity {
-  color: #666;
-  font-size: 0.9rem;
+  color: #6c757d;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .removeButton {
-  color: #dc3545;
+  background: #dc3545;
+  color: white;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
 }
 
 .removeButton:hover {
-  background-color: rgba(220, 53, 69, 0.1);
+  background: #c82333;
+  transform: scale(1.1);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px 24px 24px;
+  background: white;
+  border-top: 1px solid #e9ecef;
+}
+
+.cancelButton {
+  padding: 12px 24px !important;
+  border-radius: 8px !important;
+  color: #6c757d !important;
+  border: 2px solid #e9ecef !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+}
+
+.cancelButton:hover {
+  background: #f8f9fa !important;
+  border-color: #dee2e6 !important;
+}
+
+.orderButton {
+  background: linear-gradient(135deg, #4caf50, #45a049) !important;
+  color: white !important;
+  padding: 12px 24px !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3) !important;
+  transition: all 0.2s !important;
+}
+
+.orderButton:hover {
+  background: linear-gradient(135deg, #45a049, #388e3c) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4) !important;
+}
+
+.orderButton:disabled {
+  background: #e9ecef !important;
+  color: #6c757d !important;
+  box-shadow: none !important;
+  transform: none !important;
 }

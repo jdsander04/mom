@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton } from '@mui/material';
-import { Close as CloseIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Close as CloseIcon } from '@mui/icons-material';
 import { useCartContext } from '../../contexts/CartContext';
 import { apiService } from '../../services/api';
 import type { CartRecipe, CartItem } from '../../types/cart';
+import UndoPopup from '../UndoPopup';
 import styles from './OrderSummary.module.css';
 
 interface OrderSummaryProps {
@@ -11,6 +12,9 @@ interface OrderSummaryProps {
   onClose: () => void;
   onConfirmOrder: () => void;
   selectedProvider: string;
+  undoAction?: any;
+  undoRemoval: () => void;
+  clearUndo: () => void;
 }
 
 interface CombinedIngredient {
@@ -20,7 +24,7 @@ interface CombinedIngredient {
   items: CartItem[];
 }
 
-export default function OrderSummary({ open, onClose, onConfirmOrder, selectedProvider }: OrderSummaryProps) {
+export default function OrderSummary({ open, onClose, onConfirmOrder, selectedProvider, undoAction, undoRemoval, clearUndo }: OrderSummaryProps) {
   const { cart, loading, refreshCart, removeItem } = useCartContext();
   const [instacartLoading, setInstacartLoading] = useState(false);
   const hasRefreshedRef = useRef(false);
@@ -86,64 +90,83 @@ export default function OrderSummary({ open, onClose, onConfirmOrder, selectedPr
   const combinedIngredients = combineIngredients();
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        Order Summary
-        <IconButton onClick={onClose}>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth className={styles.dialog}>
+      <div className={styles.header}>
+        <div className={styles.titleSection}>
+          <h2 className={styles.title}>🛒 Order Summary</h2>
+          <p className={styles.subtitle}>Review your final shopping list</p>
+        </div>
+        <IconButton onClick={onClose} className={styles.closeButton}>
           <CloseIcon />
         </IconButton>
-      </DialogTitle>
+      </div>
       
-      <DialogContent>
+      <DialogContent className={styles.content}>
         {loading ? (
           <div className={styles.loading}>Loading...</div>
         ) : (
           <>
             <div className={styles.recipesSection}>
-              <h3>Recipes</h3>
-              {cart.recipes.map((recipe: CartRecipe) => (
-                <div key={recipe.recipe_id} className={styles.recipeItem}>
-                  <span className={styles.recipeName}>{recipe.name}</span>
-                  <span className={styles.servingSize}>Serving size: {recipe.serving_size}</span>
-                </div>
-              ))}
+              <h3 className={styles.sectionTitle}>📋 Recipes ({cart.recipes.length})</h3>
+              <div className={styles.recipesList}>
+                {cart.recipes.map((recipe: CartRecipe) => (
+                  <div key={recipe.recipe_id} className={styles.recipeItem}>
+                    <div className={styles.recipeIcon}>🍽️</div>
+                    <div className={styles.recipeInfo}>
+                      <span className={styles.recipeName}>{recipe.name}</span>
+                      <span className={styles.servingSize}>{recipe.serving_size} servings • {recipe.ingredients.length} ingredients</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className={styles.ingredientsSection}>
-              <h3>Combined Ingredients</h3>
-              {combinedIngredients.map((ingredient) => (
-                <div key={`${ingredient.name}-${ingredient.unit}`} className={styles.ingredientItem}>
-                  <div className={styles.ingredientInfo}>
-                    <span className={styles.ingredientName}>{ingredient.name}</span>
-                    <span className={styles.ingredientQuantity}>
-                      {ingredient.quantity.toFixed(1)} {ingredient.unit}
-                    </span>
+              <h3 className={styles.sectionTitle}>🥕 Shopping List ({combinedIngredients.length} items)</h3>
+              <div className={styles.ingredientsList}>
+                {combinedIngredients.map((ingredient) => (
+                  <div key={`${ingredient.name}-${ingredient.unit}`} className={styles.ingredientItem}>
+                    <div className={styles.ingredientInfo}>
+                      <span className={styles.ingredientName}>{ingredient.name}</span>
+                      <span className={styles.ingredientQuantity}>
+                        {ingredient.quantity.toFixed(1)} {ingredient.unit}
+                      </span>
+                    </div>
+                    <button 
+                      onClick={() => removeIngredient(ingredient)}
+                      className={styles.removeButton}
+                      title="Remove ingredient"
+                    >
+                      🗑️
+                    </button>
                   </div>
-                  <IconButton 
-                    size="small" 
-                    onClick={() => removeIngredient(ingredient)}
-                    className={styles.removeButton}
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </>
         )}
       </DialogContent>
 
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+      <div className={styles.actions}>
+        <Button onClick={onClose} className={styles.cancelButton}>Cancel</Button>
         <Button 
           variant="contained" 
           onClick={handleConfirmOrder}
           disabled={loading || instacartLoading || cart.recipes.length === 0}
-          sx={{ backgroundColor: '#4caf50', '&:hover': { backgroundColor: '#45a049' } }}
+          className={styles.orderButton}
         >
-          {instacartLoading ? 'Creating List...' : `Order with ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)}`}
+          {instacartLoading ? '⏳ Creating List...' : `📦 Order with ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)}`}
         </Button>
-      </DialogActions>
+      </div>
+      
+      {undoAction && (
+        <UndoPopup
+          type={undoAction.type}
+          data={undoAction.data}
+          onUndo={undoRemoval}
+          onDismiss={clearUndo}
+        />
+      )}
     </Dialog>
   );
 }

@@ -2,9 +2,13 @@ import { useEffect } from 'react';
 import type { CartRecipe, CartItem } from '../types/cart';
 import styles from './UndoPopup.module.css';
 
+interface BulkItem extends CartItem {
+  originalRecipeId: number;
+}
+
 interface UndoPopupProps {
-  type: 'recipe' | 'item';
-  data: CartRecipe | CartItem;
+  type: 'recipe' | 'item' | 'bulk';
+  data: CartRecipe | CartItem | BulkItem[];
   onUndo: () => void;
   onDismiss: () => void;
 }
@@ -17,12 +21,20 @@ export default function UndoPopup({ type, data, onUndo, onDismiss }: UndoPopupPr
     return () => clearTimeout(timer);
   }, [onDismiss]);
 
-  const itemName = type === 'recipe' ? (data as CartRecipe).name : (data as CartItem).name;
+  let message = '';
+  if (type === 'recipe') {
+    message = `Removed recipe: ${(data as CartRecipe).name}`;
+  } else if (type === 'bulk') {
+    const items = data as BulkItem[];
+    message = `Removed ${items.length} ingredients`;
+  } else {
+    message = `Removed ingredient: ${(data as CartItem).name}`;
+  }
 
   return (
     <div className={styles.popup}>
       <span className={styles.message}>
-        Removed {type === 'recipe' ? 'recipe' : 'ingredient'}: {itemName}
+        {message}
       </span>
       <button onClick={onUndo} className={styles.undoBtn}>
         Undo
