@@ -8,6 +8,7 @@ import styles from './Cart.module.css';
 export default function Cart() {
   const { cart, loading, undoAction, updateServingSize, removeRecipe, updateItemQuantity, removeItem, refreshCart, undoRemoval, clearUndo } = useCartContext();
   const [orderSummaryOpen, setOrderSummaryOpen] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState('instacart');
   const refreshCartRef = useRef(refreshCart);
   refreshCartRef.current = refreshCart;
 
@@ -36,7 +37,6 @@ export default function Cart() {
   };
 
   const handleConfirmOrder = () => {
-    console.log('Order confirmed!');
     setOrderSummaryOpen(false);
   };
 
@@ -51,6 +51,13 @@ export default function Cart() {
       ) : (
         <>
           <div className={styles.orderButtonContainer}>
+            <select 
+              value={selectedProvider}
+              onChange={(e) => setSelectedProvider(e.target.value)}
+              className={styles.providerSelect}
+            >
+              <option value="instacart">Instacart</option>
+            </select>
             <button 
               onClick={() => setOrderSummaryOpen(true)}
               className={styles.orderButton}
@@ -115,6 +122,7 @@ export default function Cart() {
         open={orderSummaryOpen}
         onClose={() => setOrderSummaryOpen(false)}
         onConfirmOrder={handleConfirmOrder}
+        selectedProvider={selectedProvider}
       />
       
       {undoAction && (

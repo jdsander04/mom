@@ -118,7 +118,19 @@
 .orderButtonContainer {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
   margin-bottom: 20px;
+}
+
+.providerSelect {
+  padding: 12px 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  background: white;
+  cursor: pointer;
+  min-width: 120px;
 }
 
 .orderButton {

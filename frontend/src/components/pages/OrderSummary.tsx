@@ -10,6 +10,7 @@ interface OrderSummaryProps {
   open: boolean;
   onClose: () => void;
   onConfirmOrder: () => void;
+  selectedProvider: string;
 }
 
 interface CombinedIngredient {
@@ -19,7 +20,7 @@ interface CombinedIngredient {
   items: CartItem[];
 }
 
-export default function OrderSummary({ open, onClose, onConfirmOrder }: OrderSummaryProps) {
+export default function OrderSummary({ open, onClose, onConfirmOrder, selectedProvider }: OrderSummaryProps) {
   const { cart, loading, refreshCart, removeItem } = useCartContext();
   const [instacartLoading, setInstacartLoading] = useState(false);
 
@@ -61,18 +62,21 @@ export default function OrderSummary({ open, onClose, onConfirmOrder }: OrderSum
     }
   };
 
-  const sendToInstacart = async () => {
-    setInstacartLoading(true);
-    try {
-      const response = await apiService.post('/cart/instacart/');
-      if (response.data.success && response.data.redirect_url) {
-        window.open(response.data.redirect_url, '_blank');
+  const handleConfirmOrder = async () => {
+    if (selectedProvider === 'instacart') {
+      setInstacartLoading(true);
+      try {
+        const response = await apiService.post('/cart/instacart/');
+        if (response.data.success && response.data.redirect_url) {
+          window.open(response.data.redirect_url, '_blank');
+        }
+      } catch (error) {
+        console.error('Failed to create Instacart shopping list:', error);
+      } finally {
+        setInstacartLoading(false);
       }
-    } catch (error) {
-      console.error('Failed to create Instacart shopping list:', error);
-    } finally {
-      setInstacartLoading(false);
     }
+    onConfirmOrder();
   };
 
   const combinedIngredients = combineIngredients();
@@ -128,19 +132,12 @@ export default function OrderSummary({ open, onClose, onConfirmOrder }: OrderSum
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button 
-          variant="outlined"
-          onClick={sendToInstacart}
-          disabled={loading || instacartLoading || cart.recipes.length === 0}
-        >
-          {instacartLoading ? 'Creating List...' : 'Send to Instacart'}
-        </Button>
-        <Button 
           variant="contained" 
-          onClick={onConfirmOrder}
-          disabled={loading || cart.recipes.length === 0}
+          onClick={handleConfirmOrder}
+          disabled={loading || instacartLoading || cart.recipes.length === 0}
           sx={{ backgroundColor: '#4caf50', '&:hover': { backgroundColor: '#45a049' } }}
         >
-          Confirm Order
+          {instacartLoading ? 'Creating List...' : `Order with ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)}`}
         </Button>
       </DialogActions>
     </Dialog>
