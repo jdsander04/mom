@@ -69,7 +69,7 @@ export default function Cart() {
           {cart.recipes.map((recipe: CartRecipe) => (
             <div key={recipe.recipe_id} className={styles.recipeCard}>
               <div className={styles.recipeHeader}>
-                <h3>{recipe.name}</h3>
+                <h3 className={styles.recipeTitle}>{recipe.name}</h3>
                 <div className={styles.servingControls}>
                   <label>Serving Size:</label>
                   <input
@@ -78,6 +78,7 @@ export default function Cart() {
                     step="0.5"
                     value={recipe.serving_size}
                     onChange={(e) => handleUpdateServingSize(recipe.recipe_id, parseFloat(e.target.value))}
+                    className={styles.servingInput}
                   />
                 </div>
                 <button 
@@ -93,22 +94,21 @@ export default function Cart() {
                 {recipe.ingredients.map((item: CartItem) => (
                   <div key={item.id} className={styles.ingredientItem}>
                     <span className={styles.itemName}>{item.name}</span>
-                    <div className={styles.itemControls}>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={item.quantity}
-                        onChange={(e) => handleUpdateItemQuantity(item.id, parseFloat(e.target.value))}
-                      />
-                      <span>{item.unit}</span>
-                      <button 
-                        onClick={() => handleRemoveItem(item.id)}
-                        className={styles.removeBtn}
-                      >
-                        Remove
-                      </button>
-                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={item.quantity}
+                      onChange={(e) => handleUpdateItemQuantity(item.id, parseFloat(e.target.value))}
+                      className={styles.quantityInput}
+                    />
+                    <span className={styles.itemUnit}>{item.unit}</span>
+                    <button 
+                      onClick={() => handleRemoveItem(item.id)}
+                      className={styles.removeBtn}
+                    >
+                      Remove
+                    </button>
                   </div>
                 ))}
               </div>

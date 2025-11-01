@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton } from '@mui/material';
 import { Close as CloseIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useCartContext } from '../../contexts/CartContext';
@@ -23,10 +23,14 @@ interface CombinedIngredient {
 export default function OrderSummary({ open, onClose, onConfirmOrder, selectedProvider }: OrderSummaryProps) {
   const { cart, loading, refreshCart, removeItem } = useCartContext();
   const [instacartLoading, setInstacartLoading] = useState(false);
+  const hasRefreshedRef = useRef(false);
 
   useEffect(() => {
-    if (open) {
+    if (open && !hasRefreshedRef.current) {
       refreshCart();
+      hasRefreshedRef.current = true;
+    } else if (!open) {
+      hasRefreshedRef.current = false;
     }
   }, [open, refreshCart]);
 

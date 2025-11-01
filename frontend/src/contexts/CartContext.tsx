@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { apiService } from '../services/api';
 import type { Cart, CartRecipe, CartItem } from '../types/cart';
 
@@ -40,7 +40,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const [loading, setLoading] = useState(true);
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
 
-  const refreshCart = async () => {
+  const refreshCart = useCallback(async () => {
     try {
       const cartData = await apiService.getCart();
       setCart(cartData || { recipes: [] });
@@ -50,7 +50,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const removeRecipe = async (recipeId: number) => {
     const removedRecipe = cart.recipes.find(recipe => recipe.recipe_id === recipeId);
