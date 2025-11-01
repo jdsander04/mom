@@ -22,15 +22,9 @@ const NAV_ITEMS = [
 ];
 
 const CONTENT_STYLES = {
-  margin: '0 auto',
-  padding: '2rem',
-  display: 'grid',
-  gridTemplateColumns: 'repeat(2, 1fr)',
-  columnGap: '2rem',
-  rowGap: '1rem',
-  maxWidth: '1200px',
-  width: '1200px',
-  minWidth: '1200px'
+  padding: 0,
+  width: '100%',
+  flex: 1
 };
 
 const Layout = ({ children }: LayoutProps) => {

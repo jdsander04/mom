@@ -163,7 +163,9 @@ export default function Cart() {
               <span className={styles.searchIcon}>🔍</span>
             </div>
           </div>
-          <div className={styles.recipesSection}>
+          
+          <div className={styles.mainContent}>
+            <div className={styles.recipesSection}>
             {cart.recipes.map((recipe: CartRecipe) => {
               const isCollapsed = collapsedRecipes.has(recipe.recipe_id);
               const filteredItems = filteredIngredients(recipe.ingredients);
@@ -275,6 +277,61 @@ export default function Cart() {
                 </div>
               );
             })}
+            </div>
+            
+            <div className={styles.sidebar}>
+              <div className={styles.cartSummaryCard}>
+                <h3 className={styles.cardTitle}>📊 Cart Summary</h3>
+                <div className={styles.summaryStats}>
+                  <div className={styles.statItem}>
+                    <span className={styles.statLabel}>Total Recipes</span>
+                    <span className={styles.statValue}>{cart.recipes.length}</span>
+                  </div>
+                  <div className={styles.statItem}>
+                    <span className={styles.statLabel}>Total Ingredients</span>
+                    <span className={styles.statValue}>{cart.recipes.reduce((total, recipe) => total + recipe.ingredients.length, 0)}</span>
+                  </div>
+                  <div className={styles.statItem}>
+                    <span className={styles.statLabel}>Total Servings</span>
+                    <span className={styles.statValue}>{cart.recipes.reduce((total, recipe) => total + recipe.serving_size, 0)}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className={styles.tipsCard}>
+                <h3 className={styles.cardTitle}>💡 Shopping Tips</h3>
+                <div className={styles.tipsList}>
+                  <div className={styles.tipItem}>
+                    <span className={styles.tipIcon}>🛒</span>
+                    <span className={styles.tipText}>Check quantities before ordering</span>
+                  </div>
+                  <div className={styles.tipItem}>
+                    <span className={styles.tipIcon}>📱</span>
+                    <span className={styles.tipText}>Use mobile app for easier shopping</span>
+                  </div>
+                  <div className={styles.tipItem}>
+                    <span className={styles.tipIcon}>⏰</span>
+                    <span className={styles.tipText}>Schedule delivery for convenience</span>
+                  </div>
+                  <div className={styles.tipItem}>
+                    <span className={styles.tipIcon}>💰</span>
+                    <span className={styles.tipText}>Look for store promotions</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className={styles.quickActionsCard}>
+                <h3 className={styles.cardTitle}>⚡ Quick Actions</h3>
+                <div className={styles.actionButtons}>
+                  <button className={styles.actionBtn} onClick={() => window.location.href = '/recipes'}>
+                    ➕ Add More Recipes
+                  </button>
+                  <button className={styles.actionBtn} onClick={() => setOrderSummaryOpen(true)}>
+                    👀 Preview Order
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </>
       )}
