@@ -70,6 +70,7 @@ const HomePage = () => {
             calories={getCalories(recipe)}
             servings={getServings(recipe)}
             onClick={() => handleRecipeClick(recipe.name)}
+            sourceUrl={recipe.source_url}
           />
         ))
       ])}

@@ -8,6 +8,7 @@ interface RecipeCardProps {
   calories: number;
   servings: number;
   onClick: () => void;
+  sourceUrl?: string;
 }
 
 const CARD_STYLES = {
@@ -55,7 +56,13 @@ const SUBTITLE_STYLES = {
   fontSize: '14px',
   fontWeight: 400,
   color: '#555',
-  marginLeft: '4px'
+  marginLeft: '4px',
+  display: '-webkit-box',
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: 'vertical',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  wordBreak: 'break-word'
 };
 
 const METADATA_STYLES = {
@@ -81,9 +88,18 @@ const ICON_BUTTON_STYLES = {
   }
 };
 
-const RecipeCard = ({ title, subtitle, image, calories, servings, onClick }: RecipeCardProps) => {
+const RecipeCard = ({ title, subtitle, image, calories, servings, onClick, sourceUrl }: RecipeCardProps) => {
+  const handleIconClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click when icon is clicked
+    if (sourceUrl) {
+      window.open(sourceUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      onClick();
+    }
+  };
+
   return (
-    <Card sx={CARD_STYLES}>
+    <Card sx={CARD_STYLES} onClick={onClick}>
       {image ? (
         <CardMedia
           component="img"
@@ -106,12 +122,12 @@ const RecipeCard = ({ title, subtitle, image, calories, servings, onClick }: Rec
         </Box>
       )}
       <CardContent sx={CONTENT_STYLES}>
-        <Box sx={{ marginBottom: '8px' }}>
+        <Box sx={{ marginBottom: '8px', overflow: 'hidden' }}>
           <Typography variant="body1" component="span" sx={TITLE_STYLES}>
             {title}
           </Typography>
           {subtitle && (
-            <Typography variant="body2" component="span" sx={SUBTITLE_STYLES}>
+            <Typography variant="body2" component="div" sx={SUBTITLE_STYLES}>
               ({subtitle})
             </Typography>
           )}
@@ -125,7 +141,7 @@ const RecipeCard = ({ title, subtitle, image, calories, servings, onClick }: Rec
           </Typography>
         </Box>
       </CardContent>
-      <IconButton onClick={onClick} sx={ICON_BUTTON_STYLES} size="small">
+      <IconButton onClick={handleIconClick} sx={ICON_BUTTON_STYLES} size="small">
         <OpenInNew sx={{ fontSize: '16px' }} />
       </IconButton>
     </Card>

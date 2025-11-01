@@ -5,9 +5,12 @@ from core.authentication import BearerTokenAuthentication
 from drf_spectacular.utils import extend_schema
 import requests
 import os
+import logging
 
 from .models import Cart, CartItem, CartRecipe
 from recipes.models import Recipe
+
+logger = logging.getLogger(__name__)
 
 
 @extend_schema(
@@ -365,7 +368,11 @@ def create_instacart_list(request):
 	
 	api_key = os.getenv('INSTACART_API_KEY')
 	if not api_key:
+		logger.error('INSTACART_API_KEY not found in environment variables')
 		return Response({'success': False, 'error': 'API key not configured'}, status=400)
+	
+	# Strip whitespace in case there are leading/trailing spaces
+	api_key = api_key.strip()
 	
 	# Format ingredients for Instacart API
 	line_items = []
@@ -382,6 +389,7 @@ def create_instacart_list(request):
 	}
 	
 	try:
+		logger.info(f'Making Instacart API request with {len(line_items)} items')
 		response = requests.post(
 			'https://connect.dev.instacart.tools/idp/v1/products/products_link',
 			headers={
@@ -393,6 +401,8 @@ def create_instacart_list(request):
 			timeout=10
 		)
 		
+		logger.info(f'Instacart API response status: {response.status_code}')
+		
 		if response.status_code == 200:
 			data = response.json()
 			return Response({
@@ -403,12 +413,19 @@ def create_instacart_list(request):
 			try:
 				error_data = response.json()
 				error_msg = error_data.get('message', f'Status {response.status_code}')
+				error_details = error_data.get('error', '')
+				if error_details:
+					error_msg = f'{error_msg}: {error_details}'
+				logger.error(f'Instacart API error: {error_msg} (status {response.status_code})')
+				logger.error(f'Response body: {error_data}')
 			except:
 				error_msg = f'Status {response.status_code}'
+				logger.error(f'Instacart API error: {error_msg}')
+				logger.error(f'Response text: {response.text[:200]}')
 			return Response({
 				'success': False,
 				'error': f'Instacart API error: {error_msg}'
-			}, status=400)
+			}, status=response.status_code if response.status_code < 500 else 503)
 			
 	except requests.RequestException as e:
 		return Response({
