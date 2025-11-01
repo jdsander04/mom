@@ -397,7 +397,7 @@ def create_instacart_list(request):
 			data = response.json()
 			return Response({
 				'success': True,
-				'redirect_url': data.get('url')
+				'redirect_url': data.get('products_link_url')
 			})
 		else:
 			try:
