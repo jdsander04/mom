@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Box } from '@mui/material';
+import { useLocation } from 'react-router-dom';
 import { 
   Home, 
   MenuBook, 
@@ -21,7 +22,19 @@ const NAV_ITEMS = [
   { label: 'Health and budgeting', href: '/health', icon: <HealthAndSafety /> }
 ];
 
-const CONTENT_STYLES = {
+const DEFAULT_CONTENT_STYLES = {
+  margin: '0 auto',
+  padding: '2rem',
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, 1fr)',
+  columnGap: '2rem',
+  rowGap: '1rem',
+  maxWidth: '1200px',
+  width: '1200px',
+  minWidth: '1200px'
+};
+
+const FULL_WIDTH_CONTENT_STYLES = {
   padding: 0,
   width: '100%',
   flex: 1
@@ -29,6 +42,8 @@ const CONTENT_STYLES = {
 
 const Layout = ({ children }: LayoutProps) => {
   const [isSidebarMinimized, setIsSidebarMinimized] = useState(false);
+  const location = useLocation();
+  const isCartPage = location.pathname === '/cart';
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -37,7 +52,7 @@ const Layout = ({ children }: LayoutProps) => {
         onToggle={setIsSidebarMinimized}
         isMinimized={isSidebarMinimized}
       />
-      <Box component="main" sx={CONTENT_STYLES}>
+      <Box component="main" sx={isCartPage ? FULL_WIDTH_CONTENT_STYLES : DEFAULT_CONTENT_STYLES}>
         {children}
       </Box>
     </Box>
