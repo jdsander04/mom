@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { ExpandMore, CheckCircle, AddCircleOutline, Delete, MoreVert } from '@mui/icons-material'
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton, Menu, MenuItem } from '@mui/material'
 import { useAuth } from '../../../contexts/AuthContext'
@@ -15,17 +15,28 @@ interface RecipeAccordionProps {
   onRecipeDeleted?: () => void
   favorite?: boolean
   onRecipeUpdated?: () => void
+  initialOpen?: boolean
 }
 
-const RecipeAccordion = ({ recipeId, title, calories, serves, children, sourceUrl, onRecipeDeleted, favorite = false, onRecipeUpdated }: RecipeAccordionProps) => {
-  const [isOpen, setIsOpen] = useState(false)
+const RecipeAccordion = ({ recipeId, title, calories, serves, children, sourceUrl, onRecipeDeleted, favorite = false, onRecipeUpdated, initialOpen = false }: RecipeAccordionProps) => {
+  const [isOpen, setIsOpen] = useState(initialOpen)
   const [isAdded, setIsAdded] = useState(false)
   const [currentQuantity, setCurrentQuantity] = useState(1)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
   const [isFavorite, setIsFavorite] = useState<boolean>(favorite)
+  const accordionRef = useRef<HTMLDivElement>(null)
   const { token } = useAuth()
-  const { cart, refreshCart } = useCartContext()
+  const { cart, refreshCart, removeRecipe } = useCartContext()
+
+  // Scroll to accordion when initially opened
+  useEffect(() => {
+    if (initialOpen && accordionRef.current) {
+      setTimeout(() => {
+        accordionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 100)
+    }
+  }, [initialOpen])
 
   useEffect(() => {
     checkRecipeInCart()
@@ -52,6 +63,19 @@ const RecipeAccordion = ({ recipeId, title, calories, serves, children, sourceUr
     e.stopPropagation()
     if (!token) return
 
+    // If already in cart, remove it
+    if (isAdded) {
+      try {
+        await removeRecipe(recipeId)
+        await refreshCart()
+        setIsAdded(false)
+      } catch (error) {
+        console.error('Failed to remove recipe from cart:', error)
+      }
+      return
+    }
+
+    // Otherwise, add it to cart
     try {
       await fetch('/api/cart/recipes/', {
         method: 'POST',
@@ -162,7 +186,7 @@ const RecipeAccordion = ({ recipeId, title, calories, serves, children, sourceUr
   }
 
   return (
-    <div className={styles.accordion}>
+    <div className={styles.accordion} ref={accordionRef}>
       <button 
         className={`${styles.header} ${isOpen ? styles.headerOpen : ''}`} 
         onClick={() => setIsOpen(!isOpen)}

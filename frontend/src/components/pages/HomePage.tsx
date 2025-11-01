@@ -1,13 +1,15 @@
+import { useNavigate } from 'react-router-dom';
 import RecipeCard from '../common/RecipeCard';
 import styles from './HomePage.module.css';
 import { useRecipes } from '../../hooks/useRecipes';
 import type { Recipe } from '../../types/recipe';
 
 const HomePage = () => {
+  const navigate = useNavigate();
   const { popularRecipes, recentRecipes, loading, error, refetch } = useRecipes();
 
-  const handleRecipeClick = (title: string) => {
-    console.log(`Clicked on ${title}`);
+  const handleRecipeClick = (recipeId: number) => {
+    navigate(`/recipes?recipeId=${recipeId}`);
   };
 
   // Helper function to extract calories from nutrients
@@ -69,7 +71,7 @@ const HomePage = () => {
             image={recipe.image_url || ''}
             calories={getCalories(recipe)}
             servings={getServings(recipe)}
-            onClick={() => handleRecipeClick(recipe.name)}
+            onClick={() => handleRecipeClick(recipe.id)}
             sourceUrl={recipe.source_url}
           />
         ))

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { TextField, Button, Dialog, DialogTitle, DialogContent, DialogActions, Typography, Box, IconButton, InputAdornment } from '@mui/material';
 import { Close as CloseIcon, CloudUpload as UploadIcon, Add as AddIcon, FilterList as FilterIcon, Sort as SortIcon, Search as SearchIcon } from '@mui/icons-material';
 import styles from './RecipeLibrary.module.css';
@@ -18,6 +19,7 @@ interface Ingredient {
 }
 
 const RecipeLibrary = () => {
+  const [searchParams] = useSearchParams();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [customRecipeDialogOpen, setCustomRecipeDialogOpen] = useState(false);
   const [newRecipeUrl, setNewRecipeUrl] = useState('');
@@ -28,6 +30,9 @@ const RecipeLibrary = () => {
   const [searchResults, setSearchResults] = useState<Recipe[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [nonRecipeNotice, setNonRecipeNotice] = useState<string | null>(null);
+  
+  // Get recipeId from URL params
+  const targetRecipeId = searchParams.get('recipeId') ? parseInt(searchParams.get('recipeId') || '0', 10) : null;
 
   const isValidHttpUrl = (value: string) => {
     try {
@@ -388,6 +393,7 @@ const RecipeLibrary = () => {
                   onRecipeDeleted={refetch}
                   onRecipeUpdated={refetch}
                   favorite={recipe.favorite}
+                  initialOpen={targetRecipeId === recipe.id}
                 >
                   <RecipeDetails
                     imageUrl={recipe.image_url || ''}
@@ -421,6 +427,7 @@ const RecipeLibrary = () => {
               onRecipeDeleted={refetch}
               onRecipeUpdated={refetch}
               favorite={recipe.favorite}
+              initialOpen={targetRecipeId === recipe.id}
             >
               <RecipeDetails
                 imageUrl={recipe.image_url || ''}

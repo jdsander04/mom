@@ -4,11 +4,25 @@ import type { CartRecipe, CartItem } from '../../types/cart';
 import OrderSummary from './OrderSummary';
 import UndoPopup from '../UndoPopup';
 import styles from './Cart.module.css';
+import {
+  ShoppingCartIcon,
+  ClipboardIcon,
+  CarrotIcon,
+  TrashIcon,
+  PackageIcon,
+  SearchIcon,
+  UtensilsIcon,
+  HourglassIcon,
+  ChartIcon,
+  ZapIcon,
+  PlusIcon,
+  EyeIcon,
+} from '../Icons';
 
 export default function Cart() {
   const { cart, loading, undoAction, updateServingSize, removeRecipe, updateItemQuantity, removeItem, removeBulkItems, refreshCart, undoRemoval, clearUndo } = useCartContext();
   const [orderSummaryOpen, setOrderSummaryOpen] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState('instacart');
+  const [selectedProvider] = useState('instacart');
   const [collapsedRecipes, setCollapsedRecipes] = useState<Set<number>>(new Set());
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,8 +53,9 @@ export default function Cart() {
     await removeRecipe(recipeId);
   };
 
-  const handleUpdateServingSize = async (recipeId: number, servingSize: number) => {
-    await updateServingSize(recipeId, servingSize);
+  const handleUpdateMultiples = async (recipeId: number, multiples: number) => {
+    // Convert multiples (whole numbers) to serving_size for backend
+    await updateServingSize(recipeId, multiples);
     await refreshCart();
   };
 
@@ -89,8 +104,14 @@ export default function Cart() {
   };
 
   const filteredIngredients = (ingredients: CartItem[]) => {
-    if (!searchTerm) return ingredients;
-    return ingredients.filter(item => 
+    // Sort ingredients alphabetically by name
+    const sorted = [...ingredients].sort((a, b) => 
+      a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+    );
+    
+    // Filter by search term if provided
+    if (!searchTerm) return sorted;
+    return sorted.filter(item => 
       item.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   };
@@ -104,13 +125,18 @@ export default function Cart() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>🛒 My Shopping Cart</h1>
+        <h1 className={styles.title}>
+          <ShoppingCartIcon size={24} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '8px' }} />
+          Shopping Cart
+        </h1>
         <p className={styles.subtitle}>Review your recipes and ingredients before ordering</p>
       </div>
       
       {!cart || !cart.recipes || cart.recipes.length === 0 ? (
         <div className={styles.empty}>
-          <div className={styles.emptyIcon}>🛒</div>
+          <div className={styles.emptyIcon}>
+            <ShoppingCartIcon size={48} />
+          </div>
           <h2>Your cart is empty</h2>
           <p>Add recipes from the Recipe Library to get started!</p>
           <button className={styles.emptyButton} onClick={() => window.location.href = '/recipes'}>
@@ -122,31 +148,36 @@ export default function Cart() {
           <div className={styles.stickyHeader}>
             <div className={styles.cartSummary}>
               <div className={styles.cartStats}>
-                <span className={styles.cartCount}>📋 {cart.recipes.length} recipes</span>
-                <span className={styles.itemCount}>🥕 {cart.recipes.reduce((total, recipe) => total + recipe.ingredients.length, 0)} ingredients</span>
+                <span className={styles.cartCount}>
+                  <ClipboardIcon size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                  {cart.recipes.length} recipes
+                </span>
+                <span className={styles.itemCount}>
+                  <CarrotIcon size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                  {cart.recipes.reduce((total, recipe) => total + recipe.ingredients.length, 0)} ingredients
+                </span>
               </div>
               {selectedItems.size > 0 && (
                 <div className={styles.bulkActions}>
                   <span className={styles.selectedCount}>{selectedItems.size} selected</span>
                   <button onClick={handleBulkRemove} className={styles.bulkRemoveBtn}>
-                    🗑️ Remove Selected
+                    <TrashIcon size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                    Remove Selected
                   </button>
                 </div>
               )}
             </div>
             <div className={styles.orderButtonContainer}>
-              <select 
-                value={selectedProvider}
-                onChange={(e) => setSelectedProvider(e.target.value)}
-                className={styles.providerSelect}
-              >
-                <option value="instacart">📦 Instacart</option>
-              </select>
+              <div className={styles.providerSelect}>
+                <PackageIcon size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                Instacart
+              </div>
               <button 
                 onClick={() => setOrderSummaryOpen(true)}
                 className={styles.orderButton}
               >
-                🛒 Order Now
+                <ShoppingCartIcon size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                Order Now
               </button>
             </div>
           </div>
@@ -160,7 +191,9 @@ export default function Cart() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className={styles.searchInput}
               />
-              <span className={styles.searchIcon}>🔍</span>
+              <span className={styles.searchIcon}>
+                <SearchIcon size={20} />
+              </span>
             </div>
           </div>
           
@@ -173,23 +206,28 @@ export default function Cart() {
                 <div key={recipe.recipe_id} className={styles.recipeCard}>
                   <div className={styles.recipeHeader}>
                     <div className={styles.recipeInfo}>
-                      <div className={styles.recipeImage}>🍽️</div>
+                      <div className={styles.recipeImage}>
+                        <UtensilsIcon size={32} />
+                      </div>
                       <div className={styles.recipeTitleSection}>
                         <h3 className={styles.recipeTitle}>{recipe.name}</h3>
                         <div className={styles.recipeSummary}>
-                          📋 {recipe.ingredients.length} ingredients • 🍽️ {recipe.serving_size} servings
+                          <ClipboardIcon size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                          {recipe.ingredients.length} ingredients • 
+                          <UtensilsIcon size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginLeft: '4px', marginRight: '4px' }} />
+                          {Math.round(recipe.serving_size)}x recipe
                         </div>
                       </div>
                     </div>
                     <div className={styles.recipeControls}>
                       <div className={styles.servingControls}>
-                        <label>Servings:</label>
+                        <label>Multiples:</label>
                         <input
                           type="number"
-                          min="0.5"
-                          step="0.5"
-                          value={recipe.serving_size}
-                          onChange={(e) => handleUpdateServingSize(recipe.recipe_id, parseFloat(e.target.value))}
+                          min="1"
+                          step="1"
+                          value={Math.round(recipe.serving_size)}
+                          onChange={(e) => handleUpdateMultiples(recipe.recipe_id, parseInt(e.target.value) || 1)}
                           className={styles.servingInput}
                         />
                       </div>
@@ -205,7 +243,7 @@ export default function Cart() {
                         className={styles.removeRecipeBtn}
                         title="Remove recipe"
                       >
-                        🗑️
+                        <TrashIcon size={18} />
                       </button>
                     </div>
                   </div>
@@ -229,7 +267,11 @@ export default function Cart() {
                                 disabled={loadingItems.has(item.id)}
                                 title="Remove item"
                               >
-                                {loadingItems.has(item.id) ? '⏳' : '🗑️'}
+                                {loadingItems.has(item.id) ? (
+                                  <HourglassIcon size={18} />
+                                ) : (
+                                  <TrashIcon size={18} />
+                                )}
                               </button>
                             </div>
                             <div className={styles.quantityControls}>
@@ -281,7 +323,10 @@ export default function Cart() {
             
             <div className={styles.sidebar}>
               <div className={styles.cartSummaryCard}>
-                <h3 className={styles.cardTitle}>📊 Cart Summary</h3>
+                <h3 className={styles.cardTitle}>
+                  <ChartIcon size={18} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} />
+                  Cart Summary
+                </h3>
                 <div className={styles.summaryStats}>
                   <div className={styles.statItem}>
                     <span className={styles.statLabel}>Total Recipes</span>
@@ -291,43 +336,22 @@ export default function Cart() {
                     <span className={styles.statLabel}>Total Ingredients</span>
                     <span className={styles.statValue}>{cart.recipes.reduce((total, recipe) => total + recipe.ingredients.length, 0)}</span>
                   </div>
-                  <div className={styles.statItem}>
-                    <span className={styles.statLabel}>Total Servings</span>
-                    <span className={styles.statValue}>{cart.recipes.reduce((total, recipe) => total + recipe.serving_size, 0)}</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className={styles.tipsCard}>
-                <h3 className={styles.cardTitle}>💡 Shopping Tips</h3>
-                <div className={styles.tipsList}>
-                  <div className={styles.tipItem}>
-                    <span className={styles.tipIcon}>🛒</span>
-                    <span className={styles.tipText}>Check quantities before ordering</span>
-                  </div>
-                  <div className={styles.tipItem}>
-                    <span className={styles.tipIcon}>📱</span>
-                    <span className={styles.tipText}>Use mobile app for easier shopping</span>
-                  </div>
-                  <div className={styles.tipItem}>
-                    <span className={styles.tipIcon}>⏰</span>
-                    <span className={styles.tipText}>Schedule delivery for convenience</span>
-                  </div>
-                  <div className={styles.tipItem}>
-                    <span className={styles.tipIcon}>💰</span>
-                    <span className={styles.tipText}>Look for store promotions</span>
-                  </div>
                 </div>
               </div>
               
               <div className={styles.quickActionsCard}>
-                <h3 className={styles.cardTitle}>⚡ Quick Actions</h3>
+                <h3 className={styles.cardTitle}>
+                  <ZapIcon size={18} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} />
+                  Quick Actions
+                </h3>
                 <div className={styles.actionButtons}>
                   <button className={styles.actionBtn} onClick={() => window.location.href = '/recipes'}>
-                    ➕ Add More Recipes
+                    <PlusIcon size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                    Add More Recipes
                   </button>
                   <button className={styles.actionBtn} onClick={() => setOrderSummaryOpen(true)}>
-                    👀 Preview Order
+                    <EyeIcon size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                    Preview Order
                   </button>
                 </div>
               </div>
