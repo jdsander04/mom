@@ -114,22 +114,44 @@ def recipe_list(request):
     
     # Create new recipe
     elif request.method == 'POST':
+        logger.info(f"RECIPE_POST: Starting recipe creation for user {request.user.id}")
         recipe_source = request.data.get('recipe_source')
+        
+        if not recipe_source:
+            logger.warning(f"RECIPE_POST: Missing recipe_source parameter for user {request.user.id}")
+            return Response({
+                'error': 'Missing recipe_source parameter',
+                'details': 'Must specify one of: "url", "file", or "explicit"'
+            }, status=400)
 
         if recipe_source == 'url':
+            logger.info(f"RECIPE_POST: Processing URL source for user {request.user.id}")
             url = request.data.get('url', '').strip()
             if not url:
-                return Response({'error': 'URL required for url source'}, status=400)
+                logger.warning(f"RECIPE_POST: Missing URL parameter for user {request.user.id}")
+                return Response({
+                    'error': 'Missing URL parameter',
+                    'details': 'When recipe_source is "url", you must provide a "url" field'
+                }, status=400)
             
             # Basic URL validation
             from urllib.parse import urlparse
             try:
                 parsed = urlparse(url)
                 if not parsed.scheme in ['http', 'https'] or not parsed.netloc:
-                    return Response({'error': 'Invalid URL format'}, status=400)
-            except Exception:
-                return Response({'error': 'Invalid URL format'}, status=400)
+                    logger.warning(f"RECIPE_POST: Invalid URL format '{url}' for user {request.user.id}")
+                    return Response({
+                        'error': 'Invalid URL format',
+                        'details': f'URL must start with http:// or https:// and include a domain'
+                    }, status=400)
+            except Exception as e:
+                logger.warning(f"RECIPE_POST: URL parse error '{url}' for user {request.user.id}: {e}")
+                return Response({
+                    'error': 'Invalid URL format',
+                    'details': 'Could not parse the provided URL'
+                }, status=400)
             
+            logger.info(f"RECIPE_POST: Extracting recipe from URL: {url}")
             try:
                 # Try to extract recipe with async mode enabled
                 # If scraper works, recipe_data will be returned
@@ -138,6 +160,7 @@ def recipe_list(request):
                 
                 # If recipe_data is None, it means LLM fallback is needed - create placeholder and queue task
                 if recipe_data is None:
+                    logger.info(f"RECIPE_POST: Scraper unavailable, creating placeholder for async LLM processing")
                     # Create placeholder recipe
                     placeholder_recipe = Recipe.objects.create(
                         user=request.user,
@@ -145,6 +168,7 @@ def recipe_list(request):
                         description='Recipe extraction in progress. Please wait.',
                         source_url=url
                     )
+                    logger.info(f"RECIPE_POST: Created placeholder recipe {placeholder_recipe.id} for URL: {url}")
                     
                     # Queue the async task
                     async_result = process_llm_recipe_extraction.delay(
@@ -155,7 +179,7 @@ def recipe_list(request):
                     try:
                         task_id = getattr(async_result, 'id', None)
                         logger.info(
-                            f"RECIPE_EXTRACT: Queued LLM task task_id={task_id} placeholder_id={placeholder_recipe.id} url={url}"
+                            f"RECIPE_POST: Queued LLM extraction task_id={task_id} placeholder_id={placeholder_recipe.id} for url={url}"
                         )
                     except Exception:
                         # Swallow logging errors, continue
@@ -180,24 +204,30 @@ def recipe_list(request):
                     return Response(created_recipe, status=201)
                 
                 # If we have recipe_data, scraper worked - process normally
-                print(f"VIEWS: Recipe data received: {recipe_data}")
-                print(f"VIEWS: Recipe data type: {type(recipe_data)}")
+                logger.info(f"RECIPE_POST: Successfully extracted recipe from URL with scraper")
                 if recipe_data:
-                    print(f"VIEWS: Recipe data keys: {list(recipe_data.keys())}")
-                    print(f"VIEWS: Title: {recipe_data.get('title')}")
-                    print(f"VIEWS: Ingredients: {recipe_data.get('ingredients')}")
-                    print(f"VIEWS: Instructions: {recipe_data.get('instructions_list')}")
+                    logger.debug(f"RECIPE_POST: Recipe data keys: {list(recipe_data.keys())}")
+                    logger.debug(f"RECIPE_POST: Title: {recipe_data.get('title')}")
+                    logger.debug(f"RECIPE_POST: Ingredients count: {len(recipe_data.get('ingredients', []))}")
+                    logger.debug(f"RECIPE_POST: Instructions count: {len(recipe_data.get('instructions_list', []))}")
                 
                 if not recipe_data:
-                    return Response({'error': 'No recipe data returned from URL'}, status=400)
+                    logger.error(f"RECIPE_POST: No recipe data returned from URL extraction")
+                    return Response({
+                        'error': 'Failed to extract recipe from URL',
+                        'details': 'The recipe scraper returned empty data. The URL may not contain a valid recipe.'
+                    }, status=400)
                 # Make title validation less strict - allow empty title
                 title = recipe_data.get('title') or recipe_data.get('name') or 'Untitled Recipe'
-                print(f"VIEWS: Final title: {title}")
+                logger.info(f"RECIPE_POST: Processing recipe with title: {title}")
             except Exception as e:
-                print(f"VIEWS: Recipe extraction error: {e}")
+                logger.error(f"RECIPE_POST: Recipe extraction error: {e}")
                 import traceback
-                print(f"VIEWS: Traceback: {traceback.format_exc()}")
-                return Response({'error': f'Failed to process recipe URL: {str(e)}'}, status=500)
+                logger.error(f"RECIPE_POST: Traceback: {traceback.format_exc()}")
+                return Response({
+                    'error': 'Failed to process recipe URL',
+                    'details': str(e)
+                }, status=500)
             
             # Try to compute serves from common fields like yields/servings
             serves = None
@@ -276,9 +306,16 @@ def recipe_list(request):
                         continue  # Skip invalid nutrients
             
         elif recipe_source == 'file':
+            logger.info(f"RECIPE_POST: Processing file upload for user {request.user.id}")
             file = request.FILES.get('file')
             if not file:
-                return Response({'error': 'File required for file source'}, status=400)
+                logger.warning(f"RECIPE_POST: Missing file parameter for user {request.user.id}")
+                return Response({
+                    'error': 'Missing file parameter',
+                    'details': 'When recipe_source is "file", you must provide a "file" field containing the image'
+                }, status=400)
+            
+            logger.info(f"RECIPE_POST: Received file '{file.name}' ({file.size} bytes) for user {request.user.id}")
             
             # Validate that it's an image
             try:
@@ -286,21 +323,31 @@ def recipe_list(request):
                 image = Image.open(file)
                 image.verify()
                 file.seek(0)  # Reset file pointer after verify
+                logger.debug(f"RECIPE_POST: Image validation successful for '{file.name}'")
             except Exception as e:
-                return Response({'error': 'Invalid image file'}, status=400)
+                logger.warning(f"RECIPE_POST: Invalid image file '{file.name}' for user {request.user.id}: {e}")
+                return Response({
+                    'error': 'Invalid image file',
+                    'details': f'The file "{file.name}" is not a valid image. Please upload a PNG, JPEG, or other supported image format.'
+                }, status=400)
             
             # Generate unique file name
             unique_id = str(uuid.uuid4())[:8]
             file_extension = file.name.split('.')[-1] if '.' in file.name else 'jpg'
             file_name = f"recipe_images/{request.user.id}_{unique_id}.{file_extension}"
+            logger.debug(f"RECIPE_POST: Generated file path: {file_name}")
             
             # Save image to MinIO
             try:
                 saved_path = default_storage.save(file_name, file)
                 image_url = default_storage.url(saved_path)
+                logger.info(f"RECIPE_POST: Saved image to MinIO: {saved_path} -> {image_url}")
             except Exception as e:
-                logger.error(f"Failed to save image to storage: {e}")
-                return Response({'error': 'Failed to save image'}, status=500)
+                logger.error(f"RECIPE_POST: Failed to save image to storage for user {request.user.id}: {e}")
+                return Response({
+                    'error': 'Failed to save image',
+                    'details': 'The image could not be saved to storage. Please try again.'
+                }, status=500)
             
             # Create placeholder recipe
             placeholder_recipe = Recipe.objects.create(
@@ -309,6 +356,7 @@ def recipe_list(request):
                 description='Recipe OCR extraction in progress. Please wait.',
                 image_url=image_url
             )
+            logger.info(f"RECIPE_POST: Created placeholder recipe {placeholder_recipe.id}")
             
             # Queue the async OCR task
             async_result = process_ocr_recipe_extraction.delay(
@@ -319,9 +367,10 @@ def recipe_list(request):
             try:
                 task_id = getattr(async_result, 'id', None)
                 logger.info(
-                    f"RECIPE_FILE: Queued OCR task task_id={task_id} placeholder_id={placeholder_recipe.id}"
+                    f"RECIPE_POST: Queued OCR extraction task_id={task_id} placeholder_id={placeholder_recipe.id} for user {request.user.id}"
                 )
-            except Exception:
+            except Exception as e:
+                logger.warning(f"RECIPE_POST: Could not log task ID: {e}")
                 pass
             
             # Return placeholder recipe immediately
@@ -343,13 +392,24 @@ def recipe_list(request):
             return Response(created_recipe, status=201)
             
         elif recipe_source == 'explicit':
+            logger.info(f"RECIPE_POST: Processing explicit recipe for user {request.user.id}")
+            recipe_name = request.data.get('name', '')
+            if not recipe_name:
+                logger.warning(f"RECIPE_POST: Missing name for explicit recipe, user {request.user.id}")
+                return Response({
+                    'error': 'Missing required field',
+                    'details': 'When recipe_source is "explicit", you must provide a "name" field'
+                }, status=400)
+            
+            logger.info(f"RECIPE_POST: Creating explicit recipe '{recipe_name}' for user {request.user.id}")
             recipe = Recipe.objects.create(
                 user=request.user,
-                name=request.data.get('name', ''),
+                name=recipe_name,
                 description=request.data.get('description', ''),
                 serves=parse_serves_value(request.data.get('serves'))
             )
             
+            ingredients_count = 0
             for ing_data in request.data.get('ingredients', []):
                 Ingredient.objects.create(
                     recipe=recipe,
@@ -357,16 +417,25 @@ def recipe_list(request):
                     quantity=ing_data.get('quantity', 0),
                     unit=ing_data.get('unit', '')
                 )
+                ingredients_count += 1
             
+            steps_count = 0
             for i, step_data in enumerate(request.data.get('steps', []), 1):
                 Step.objects.create(
                     recipe=recipe,
                     description=step_data.get('description', ''),
                     order=i
                 )
+                steps_count += 1
+            
+            logger.info(f"RECIPE_POST: Created explicit recipe {recipe.id} with {ingredients_count} ingredients and {steps_count} steps")
                 
         else:
-            return Response({'error': 'Expected "url", "file", or "explicit"'}, status=400)
+            logger.warning(f"RECIPE_POST: Invalid recipe_source '{recipe_source}' for user {request.user.id}")
+            return Response({
+                'error': 'Invalid recipe_source',
+                'details': 'recipe_source must be one of: "url", "file", or "explicit"'
+            }, status=400)
 
         # Return complete recipe data after creation
         created_recipe = {
@@ -392,6 +461,7 @@ def recipe_list(request):
                 for n in recipe.nutrients.all()
             ]
         }
+        logger.info(f"RECIPE_POST: Successfully created recipe {recipe.id} '{recipe.name}' for user {request.user.id}")
         return Response(created_recipe, status=201)
 
 @extend_schema(
