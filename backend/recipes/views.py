@@ -84,10 +84,18 @@ logger = logging.getLogger(__name__)
     },
     responses={
         201: {
-            'description': 'Recipe created successfully',
+            'description': 'Recipe created successfully (may be a placeholder if processing async)',
             'content': {
                 'application/json': {
-                    'example': {'id': 1, 'name': 'Recipe Name'}
+                    'example': {
+                        'id': 1,
+                        'name': 'Processing recipe from image...',
+                        'description': 'Recipe OCR extraction in progress. Please wait.',
+                        'image_url': 'http://localhost:9000/media/recipe_images/1_abc123.png',
+                        'status': 'processing',
+                        'ingredients': [],
+                        'steps': []
+                    }
                 }
             }
         }
