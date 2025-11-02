@@ -23,6 +23,7 @@ const RecipeLibrary = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [customRecipeDialogOpen, setCustomRecipeDialogOpen] = useState(false);
   const [newRecipeUrl, setNewRecipeUrl] = useState('');
+  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [sortBy, setSortBy] = useState<'date_added' | 'times_made'>('date_added');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -94,6 +95,14 @@ const RecipeLibrary = () => {
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
+  // Reset form state when dialog opens
+  useEffect(() => {
+    if (dialogOpen) {
+      setNewRecipeUrl('');
+      setUploadedImage(null);
+    }
+  }, [dialogOpen]);
+
   const addRecipeFromUrl = async () => {
     if (!newRecipeUrl.trim() || submitting) return;
     if (!isValidHttpUrl(newRecipeUrl.trim())) {
@@ -142,6 +151,51 @@ const RecipeLibrary = () => {
       }
     } catch (error) {
       console.error('Failed to add recipe:', error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const addRecipeFromImage = async () => {
+    if (!uploadedImage || submitting) return;
+    
+    setSubmitting(true);
+    try {
+      const created = await apiService.createRecipeFromImage(uploadedImage);
+      
+      setUploadedImage(null);
+      setDialogOpen(false);
+      refetch(); // Refresh the recipes list
+
+      // If a placeholder recipe is created, poll it briefly to detect quick failure (non-recipe)
+      if (created && created.id && created.name && created.name.toLowerCase().includes('processing')) {
+        const placeholderId = created.id;
+        const startTime = Date.now();
+        const pollInterval = 2000; // 2s
+        const maxDuration = 20000; // 20s
+        const timer = setInterval(async () => {
+          try {
+            const r = await apiService.getRecipe(placeholderId);
+            // If recipe has been updated to a real name, stop polling
+            if (r && r.name && !r.name.toLowerCase().includes('processing')) {
+              clearInterval(timer);
+              return;
+            }
+          } catch (e) {
+            // If fetch fails (likely 404 because placeholder was deleted), show notice
+            clearInterval(timer);
+            setNonRecipeNotice('That image does not seem to contain a recipe.');
+            // Auto-hide after 6 seconds
+            setTimeout(() => setNonRecipeNotice(null), 6000);
+            return;
+          }
+          if (Date.now() - startTime > maxDuration) {
+            clearInterval(timer);
+          }
+        }, pollInterval);
+      }
+    } catch (error) {
+      console.error('Failed to add recipe from image:', error);
     } finally {
       setSubmitting(false);
     }
@@ -527,26 +581,45 @@ const RecipeLibrary = () => {
             {/* From media section */}
             <Box sx={{ mb: 3 }}>
               <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold' }}>
-                From media
+                From image
               </Typography>
-              <Box
-                sx={{
-                  border: '2px dashed #ccc',
-                  borderRadius: 1,
-                  padding: '40px 20px',
-                  textAlign: 'center',
-                  backgroundColor: '#f9f9f9',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    backgroundColor: '#f0f0f0'
+              <input
+                accept="image/*"
+                style={{ display: 'none' }}
+                id="upload-image-input"
+                type="file"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setUploadedImage(file);
                   }
                 }}
-              >
-                <UploadIcon sx={{ fontSize: 40, color: '#666', mb: 1 }} />
-                <Typography variant="body1" sx={{ color: '#666' }}>
-                  Upload Media
-                </Typography>
-              </Box>
+              />
+              <label htmlFor="upload-image-input">
+                <Box
+                  sx={{
+                    border: '2px dashed #ccc',
+                    borderRadius: 1,
+                    padding: '40px 20px',
+                    textAlign: 'center',
+                    backgroundColor: uploadedImage ? '#e8f5e9' : '#f9f9f9',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      backgroundColor: uploadedImage ? '#c8e6c9' : '#f0f0f0'
+                    }
+                  }}
+                >
+                  <UploadIcon sx={{ fontSize: 40, color: uploadedImage ? '#4caf50' : '#666', mb: 1 }} />
+                  <Typography variant="body1" sx={{ color: uploadedImage ? '#4caf50' : '#666', fontWeight: uploadedImage ? 'bold' : 'normal' }}>
+                    {uploadedImage ? uploadedImage.name : 'Upload Image'}
+                  </Typography>
+                  {uploadedImage && (
+                    <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: 1 }}>
+                      Click to change
+                    </Typography>
+                  )}
+                </Box>
+              </label>
             </Box>
 
             {/* Custom recipe section */}
@@ -580,8 +653,14 @@ const RecipeLibrary = () => {
           <DialogActions sx={{ padding: '0 24px 24px 24px', justifyContent: 'flex-end' }}>
             <Button 
               variant="contained"
-              onClick={addRecipeFromUrl}
-              disabled={submitting}
+              onClick={() => {
+                if (uploadedImage) {
+                  addRecipeFromImage();
+                } else {
+                  addRecipeFromUrl();
+                }
+              }}
+              disabled={submitting || (!newRecipeUrl.trim() && !uploadedImage)}
               sx={{
                 backgroundColor: '#4caf50',
                 '&:hover': {

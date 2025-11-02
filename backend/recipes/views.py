@@ -5,10 +5,13 @@ from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 from .models import Recipe, Ingredient, Step, Nutrient
-from .services import recipe_from_url, recipe_from_file
-from .tasks import process_llm_recipe_extraction
+from .services import recipe_from_url
+from .tasks import process_llm_recipe_extraction, process_ocr_recipe_extraction
 from .services import parse_ingredient_string, parse_serves_value
 import logging
+import uuid
+from django.core.files.storage import default_storage
+from PIL import Image
 
 logger = logging.getLogger(__name__)
 
@@ -59,9 +62,25 @@ logger = logging.getLogger(__name__)
                         }
                     },
                     'required': ['recipe_source']
+                },
+                {
+                    'type': 'object',
+                    'properties': {
+                        'recipe_source': {'type': 'string', 'enum': ['file']},
+                        'file': {'type': 'string', 'format': 'binary', 'description': 'Image file containing recipe'}
+                    },
+                    'required': ['recipe_source', 'file']
                 }
             ]
         },
+        'multipart/form-data': {
+            'type': 'object',
+            'properties': {
+                'recipe_source': {'type': 'string', 'enum': ['file']},
+                'file': {'type': 'string', 'format': 'binary', 'description': 'Image file containing recipe'}
+            },
+            'required': ['recipe_source', 'file']
+        }
     },
     responses={
         201: {
@@ -252,32 +271,68 @@ def recipe_list(request):
             file = request.FILES.get('file')
             if not file:
                 return Response({'error': 'File required for file source'}, status=400)
-            recipe_data = recipe_from_file(file)
-            if not recipe_data:
-                return Response({'error': 'Failed to process file'}, status=400)
-            recipe = Recipe.objects.create(
+            
+            # Validate that it's an image
+            try:
+                # Verify it's an image by trying to open it with PIL
+                image = Image.open(file)
+                image.verify()
+                file.seek(0)  # Reset file pointer after verify
+            except Exception as e:
+                return Response({'error': 'Invalid image file'}, status=400)
+            
+            # Generate unique file name
+            unique_id = str(uuid.uuid4())[:8]
+            file_extension = file.name.split('.')[-1] if '.' in file.name else 'jpg'
+            file_name = f"recipe_images/{request.user.id}_{unique_id}.{file_extension}"
+            
+            # Save image to MinIO
+            try:
+                saved_path = default_storage.save(file_name, file)
+                image_url = default_storage.url(saved_path)
+            except Exception as e:
+                logger.error(f"Failed to save image to storage: {e}")
+                return Response({'error': 'Failed to save image'}, status=500)
+            
+            # Create placeholder recipe
+            placeholder_recipe = Recipe.objects.create(
                 user=request.user,
-                name=recipe_data.get('title', ''),
-                description=recipe_data.get('description', ''),
-                serves=parse_serves_value(recipe_data.get('serves')) or parse_serves_value(recipe_data.get('yields'))
+                name='Processing recipe from image...',
+                description='Recipe OCR extraction in progress. Please wait.',
+                image_url=image_url
             )
             
-            # Create ingredients
-            for ingredient in recipe_data.get('ingredients', []):
-                Ingredient.objects.create(
-                    recipe=recipe,
-                    name=ingredient.get('name', ''),
-                    quantity=ingredient.get('quantity', 0),
-                    unit=ingredient.get('unit', '')
+            # Queue the async OCR task
+            async_result = process_ocr_recipe_extraction.delay(
+                recipe_id=placeholder_recipe.id,
+                image_path=saved_path,
+                user_id=request.user.id
+            )
+            try:
+                task_id = getattr(async_result, 'id', None)
+                logger.info(
+                    f"RECIPE_FILE: Queued OCR task task_id={task_id} placeholder_id={placeholder_recipe.id}"
                 )
+            except Exception:
+                pass
             
-            # Create steps
-            for i, instruction in enumerate(recipe_data.get('instructions', []), 1):
-                Step.objects.create(
-                    recipe=recipe,
-                    description=instruction,
-                    order=i
-                )
+            # Return placeholder recipe immediately
+            created_recipe = {
+                'id': placeholder_recipe.id,
+                'name': placeholder_recipe.name,
+                'description': placeholder_recipe.description,
+                'image_url': placeholder_recipe.image_url,
+                'source_url': placeholder_recipe.source_url,
+                'serves': None,
+                'date_added': placeholder_recipe.date_added.isoformat(),
+                'times_made': placeholder_recipe.times_made,
+                'favorite': placeholder_recipe.favorite,
+                'ingredients': [],
+                'steps': [],
+                'nutrients': [],
+                'status': 'processing'
+            }
+            return Response(created_recipe, status=201)
             
         elif recipe_source == 'explicit':
             recipe = Recipe.objects.create(

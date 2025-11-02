@@ -56,6 +56,24 @@ class ApiService {
     return this.handleResponse<Recipe>(response);
   }
 
+  async createRecipeFromImage(file: File): Promise<Recipe> {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('recipe_source', 'file');
+    formData.append('file', file);
+
+    const headers: HeadersInit = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    // Intentionally do not set Content-Type so the browser sets proper multipart boundary
+
+    const response = await fetch(`${API_BASE_URL}/recipes/`, {
+      method: 'POST',
+      headers,
+      body: formData
+    });
+    return this.handleResponse<Recipe>(response);
+  }
+
   async updateRecipe(id: number, recipeData: Partial<Recipe>): Promise<{ message: string }> {
     const response = await fetch(`${API_BASE_URL}/recipes/${id}/`, {
       method: 'PATCH',

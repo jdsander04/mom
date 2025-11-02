@@ -216,6 +216,9 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 
+# OCR Service Configuration
+OCR_SERVICE_URL = os.getenv('OCR_SERVICE_URL', 'http://ocr:8000')
+
 
 # Media storage (MinIO / S3-compatible)
 MINIO_ENABLED = os.getenv('MINIO_ENABLED', 'false').lower() in ('true', '1', 'yes')
@@ -238,6 +241,7 @@ if MINIO_ENABLED:
     AWS_SECRET_ACCESS_KEY = os.getenv('MINIO_ROOT_PASSWORD', '')
     AWS_STORAGE_BUCKET_NAME = os.getenv('MEDIA_BUCKET', 'media')
     AWS_S3_ENDPOINT_URL = os.getenv('MINIO_ENDPOINT', 'http://minio:9000')
+    AWS_S3_CUSTOM_DOMAIN = os.getenv('MINIO_PUBLIC_URL', 'localhost:9000')  # Public hostname for URLs
     AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
     AWS_S3_SIGNATURE_VERSION = os.getenv('AWS_S3_SIGNATURE_VERSION', 's3v4')
     AWS_S3_ADDRESSING_STYLE = os.getenv('AWS_S3_ADDRESSING_STYLE', 'path')

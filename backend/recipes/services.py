@@ -16,6 +16,84 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
+
+def _get_text_from_ocr(image_url: str) -> str:
+    """Extract text from image using OCR service.
+    
+    This function tries multiple common OCR API formats:
+    1. POST /ocr with JSON body
+    2. POST / with JSON body
+    3. Various response formats
+    
+    Returns combined text from all detected lines.
+    """
+    from django.conf import settings
+    
+    ocr_url = getattr(settings, 'OCR_SERVICE_URL', 'http://ocr:8000')
+    
+    # Try common OCR API endpoints
+    endpoints_to_try = [
+        f"{ocr_url}/ocr",
+        f"{ocr_url}/",
+        f"{ocr_url}/predict",
+        f"{ocr_url}/extract",
+    ]
+    
+    for api_url in endpoints_to_try:
+        try:
+            logger.info(f"OCR: Trying endpoint {api_url} for image: {image_url}")
+            
+            # Try different request formats
+            response = requests.post(
+                api_url,
+                json={'image_url': image_url, 'image': image_url, 'url': image_url},
+                timeout=30,
+                headers={'Content-Type': 'application/json'}
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(f"OCR: Success with endpoint {api_url}")
+                
+                # Handle various response formats
+                text_lines = []
+                
+                # Format 1: {"results": [{"text": "..."}, ...]}
+                if isinstance(result, dict) and 'results' in result:
+                    text_lines = [item.get('text', '') for item in result['results'] if item.get('text')]
+                
+                # Format 2: {"text": "..."}
+                elif isinstance(result, dict) and 'text' in result:
+                    text_lines = [result['text']]
+                
+                # Format 3: {"predictions": [{"text": "..."}, ...]}
+                elif isinstance(result, dict) and 'predictions' in result:
+                    text_lines = [item.get('text', '') for item in result['predictions'] if item.get('text')]
+                
+                # Format 4: [{"text": "..."}, ...]
+                elif isinstance(result, list):
+                    text_lines = [item.get('text', '') for item in result if isinstance(item, dict) and item.get('text')]
+                
+                full_text = '\n'.join(text_lines).strip()
+                if full_text:
+                    logger.info(f"OCR: Extracted {len(text_lines)} lines of text")
+                    return full_text
+                else:
+                    logger.warning(f"OCR: No text found in response from {api_url}")
+            else:
+                logger.warning(f"OCR: Endpoint {api_url} returned status {response.status_code}")
+                
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"OCR: Failed to connect to {api_url}: {e}")
+            continue
+        except Exception as e:
+            logger.warning(f"OCR: Error parsing response from {api_url}: {e}")
+            continue
+    
+    logger.error(f"OCR: All endpoints failed for image: {image_url}")
+    return ""
+
+
 def _normalize_unicode_fractions(text: str) -> str:
     """Replace unicode vulgar fractions with ascii equivalents like 1/2.
 
@@ -249,6 +327,105 @@ def _get_recipe_from_llm(text: str) -> dict:
         logger.info(f"LLM: Decision is_recipe={result['is_recipe']} reason='{result['reason']}'")
         return result
 
+
+
+def _get_recipe_from_image(image_base64: str, image_format: str = "png") -> dict:
+    """Uses OpenAI Vision to extract structured recipe data from a base64-encoded image."""
+    logger.info(f"OCR: Starting image extraction from base64 data")
+    
+    try:
+        logger.debug("OCR: Getting OpenAI client...")
+        client = _get_openai_client()
+        
+        if not client:
+            logger.error("OCR: OpenAI client unavailable")
+            result = {"is_recipe": False, "reason": "OpenAI unavailable"}
+            return result
+        
+        logger.info("OCR: Making API call to OpenAI Vision...")
+        logger.info('"POST https://api.openai.com/v1/chat/completions HTTP/1.1" PENDING 0')
+        
+        # Prepare image data URL with base64
+        image_data_url = f"data:image/{image_format};base64,{image_base64}"
+        
+        response = client.chat.completions.create(
+            model="gpt-4o",  # Use gpt-4o for vision capabilities
+            messages=[
+                {"role": "system", "content": "You are a strict recipe extraction expert. Return ONLY valid JSON. If the image does not contain a recipe, you MUST return {\\\"is_recipe\\\": false, \\\"reason\\\": \\\"brief reason\\\"}. If it is a recipe, return {\\\"is_recipe\\\": true, \\\"title\\\": string, \\\"description\\\": string, \\\"ingredients\\\": [{\\\"name\\\": string, \\\"quantity\\\": number, \\\"unit\\\": string}], \\\"instructions_list\\\": [string], \\\"serves\\\"?: number} and nothing else."},
+                {"role": "system", "content": "If available infer servings as an integer in 'serves'; otherwise omit it. Parse fractions accurately (1/2, 2/3, etc.) and handle mixed numbers (1 1/2)."},
+                {"role": "user", "content": [
+                    {"type": "text", "text": "Decide if this is a recipe and extract it if so."},
+                    {"type": "image_url", "image_url": {"url": image_data_url}}
+                ]}
+            ],
+            max_tokens=1500,
+            temperature=0,
+            timeout=60  # Longer timeout for image processing
+        )
+        
+        logger.info("OCR: Received response from OpenAI")
+        content = response.choices[0].message.content.strip()
+        logger.info(f'"POST https://api.openai.com/v1/chat/completions HTTP/1.1" 200 {len(content)}')
+        logger.debug(f"OCR: Raw response content: {content}")
+        
+        # Handle markdown code blocks
+        if content.startswith('```json'):
+            content = content[7:-3].strip()
+        elif content.startswith('```'):
+            content = content[3:-3].strip()
+        
+        result = json.loads(content)
+        logger.debug(f"OCR: Parsed JSON result: {result}")
+        
+        # Ensure required fields exist with meaningful defaults
+        if not isinstance(result, dict):
+            result = {"is_recipe": False, "reason": "Invalid JSON structure"}
+        
+        result.setdefault('is_recipe', True)
+        logger.info(f"OCR: Decision is_recipe={result.get('is_recipe')} reason='{result.get('reason', '')}'")
+        
+        if result.get('is_recipe'):
+            result.setdefault('title', 'Recipe from Image')
+            result.setdefault('description', 'Extracted recipe')
+            result.setdefault('ingredients', [])
+            result.setdefault('instructions_list', [])
+            logger.info(
+                "OCR: Extracted counts title='%s' ingredients=%d steps=%d",
+                result.get('title'),
+                len(result.get('ingredients') or []),
+                len(result.get('instructions_list') or [])
+            )
+        
+        # Convert string ingredients to proper format if needed
+        if result['ingredients'] and isinstance(result['ingredients'][0], str):
+            formatted_ingredients = []
+            for ing in result['ingredients']:
+                parsed = parse_ingredient_string(ing)
+                if parsed["name"] or parsed["quantity"]:
+                    formatted_ingredients.append(parsed)
+            result['ingredients'] = formatted_ingredients
+        
+        # Normalize serves under various possible keys
+        serves_candidates = [
+            result.get('serves'),
+            result.get('servings'),
+            result.get('yields'),
+        ]
+        for candidate in serves_candidates:
+            parsed_serves = parse_serves_value(candidate)
+            if parsed_serves:
+                result['serves'] = parsed_serves
+                break
+        
+        logger.info(f"OCR: Final result with defaults: {result}")
+        return result
+        
+    except Exception as e:
+        logger.error(f"OCR extraction failed: {e}")
+        logger.error('"POST https://api.openai.com/v1/chat/completions HTTP/1.1" 500 0')
+        result = {"is_recipe": False, "reason": "OCR error"}
+        logger.info(f"OCR: Decision is_recipe={result['is_recipe']} reason='{result['reason']}'")
+        return result
 
 
 def _get_text_from_website(url):
