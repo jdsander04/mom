@@ -93,6 +93,14 @@ class ApiService {
     }
   }
 
+  async copyRecipe(id: number): Promise<{ id: number; name: string; message: string }> {
+    const response = await fetch(`${API_BASE_URL}/recipes/${id}/copy/`, {
+      method: 'POST',
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<{ id: number; name: string; message: string }>(response);
+  }
+
   async searchRecipes(query: string, limit: number = 50, fuzziness: number = 2): Promise<Recipe[]> {
     const response = await fetch(`${API_BASE_URL}/recipes/search/?q=${encodeURIComponent(query)}&limit=${limit}&fuzziness=${fuzziness}`, {
       method: 'GET',

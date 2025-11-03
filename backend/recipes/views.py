@@ -196,6 +196,7 @@ def recipe_list(request):
                         'date_added': placeholder_recipe.date_added.isoformat(),
                         'times_made': placeholder_recipe.times_made,
                         'favorite': placeholder_recipe.favorite,
+                        'user_id': placeholder_recipe.user.id,
                         'ingredients': [],
                         'steps': [],
                         'nutrients': [],
@@ -384,6 +385,7 @@ def recipe_list(request):
                 'date_added': placeholder_recipe.date_added.isoformat(),
                 'times_made': placeholder_recipe.times_made,
                 'favorite': placeholder_recipe.favorite,
+                'user_id': placeholder_recipe.user.id,
                 'ingredients': [],
                 'steps': [],
                 'nutrients': [],
@@ -448,6 +450,7 @@ def recipe_list(request):
             'serves': recipe.serves,
             'times_made': recipe.times_made,
             'favorite': recipe.favorite,
+            'user_id': recipe.user.id,
             'ingredients': [
                 {'name': i.name, 'quantity': float(i.quantity), 'unit': i.unit}
                 for i in recipe.ingredients.all()
@@ -529,7 +532,13 @@ def recipe_list(request):
 @authentication_classes([BearerTokenAuthentication])
 def recipe_detail(request, recipe_id):
     try:
-        recipe = Recipe.objects.get(id=recipe_id, user=request.user)
+        # For GET, allow reading any recipe (for popular recipes from other users)
+        # For PATCH/DELETE, only allow modifying own recipes
+        recipe = Recipe.objects.get(id=recipe_id)
+        
+        # Check ownership for write operations
+        if request.method in ['PATCH', 'DELETE'] and recipe.user != request.user:
+            return Response({'error': 'Permission denied. You can only modify your own recipes.'}, status=403)
     except Recipe.DoesNotExist:
         return Response({'error': 'Recipe not found'}, status=404)
     
@@ -546,6 +555,7 @@ def recipe_detail(request, recipe_id):
             'serves': recipe.serves,
             'times_made': recipe.times_made,
             'favorite': recipe.favorite,
+            'user_id': recipe.user.id,
             'ingredients': [
                 {'name': i.name, 'quantity': float(i.quantity), 'unit': i.unit}
                 for i in recipe.ingredients.all()
@@ -635,9 +645,12 @@ def recipe_detail(request, recipe_id):
 @permission_classes([IsAuthenticated])
 @authentication_classes([BearerTokenAuthentication])
 def recipe_made(request, recipe_id):
-    """Increment the times_made counter for a recipe when it's used."""
+    """Increment the times_made counter for a recipe when it's used.
+    
+    Allows any authenticated user to mark any recipe as made (for popular recipes feature).
+    """
     try:
-        recipe = Recipe.objects.get(id=recipe_id, user=request.user)
+        recipe = Recipe.objects.get(id=recipe_id)
     except Recipe.DoesNotExist:
         return Response({'error': 'Recipe not found'}, status=404)
     
@@ -648,6 +661,91 @@ def recipe_made(request, recipe_id):
         'message': 'Recipe made count updated',
         'times_made': recipe.times_made
     })
+
+
+@extend_schema(
+    methods=['POST'],
+    operation_id='recipe_copy',
+    responses={
+        201: {
+            'description': 'Recipe copied successfully',
+            'content': {
+                'application/json': {
+                    'example': {
+                        'id': 2,
+                        'name': 'Spaghetti Bolognese',
+                        'description': 'Hearty meat sauce',
+                        'message': 'Recipe copied to your library'
+                    }
+                }
+            }
+        }
+    }
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([BearerTokenAuthentication])
+def recipe_copy(request, recipe_id):
+    """Copy a recipe to the current user's library."""
+    try:
+        source_recipe = Recipe.objects.get(id=recipe_id)
+    except Recipe.DoesNotExist:
+        return Response({'error': 'Recipe not found'}, status=404)
+    
+    # Check if user already has this recipe (by name or same recipe)
+    # This is optional - we could allow multiple copies if desired
+    existing = Recipe.objects.filter(user=request.user, name=source_recipe.name).first()
+    if existing:
+        return Response({
+            'id': existing.id,
+            'name': existing.name,
+            'message': 'This recipe is already in your library'
+        }, status=200)
+    
+    # Create a copy of the recipe
+    copied_recipe = Recipe.objects.create(
+        user=request.user,
+        name=source_recipe.name,
+        description=source_recipe.description,
+        image_url=source_recipe.image_url,
+        source_url=source_recipe.source_url,
+        serves=source_recipe.serves,
+        favorite=False,  # Don't copy favorite status
+        times_made=0  # Reset times_made for the copy
+    )
+    
+    # Copy ingredients
+    for ingredient in source_recipe.ingredients.all():
+        Ingredient.objects.create(
+            recipe=copied_recipe,
+            name=ingredient.name,
+            quantity=ingredient.quantity,
+            unit=ingredient.unit
+        )
+    
+    # Copy steps
+    for step in source_recipe.steps.all():
+        Step.objects.create(
+            recipe=copied_recipe,
+            description=step.description,
+            order=step.order
+        )
+    
+    # Copy nutrients
+    for nutrient in source_recipe.nutrients.all():
+        Nutrient.objects.create(
+            recipe=copied_recipe,
+            macro=nutrient.macro,
+            mass=nutrient.mass
+        )
+    
+    logger.info(f"RECIPE_COPY: User {request.user.id} copied recipe {source_recipe.id} to {copied_recipe.id}")
+    
+    return Response({
+        'id': copied_recipe.id,
+        'name': copied_recipe.name,
+        'message': 'Recipe added to your library'
+    }, status=201)
 
 
 @extend_schema(
@@ -830,6 +928,7 @@ def recipe_search(request):
             'date_added': recipe.date_added.isoformat(),
             'times_made': recipe.times_made,
             'favorite': recipe.favorite,
+            'user_id': recipe.user.id,
             'score': round(score, 3)  # Round to 3 decimal places
         })
     
@@ -903,6 +1002,7 @@ def recipe_popular(request):
             'date_added': r.date_added.isoformat() if r.date_added else None,
             'times_made': r.times_made,
             'serves': r.serves,
+            'user_id': r.user.id,
         })
 
     return Response({'results': results, 'total': len(results)})
