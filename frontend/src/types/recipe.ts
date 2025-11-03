@@ -27,6 +27,7 @@ export interface Recipe {
   date_added?: string; // ISO date string
   times_made?: number; // Number of times this recipe has been made
   favorite?: boolean;
+  user_id?: number; // ID of the user who owns this recipe
 }
 
 export interface RecipeSummary {
