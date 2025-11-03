@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'preferences',
     'ingredient',
     'users',
+    'health',
 ]
 
 MIDDLEWARE = [
