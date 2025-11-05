@@ -65,7 +65,20 @@ export default function UserProfile() {
   const DIET_DB = useMemo(() => [], []);
   const INGREDIENT_DB = useMemo(() => [], []);
 
-  const USER_NAME = useMemo(() => 'Jane Doe', []);
+  const [userName, setUserName] = useState<string>('');
+  const [profilePic, setProfilePic] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    fetchJSON(`${API_BASE}/user/me/`, token)
+      .then((data) => {
+        setUserName(data.name || data.username || 'Name');
+        setProfilePic(data.profile_pic || null);
+      })
+      .catch((e) => {
+        console.error('Failed to fetch user profile', e);
+      });
+  }, [token]);
 
   // item statuses and errors
   const [itemStatus, setItemStatus] = useState<Record<string, 'idle' | 'saving' | 'deleting' | 'error'>>({});
@@ -416,8 +429,8 @@ export default function UserProfile() {
                 lineHeight: 0,
               }}
             >
-              <Avatar sx={{ width: 64, height: 64 }} src={previewUrl || avatarUrl || undefined}>
-                JD
+              <Avatar sx={{ width: 64, height: 64 }} src={previewUrl || profilePic || avatarUrl || undefined}>
+                {userName ? userName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) : 'JD'}
               </Avatar>
             </Button>
             <Box className="hoverOverlay" sx={{
@@ -440,7 +453,7 @@ export default function UserProfile() {
             </Box>
           </Box>
           <Box sx={{ flex: 1 }}>
-            <Typography variant="h6">{USER_NAME}</Typography>
+            <Typography variant="h6">{userName}</Typography>
             <Typography variant="body2" color="text.secondary">
               Manage your dietary plans and allergens
             </Typography>
