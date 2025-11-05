@@ -1,7 +1,7 @@
 from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import Allergy, Nutrient, Budget
+from .models import Allergy, Nutrient, Budget, UserNutritionSnapshot
 from .serializers import AllergySerializer, NutrientSerializer, BudgetSerializer
 from django.db import DatabaseError
 
@@ -12,7 +12,9 @@ class HealthSummaryView(APIView):
     def get(self, request):
         user = request.user
         allergies = Allergy.objects.filter(user=user)
-        nutrients = Nutrient.objects.filter(user=user)
+        # Return available nutrients (admin-managed). Use all() so the frontend
+        # shows the list of nutrients created via admin.
+        nutrients = Nutrient.objects.all()
         try:
             try:
                 budget = Budget.objects.get(user=user)
@@ -34,9 +36,26 @@ class HealthSummaryView(APIView):
 
         return Response({
             'allergies': AllergySerializer(allergies, many=True).data,
-            'nutrients': NutrientSerializer(nutrients, many=True).data,
+            'nutrients': NutrientSerializer(nutrients, many=True, context={'request': request}).data,
             'budget': budget_data,
         })
+
+
+class NutritionTotalsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        try:
+            totals = UserNutritionSnapshot.compute_for_user(user)
+            # try saving a snapshot for history (non-fatal)
+            try:
+                UserNutritionSnapshot.objects.create(user=user, data=totals['totals'], total_calories=totals['calories'])
+            except Exception:
+                pass
+            return Response(totals)
+        except Exception as e:
+            return Response({'detail': 'Failed to compute nutrition totals', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class AllergyListCreateView(generics.ListCreateAPIView):
@@ -52,13 +71,18 @@ class AllergyListCreateView(generics.ListCreateAPIView):
 
 class NutrientListCreateView(generics.ListCreateAPIView):
     serializer_class = NutrientSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    # Allow any authenticated user to view the global nutrient list, but only
+    # admin users may create new global nutrients via this API.
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [permissions.IsAdminUser()]
+        return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
-        return Nutrient.objects.filter(user=self.request.user)
+        return Nutrient.objects.all()
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save()
 
 
 class BudgetRetrieveUpdateView(APIView):
