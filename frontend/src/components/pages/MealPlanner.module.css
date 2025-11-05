@@ -1,47 +1,140 @@
+.container {
+  grid-column: 1 / -1;
+  width: 100%;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 .pageTitle {
   grid-column: 1 / -1;
   margin: 0 0 1rem 0;
   font-weight: normal;
-  color: #000000;
 }
 
-.mealCard {
-  height: 100%;
-  min-height: 200px;
+.dateSection {
+  margin-bottom: 2rem;
 }
 
-.mealCard .MuiCardContent-root {
-  height: 100%;
+.dateSection h3 {
+  margin: 0 0 1rem 0;
+  font-weight: 500;
+  color: #333;
+}
+
+.calendarContainer {
   display: flex;
-  flex-direction: column;
-}
-
-.dateButton {
-  margin: 0.25rem;
+  justify-content: center;
+  margin-bottom: 1rem;
 }
 
 .selectedDate {
-  background-color: #2e7d32 !important;
-  color: white !important;
+  text-align: center;
+  color: #666;
+  font-size: 14px;
 }
 
-.calendar {
+.mealsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.mealCard {
   border: 1px solid #ddd;
   border-radius: 8px;
-  font-family: inherit;
-  max-width: 100%;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  min-height: 200px;
 }
 
-.calendar .react-calendar__tile {
-  border-radius: 4px;
+.mealHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.mealHeader h3 {
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.addButton {
+  background: #2e7d32;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: background-color 0.2s;
 }
 
-.calendar .react-calendar__tile--active {
-  background-color: #2e7d32 !important;
-  color: white !important;
+.addButton:hover {
+  background: #1b5e20;
 }
 
-.calendar .react-calendar__tile:hover {
-  background-color: #f5f5f5;
+.mealContent {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mealItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #f9f9f9;
+  transition: background-color 0.2s;
+}
+
+.mealItem:hover {
+  background: #f0f0f0;
+}
+
+.mealName {
+  cursor: pointer;
+  color: #333;
+  font-weight: 500;
+  flex: 1;
+}
+
+.mealName:hover {
+  color: #2e7d32;
+}
+
+.removeButton {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.removeButton:hover {
+  background: #ffebee;
+  color: #d32f2f;
+}
+
+.emptyMeal {
+  color: #666;
+  font-style: italic;
+  text-align: center;
+  padding: 2rem;
 }

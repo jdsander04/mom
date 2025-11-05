@@ -1,29 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Typography,
-  Grid,
-  Card,
-  CardContent,
   Button,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Chip,
-  Box,
-  IconButton,
   List,
   ListItem,
   ListItemButton,
   ListItemText
 } from '@mui/material';
-import { Add, Delete } from '@mui/icons-material';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
+
 import dayjs, { Dayjs } from 'dayjs';
 import { useAuth } from '../../contexts/AuthContext';
 import RecipeDetails from '../common/RecipeAccordion/RecipeDetails';
+import CustomCalendar from '../common/CustomCalendar';
 import styles from './MealPlanner.module.css';
 interface MealPlan {
   date: string;
@@ -227,76 +218,66 @@ const MealPlanner = () => {
 
 
   const renderMealSection = (title: string, mealType: keyof Omit<MealPlan, 'date'>, meals: { id: number; name: string }[]) => (
-    <Card className={styles.mealCard}>
-      <CardContent>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h6">{title}</Typography>
-          <IconButton onClick={() => openAddDialog(mealType)} size="small">
-            <Add />
-          </IconButton>
-        </Box>
-        <Box display="flex" flexWrap="wrap" gap={1}>
-          {meals.map((meal, index) => (
-            <Chip
-              key={index}
-              label={meal.name}
-              onClick={(e) => {
-                e.stopPropagation();
-                viewRecipeDetail(meal.id, meal.name);
-              }}
-              onDelete={(e) => {
-                e.stopPropagation();
-                removeMeal(mealType, index);
-              }}
-              deleteIcon={<Delete />}
-              variant="outlined"
-              clickable
-            />
-          ))}
-          {meals.length === 0 && (
-            <Typography variant="body2" color="text.secondary">
-              No {title.toLowerCase()} planned
-            </Typography>
-          )}
-        </Box>
-      </CardContent>
-    </Card>
+    <div className={styles.mealCard}>
+      <div className={styles.mealHeader}>
+        <h3>{title}</h3>
+        <button 
+          onClick={() => openAddDialog(mealType)} 
+          className={styles.addButton}
+        >
+          +
+        </button>
+      </div>
+      <div className={styles.mealContent}>
+        {meals.map((meal, index) => (
+          <div key={index} className={styles.mealItem}>
+            <span 
+              onClick={() => viewRecipeDetail(meal.id, meal.name)}
+              className={styles.mealName}
+            >
+              {meal.name}
+            </span>
+            <button 
+              onClick={() => removeMeal(mealType, index)}
+              className={styles.removeButton}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        {meals.length === 0 && (
+          <div className={styles.emptyMeal}>
+            No {title.toLowerCase()} planned
+          </div>
+        )}
+      </div>
+    </div>
   );
 
   return (
-    <>
+    <div className={styles.container}>
       <h1 className={styles.pageTitle}>Meal Planner</h1>
       
-      <Box mb={3}>
-        <Typography variant="h6" mb={2}>Select Date</Typography>
-        <Box display="flex" justifyContent="center">
-          <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <DateCalendar 
-              value={selectedDate}
-              onChange={(newValue) => newValue && setSelectedDate(newValue)}
-            />
-          </LocalizationProvider>
-        </Box>
-        <Typography variant="body1" mt={2} textAlign="center">
+      <div className={styles.dateSection}>
+        <h3>Select Date</h3>
+        <div className={styles.calendarContainer}>
+          <CustomCalendar 
+            value={selectedDate}
+            onChange={setSelectedDate}
+          />
+        </div>
+        <div className={styles.selectedDate}>
           Selected: {selectedDate.format('dddd, MMMM D, YYYY')}
-        </Typography>
-      </Box>
+        </div>
+      </div>
 
       {mealPlan && (
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, md: 6 }}>
-            {renderMealSection('Breakfast', 'breakfast', mealPlan.breakfast)}
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            {renderMealSection('Lunch', 'lunch', mealPlan.lunch)}
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            {renderMealSection('Dinner', 'dinner', mealPlan.dinner)}
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            {renderMealSection('Snacks', 'snacks', mealPlan.snacks)}
-          </Grid>
-        </Grid>
+        <div className={styles.mealsGrid}>
+          {renderMealSection('Breakfast', 'breakfast', mealPlan.breakfast)}
+          {renderMealSection('Lunch', 'lunch', mealPlan.lunch)}
+          {renderMealSection('Dinner', 'dinner', mealPlan.dinner)}
+          {renderMealSection('Snacks', 'snacks', mealPlan.snacks)}
+        </div>
       )}
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
@@ -311,9 +292,9 @@ const MealPlanner = () => {
               </ListItem>
             ))}
             {recipes.length === 0 && (
-              <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+              <div style={{ padding: '16px', color: '#666' }}>
                 No recipes found. Add recipes to your library first.
-              </Typography>
+              </div>
             )}
           </List>
         </DialogContent>
@@ -337,7 +318,7 @@ const MealPlanner = () => {
           <Button onClick={() => setRecipeDetailOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
-    </>
+    </div>
   );
 };
 
