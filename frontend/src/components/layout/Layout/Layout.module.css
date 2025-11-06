@@ -5,8 +5,9 @@
   grid-template-columns: 1fr 1fr;
   column-gap: 2rem;
   row-gap: 1rem;
-  max-width: 60%;
+  max-width: 100%;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .contentMinimized {

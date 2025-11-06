@@ -10,7 +10,6 @@ import {
   ListItemButton,
   ListItemText
 } from '@mui/material';
-
 import dayjs, { Dayjs } from 'dayjs';
 import { useAuth } from '../../contexts/AuthContext';
 import RecipeDetails from '../common/RecipeAccordion/RecipeDetails';
@@ -258,27 +257,31 @@ const MealPlanner = () => {
     <div className={styles.container}>
       <h1 className={styles.pageTitle}>Meal Planner</h1>
       
-      <div className={styles.dateSection}>
-        <h3>Select Date</h3>
-        <div className={styles.calendarContainer}>
-          <CustomCalendar 
-            value={selectedDate}
-            onChange={setSelectedDate}
-          />
+      <div className={styles.mainLayout}>
+        <div className={styles.calendarSection}>
+          <h3>Select Date</h3>
+          <div className={styles.calendarContainer}>
+            <CustomCalendar 
+              value={selectedDate}
+              onChange={setSelectedDate}
+            />
+          </div>
+          <div className={styles.selectedDate}>
+            Selected: {selectedDate.format('dddd, MMMM D, YYYY')}
+          </div>
         </div>
-        <div className={styles.selectedDate}>
-          Selected: {selectedDate.format('dddd, MMMM D, YYYY')}
+
+        <div className={styles.mealsSection}>
+          {mealPlan && (
+            <div className={styles.mealsGrid}>
+              {renderMealSection('Breakfast', 'breakfast', mealPlan.breakfast)}
+              {renderMealSection('Lunch', 'lunch', mealPlan.lunch)}
+              {renderMealSection('Dinner', 'dinner', mealPlan.dinner)}
+              {renderMealSection('Snacks', 'snacks', mealPlan.snacks)}
+            </div>
+          )}
         </div>
       </div>
-
-      {mealPlan && (
-        <div className={styles.mealsGrid}>
-          {renderMealSection('Breakfast', 'breakfast', mealPlan.breakfast)}
-          {renderMealSection('Lunch', 'lunch', mealPlan.lunch)}
-          {renderMealSection('Dinner', 'dinner', mealPlan.dinner)}
-          {renderMealSection('Snacks', 'snacks', mealPlan.snacks)}
-        </div>
-      )}
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Add Recipe to {currentMealType}</DialogTitle>

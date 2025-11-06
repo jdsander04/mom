@@ -40,10 +40,29 @@ const FULL_WIDTH_CONTENT_STYLES = {
   flex: 1
 };
 
+const PLANNER_CONTENT_STYLES = {
+  margin: '0 auto',
+  padding: '2rem',
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, 1fr)',
+  columnGap: '2rem',
+  rowGap: '1rem',
+  maxWidth: '100%',
+  width: '100%',
+  boxSizing: 'border-box'
+};
+
 const Layout = ({ children }: LayoutProps) => {
   const [isSidebarMinimized, setIsSidebarMinimized] = useState(false);
   const location = useLocation();
   const isCartPage = location.pathname === '/cart';
+  const isPlannerPage = location.pathname === '/planner';
+
+  const getContentStyles = () => {
+    if (isCartPage) return FULL_WIDTH_CONTENT_STYLES;
+    if (isPlannerPage) return PLANNER_CONTENT_STYLES;
+    return DEFAULT_CONTENT_STYLES;
+  };
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -52,7 +71,7 @@ const Layout = ({ children }: LayoutProps) => {
         onToggle={setIsSidebarMinimized}
         isMinimized={isSidebarMinimized}
       />
-      <Box component="main" sx={isCartPage ? FULL_WIDTH_CONTENT_STYLES : DEFAULT_CONTENT_STYLES}>
+      <Box component="main" sx={getContentStyles()}>
         {children}
       </Box>
     </Box>

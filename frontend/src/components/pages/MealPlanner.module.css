@@ -1,10 +1,11 @@
 .container {
   grid-column: 1 / -1;
   width: 100%;
-  max-width: none;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  overflow-x: hidden;
 }
 
 .pageTitle {
@@ -13,11 +14,38 @@
   font-weight: normal;
 }
 
-.dateSection {
-  margin-bottom: 2rem;
+.mainLayout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: start;
+  max-width: 100%;
+  overflow: hidden;
 }
 
-.dateSection h3 {
+@media (max-width: 768px) {
+  .mainLayout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .calendarSection {
+    position: static;
+  }
+}
+
+.calendarSection {
+  position: sticky;
+  top: 20px;
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  height: fit-content;
+  overflow: hidden;
+}
+
+.calendarSection h3 {
   margin: 0 0 1rem 0;
   font-weight: 500;
   color: #333;
@@ -27,6 +55,9 @@
   display: flex;
   justify-content: center;
   margin-bottom: 1rem;
+  width: 100%;
+  overflow: hidden;
+  flex: 1;
 }
 
 .selectedDate {
@@ -35,10 +66,23 @@
   font-size: 14px;
 }
 
+.mealsSection {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
 .mealsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .mealsGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .mealCard {
@@ -46,21 +90,27 @@
   border-radius: 8px;
   background: white;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  min-height: 200px;
+  min-height: 250px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .mealHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
+  padding: 1.5rem;
   border-bottom: 1px solid #eee;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .mealHeader h3 {
   margin: 0;
   color: #333;
-  font-size: 18px;
+  font-size: clamp(16px, 2vw, 20px);
   font-weight: 500;
 }
 
@@ -84,17 +134,19 @@
 }
 
 .mealContent {
-  padding: 1rem;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .mealItem {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
+  padding: 12px 16px;
   border: 1px solid #e0e0e0;
   border-radius: 4px;
   background: #f9f9f9;
@@ -110,6 +162,10 @@
   color: #333;
   font-weight: 500;
   flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
 }
 
 .mealName:hover {
