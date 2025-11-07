@@ -9,11 +9,39 @@
 .login-left-panel {
   flex: 2;
   position: relative;
-  background: linear-gradient(180deg, #0B4D3E 0%, #1A7A5E 50%, #2D9D7A 100%);
+  background-image: var(--login-bg-image, linear-gradient(180deg, #0B4D3E 0%, #1A7A5E 50%, #2D9D7A 100%));
+  background-size: 200% 100%;
+  background-position: 0% 50%;
+  background-repeat: no-repeat;
   display: flex;
   flex-direction: column;
   padding: 2rem;
   overflow: hidden;
+  animation: panImage 60s ease-in-out infinite;
+}
+
+.login-left-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(11, 77, 62, 0.4) 0%, rgba(26, 122, 94, 0.3) 50%, rgba(45, 157, 122, 0.4) 100%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+@keyframes panImage {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .logo-container {
@@ -23,6 +51,11 @@
   position: relative;
   z-index: 2;
   margin-bottom: auto;
+}
+
+.login-left-panel > * {
+  position: relative;
+  z-index: 2;
 }
 
 .logo-circle {
@@ -91,8 +124,9 @@
   height: 100%;
   top: 0;
   left: 0;
-  z-index: 1;
+  z-index: 0;
   overflow: hidden;
+  opacity: 0.3;
 }
 
 .shape {

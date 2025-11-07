@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Box, TextField, Button, Typography, Alert, InputAdornment } from '@mui/material';
 import { Person, Lock, ArrowForward } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
+import loginImage from '../../assets/AdobeStock_307109106.jpeg';
 import './Login.css';
 
 const Login: React.FC = () => {
@@ -105,7 +106,12 @@ const Login: React.FC = () => {
 
   return (
     <Box className="login-container">
-      <Box className="login-left-panel">
+      <Box 
+        className="login-left-panel"
+        sx={{
+          '--login-bg-image': `url(${loginImage})`,
+        } as React.CSSProperties}
+      >
         <Box className="welcome-content">
           <Typography variant="h2" className="welcome-main-text">
             Login into your account
