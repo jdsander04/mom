@@ -5,10 +5,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
   Menu,
   MenuItem,
   Checkbox,
@@ -18,6 +14,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import { useAuth } from '../../contexts/AuthContext';
 import RecipeDetails from '../common/RecipeAccordion/RecipeDetails';
 import CustomCalendar from '../common/CustomCalendar';
+import RecipeCard from '../common/RecipeCard';
 import styles from './MealPlanner.module.css';
 interface MealPlan {
   date: string;
@@ -30,6 +27,9 @@ interface MealPlan {
 interface Recipe {
   id: number;
   name: string;
+  image_url?: string;
+  serves?: number;
+  nutrients?: { macro: string; mass: number }[];
 }
 
 interface RecipeDetail {
@@ -145,7 +145,29 @@ const MealPlanner = () => {
       
       if (response.ok) {
         const data = await response.json();
-        setRecipes(data.recipes || []);
+        const recipeSummaries = data.recipes || [];
+        
+        // Fetch full details for each recipe
+        const fullRecipes = await Promise.all(
+          recipeSummaries.map(async (summary: { id: number; name: string }) => {
+            try {
+              const detailResponse = await fetch(`/api/recipes/${summary.id}/`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+              if (detailResponse.ok) {
+                return await detailResponse.json();
+              }
+              return summary;
+            } catch {
+              return summary;
+            }
+          })
+        );
+        
+        setRecipes(fullRecipes);
       } else {
         console.error('Failed to load recipes:', response.status);
         setRecipes([]);
@@ -421,32 +443,82 @@ const MealPlanner = () => {
         </div>
       </div>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Recipe to {currentMealType}</DialogTitle>
-        <DialogContent>
-          <List>
-            {recipes.map((recipe) => (
-              <ListItem key={recipe.id} disablePadding>
-                <ListItemButton onClick={() => addRecipe(recipe)}>
-                  <ListItemText primary={recipe.name} />
-                </ListItemButton>
-              </ListItem>
-            ))}
+      <Dialog 
+        open={dialogOpen} 
+        onClose={() => setDialogOpen(false)} 
+        maxWidth="md" 
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '12px',
+            border: '2px solid #2e7d32'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          backgroundColor: '#2e7d32', 
+          color: 'white',
+          fontWeight: 600
+        }}>
+          Add Recipe to {currentMealType.charAt(0).toUpperCase() + currentMealType.slice(1)}
+        </DialogTitle>
+        <DialogContent sx={{ paddingTop: '32px', paddingX: '24px', paddingBottom: '24px', backgroundColor: '#fafafa' }}>
+          <div className={styles.recipeGrid}>
+            {recipes.map((recipe) => {
+              const calories = recipe.nutrients?.find(n => n.macro === 'calories')?.mass || 0;
+              return (
+                <RecipeCard
+                  key={recipe.id}
+                  title={recipe.name}
+                  image={recipe.image_url || ''}
+                  calories={Math.round(calories)}
+                  servings={recipe.serves || 1}
+                  onClick={() => addRecipe(recipe)}
+                />
+              );
+            })}
             {recipes.length === 0 && (
-              <div style={{ padding: '16px', color: '#666' }}>
+              <div className={styles.emptyRecipes}>
                 No recipes found. Add recipes to your library first.
               </div>
             )}
-          </List>
+          </div>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+        <DialogActions sx={{ padding: '16px', backgroundColor: '#fafafa' }}>
+          <Button 
+            onClick={() => setDialogOpen(false)}
+            sx={{
+              color: '#2e7d32',
+              '&:hover': {
+                backgroundColor: '#f1f8e9'
+              }
+            }}
+          >
+            Cancel
+          </Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={recipeDetailOpen} onClose={() => setRecipeDetailOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>{selectedRecipeDetail?.name}</DialogTitle>
-        <DialogContent>
+      <Dialog 
+        open={recipeDetailOpen} 
+        onClose={() => setRecipeDetailOpen(false)} 
+        maxWidth="md" 
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '12px',
+            border: '2px solid #2e7d32'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          backgroundColor: '#2e7d32', 
+          color: 'white',
+          fontWeight: 600
+        }}>
+          {selectedRecipeDetail?.name}
+        </DialogTitle>
+        <DialogContent sx={{ paddingTop: '24px', backgroundColor: '#fafafa' }}>
           {selectedRecipeDetail && (
             <RecipeDetails
               imageUrl={selectedRecipeDetail.image_url}
@@ -455,8 +527,18 @@ const MealPlanner = () => {
             />
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setRecipeDetailOpen(false)}>Close</Button>
+        <DialogActions sx={{ padding: '16px', backgroundColor: '#fafafa' }}>
+          <Button 
+            onClick={() => setRecipeDetailOpen(false)}
+            sx={{
+              color: '#2e7d32',
+              '&:hover': {
+                backgroundColor: '#f1f8e9'
+              }
+            }}
+          >
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
 

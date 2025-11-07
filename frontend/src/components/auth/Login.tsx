@@ -119,7 +119,7 @@ const Login: React.FC = () => {
         </Box>
         
         <Box className="copyright-text">
-          © 2024 Mom. All Rights Reserved.
+          © 2025 Mom. All Rights Reserved.
         </Box>
         
         <Box className="decorative-shapes">
@@ -140,7 +140,7 @@ const Login: React.FC = () => {
           <form onSubmit={handleSubmit} className="login-form">
             <Box className="input-wrapper">
               <Typography variant="body2" className="input-label">
-                Email ID
+                Username
               </Typography>
               <Box className={`input-container ${focusedField === 'username' ? 'focused' : ''}`}>
                 <TextField

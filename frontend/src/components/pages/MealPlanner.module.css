@@ -195,6 +195,24 @@
   padding: 2rem;
 }
 
+.recipeGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.emptyRecipes {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  background-color: white;
+  border-radius: 8px;
+  border: 2px dashed #2e7d32;
+}
+
 .header {
   display: flex;
   justify-content: space-between;
