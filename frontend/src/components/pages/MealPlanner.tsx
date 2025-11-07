@@ -8,7 +8,11 @@ import {
   List,
   ListItem,
   ListItemButton,
-  ListItemText
+  ListItemText,
+  Menu,
+  MenuItem,
+  Checkbox,
+  FormControlLabel
 } from '@mui/material';
 import dayjs, { Dayjs } from 'dayjs';
 import { useAuth } from '../../contexts/AuthContext';
@@ -32,6 +36,7 @@ interface RecipeDetail {
   id: number;
   name: string;
   description: string;
+  image_url?: string;
   ingredients: { name: string; quantity: number; unit: string }[];
   steps: { description: string; order: number }[];
 }
@@ -45,6 +50,9 @@ const MealPlanner = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [recipeDetailOpen, setRecipeDetailOpen] = useState(false);
   const [selectedRecipeDetail, setSelectedRecipeDetail] = useState<RecipeDetail | null>(null);
+  const [cartMenuAnchor, setCartMenuAnchor] = useState<null | HTMLElement>(null);
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [dateSelectionOpen, setDateSelectionOpen] = useState(false);
 
   useEffect(() => {
     loadMealPlan(selectedDate.format('YYYY-MM-DD'));
@@ -214,6 +222,126 @@ const MealPlanner = () => {
     setDialogOpen(true);
   };
 
+  const addDayToCart = async () => {
+    if (!token || !mealPlan) return;
+    
+    try {
+      const response = await fetch('/api/cart/meal-plans/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ dates: [mealPlan.date] })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        alert(`Added ${data.recipes.length} recipes to cart`);
+      } else {
+        console.error('Failed to add to cart:', response.status);
+        alert('Failed to add recipes to cart');
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      alert('Error adding recipes to cart');
+    }
+  };
+
+  const addWeekToCart = async () => {
+    if (!token) return;
+    
+    const startOfWeek = selectedDate.startOf('week');
+    const endOfWeek = selectedDate.endOf('week');
+    
+    try {
+      const response = await fetch('/api/cart/week/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          start_date: startOfWeek.format('YYYY-MM-DD'),
+          end_date: endOfWeek.format('YYYY-MM-DD')
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        alert(`Added ${data.recipes.length} recipes to cart`);
+      } else {
+        console.error('Failed to add week to cart:', response.status);
+        alert('Failed to add week to cart');
+      }
+    } catch (error) {
+      console.error('Error adding week to cart:', error);
+      alert('Error adding week to cart');
+    }
+  };
+
+  const addSelectedDatesToCart = async () => {
+    if (!token || selectedDates.length === 0) return;
+    
+    try {
+      const response = await fetch('/api/cart/meal-plans/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ dates: selectedDates })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        alert(`Added ${data.recipes.length} recipes to cart`);
+        setSelectedDates([]);
+        setDateSelectionOpen(false);
+      } else {
+        console.error('Failed to add selected dates to cart:', response.status);
+        alert('Failed to add selected dates to cart');
+      }
+    } catch (error) {
+      console.error('Error adding selected dates to cart:', error);
+      alert('Error adding selected dates to cart');
+    }
+  };
+
+  const handleCartMenuClick = (event: React.MouseEvent<HTMLElement>) => {
+    setCartMenuAnchor(event.currentTarget);
+  };
+
+  const handleCartMenuClose = () => {
+    setCartMenuAnchor(null);
+  };
+
+  const openDateSelection = () => {
+    setDateSelectionOpen(true);
+    handleCartMenuClose();
+  };
+
+  const toggleDateSelection = (date: string) => {
+    setSelectedDates(prev => 
+      prev.includes(date) 
+        ? prev.filter(d => d !== date)
+        : [...prev, date]
+    );
+  };
+
+  const generateDateOptions = () => {
+    const dates = [];
+    const today = dayjs();
+    for (let i = -7; i <= 7; i++) {
+      const date = today.add(i, 'day');
+      dates.push({
+        value: date.format('YYYY-MM-DD'),
+        label: date.format('MMM D, YYYY')
+      });
+    }
+    return dates;
+  };
+
 
 
   const renderMealSection = (title: string, mealType: keyof Omit<MealPlan, 'date'>, meals: { id: number; name: string }[]) => (
@@ -255,7 +383,17 @@ const MealPlanner = () => {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.pageTitle}>Meal Planner</h1>
+      <div className={styles.header}>
+        <h1 className={styles.pageTitle}>Meal Planner</h1>
+        <Button 
+          variant="contained" 
+          color="primary" 
+          onClick={handleCartMenuClick}
+          className={styles.cartButton}
+        >
+          Add to Cart
+        </Button>
+      </div>
       
       <div className={styles.mainLayout}>
         <div className={styles.calendarSection}>
@@ -319,6 +457,52 @@ const MealPlanner = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setRecipeDetailOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Menu
+        anchorEl={cartMenuAnchor}
+        open={Boolean(cartMenuAnchor)}
+        onClose={handleCartMenuClose}
+      >
+        <MenuItem onClick={() => { addDayToCart(); handleCartMenuClose(); }}>
+          Add This Day
+        </MenuItem>
+        <MenuItem onClick={() => { addWeekToCart(); handleCartMenuClose(); }}>
+          Add This Week
+        </MenuItem>
+        <MenuItem onClick={openDateSelection}>
+          Select Specific Days
+        </MenuItem>
+      </Menu>
+
+      <Dialog open={dateSelectionOpen} onClose={() => setDateSelectionOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Select Days to Add to Cart</DialogTitle>
+        <DialogContent>
+          <div className={styles.dateSelection}>
+            {generateDateOptions().map(date => (
+              <FormControlLabel
+                key={date.value}
+                control={
+                  <Checkbox
+                    checked={selectedDates.includes(date.value)}
+                    onChange={() => toggleDateSelection(date.value)}
+                  />
+                }
+                label={date.label}
+              />
+            ))}
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDateSelectionOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={addSelectedDatesToCart} 
+            variant="contained" 
+            disabled={selectedDates.length === 0}
+          >
+            Add Selected ({selectedDates.length})
+          </Button>
         </DialogActions>
       </Dialog>
     </div>

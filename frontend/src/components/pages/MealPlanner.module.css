@@ -194,3 +194,27 @@
   text-align: center;
   padding: 2rem;
 }
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.cartButton {
+  background: #2e7d32 !important;
+  color: white !important;
+}
+
+.cartButton:hover {
+  background: #1b5e20 !important;
+}
+
+.dateSelection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+}

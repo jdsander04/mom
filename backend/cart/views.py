@@ -9,6 +9,8 @@ import logging
 
 from .models import Cart, CartItem, CartRecipe
 from recipes.models import Recipe
+from meal_calendar.models import MealPlan
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -432,6 +434,158 @@ def create_instacart_list(request):
 			'success': False,
 			'error': 'Unable to connect to Instacart API'
 		}, status=503)
+
+
+@extend_schema(
+	methods=['POST'],
+	request={
+		'application/json': {
+			'type': 'object',
+			'properties': {
+				'dates': {
+					'type': 'array',
+					'items': {'type': 'string', 'format': 'date'},
+					'description': 'Array of dates in YYYY-MM-DD format'
+				}
+			},
+			'required': ['dates']
+		}
+	},
+	responses={201: {'description': 'Meal plans added to cart'}},
+)
+@extend_schema(tags=['Cart'])
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([BearerTokenAuthentication])
+def add_meal_plans_to_cart(request):
+	cart, _ = Cart.objects.get_or_create(user=request.user)
+	dates = request.data.get('dates', [])
+	
+	added_recipes = []
+	for date_str in dates:
+		try:
+			meal_plan = MealPlan.objects.get(user=request.user, date=date_str)
+			for meal_type in ['breakfast', 'lunch', 'dinner', 'snacks']:
+				meals = getattr(meal_plan, meal_type, [])
+				for meal in meals:
+					if isinstance(meal, dict) and meal.get('id'):
+						try:
+							recipe = Recipe.objects.get(id=meal['id'], user=request.user)
+							cr, created = CartRecipe.objects.get_or_create(
+								cart=cart, recipe=recipe, defaults={'serving_size': 1.0}
+							)
+							if created:
+								# New recipe - add ingredients
+								from decimal import Decimal
+								for ingredient in recipe.ingredients.all():
+									CartItem.objects.create(
+										cart=cart,
+										name=ingredient.name,
+										quantity=ingredient.quantity,
+										unit=ingredient.unit or '',
+										recipe_ingredient=ingredient,
+									)
+								added_recipes.append(recipe.name)
+							else:
+								# Recipe already exists - scale up
+								from decimal import Decimal
+								cr.serving_size += Decimal('1.0')
+								cr.save()
+								
+								# Scale existing ingredients
+								for ci in cart.items.filter(recipe_ingredient__recipe=recipe):
+									original_quantity = Decimal(str(ci.recipe_ingredient.quantity))
+									ci.quantity = original_quantity * cr.serving_size
+									ci.save()
+								
+								added_recipes.append(f"{recipe.name} (scaled to {float(cr.serving_size)}x)")
+						except Recipe.DoesNotExist:
+							continue
+		except MealPlan.DoesNotExist:
+			continue
+	
+	return Response({
+		'message': f'Added {len(added_recipes)} recipes to cart',
+		'recipes': added_recipes
+	}, status=201)
+
+
+@extend_schema(
+	methods=['POST'],
+	request={
+		'application/json': {
+			'type': 'object',
+			'properties': {
+				'start_date': {'type': 'string', 'format': 'date'},
+				'end_date': {'type': 'string', 'format': 'date'}
+			},
+			'required': ['start_date', 'end_date']
+		}
+	},
+	responses={201: {'description': 'Week of meal plans added to cart'}},
+)
+@extend_schema(tags=['Cart'])
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([BearerTokenAuthentication])
+def add_week_to_cart(request):
+	cart, _ = Cart.objects.get_or_create(user=request.user)
+	start_date = datetime.strptime(request.data.get('start_date'), '%Y-%m-%d').date()
+	end_date = datetime.strptime(request.data.get('end_date'), '%Y-%m-%d').date()
+	
+	dates = []
+	current_date = start_date
+	while current_date <= end_date:
+		dates.append(current_date.strftime('%Y-%m-%d'))
+		current_date += timedelta(days=1)
+	
+	added_recipes = []
+	for date_str in dates:
+		try:
+			meal_plan = MealPlan.objects.get(user=request.user, date=date_str)
+			for meal_type in ['breakfast', 'lunch', 'dinner', 'snacks']:
+				meals = getattr(meal_plan, meal_type, [])
+				for meal in meals:
+					if isinstance(meal, dict) and meal.get('id'):
+						try:
+							recipe = Recipe.objects.get(id=meal['id'], user=request.user)
+							cr, created = CartRecipe.objects.get_or_create(
+								cart=cart, recipe=recipe, defaults={'serving_size': 1.0}
+							)
+							if created:
+								# New recipe - add ingredients
+								from decimal import Decimal
+								for ingredient in recipe.ingredients.all():
+									CartItem.objects.create(
+										cart=cart,
+										name=ingredient.name,
+										quantity=ingredient.quantity,
+										unit=ingredient.unit or '',
+										recipe_ingredient=ingredient,
+									)
+								added_recipes.append(recipe.name)
+							else:
+								# Recipe already exists - scale up
+								from decimal import Decimal
+								cr.serving_size += Decimal('1.0')
+								cr.save()
+								
+								# Scale existing ingredients
+								for ci in cart.items.filter(recipe_ingredient__recipe=recipe):
+									original_quantity = Decimal(str(ci.recipe_ingredient.quantity))
+									ci.quantity = original_quantity * cr.serving_size
+									ci.save()
+								
+								added_recipes.append(f"{recipe.name} (scaled to {float(cr.serving_size)}x)")
+						except Recipe.DoesNotExist:
+							continue
+		except MealPlan.DoesNotExist:
+			continue
+	
+	return Response({
+		'message': f'Added {len(added_recipes)} recipes to cart',
+		'recipes': added_recipes
+	}, status=201)
 
 
 
