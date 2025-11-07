@@ -111,6 +111,10 @@
   color: #4CAF50;
 }
 
+.addButton.added:hover svg {
+  color: #f44336;
+}
+
 .deleteButton {
   width: 32px;
   height: 32px;

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { ExpandMore, CheckCircle, AddCircleOutline, Delete, MoreVert } from '@mui/icons-material'
+import { ExpandMore, Delete, MoreVert } from '@mui/icons-material'
+import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart'
+import RemoveShoppingCartIcon from '@mui/icons-material/RemoveShoppingCart'
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton, Menu, MenuItem } from '@mui/material'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useCartContext } from '../../../contexts/CartContext'
@@ -220,7 +222,7 @@ const RecipeAccordion = ({ recipeId, title, calories, serves, children, sourceUr
             className={`${styles.addButton} ${isAdded ? styles.added : ''}`}
             onClick={handleAddClick}
           >
-            {isAdded ? <CheckCircle /> : <AddCircleOutline />}
+            {isAdded ? <RemoveShoppingCartIcon /> : <AddShoppingCartIcon />}
           </div>
           <div 
             className={styles.deleteButton}

@@ -112,12 +112,6 @@ const Login: React.FC = () => {
           '--login-bg-image': `url(${loginImage})`,
         } as React.CSSProperties}
       >
-        <Box className="welcome-content">
-          <Typography variant="h2" className="welcome-main-text">
-            Login into your account
-          </Typography>
-        </Box>
-        
         <Box className="copyright-text">
           © 2025 Mom. All Rights Reserved.
         </Box>
