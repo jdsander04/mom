@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography } from '@mui/material';
 import RecipeCard from '../common/RecipeCard';
+import RecipeDetails from '../common/RecipeAccordion/RecipeDetails';
 import styles from './HomePage.module.css';
 import { useRecipes } from '../../hooks/useRecipes';
 import { useAuth } from '../../contexts/AuthContext';
@@ -24,9 +25,17 @@ const HomePage = () => {
       // Navigate to recipe detail page if it's the user's own recipe
       navigate(`/recipes?recipeId=${recipe.id}`);
     } else {
-      // Show copy dialog if it's someone else's recipe
-      setSelectedRecipe(recipe);
-      setCopyDialogOpen(true);
+      // Fetch full recipe details and show preview dialog
+      try {
+        const fullRecipe = await apiService.getRecipe(recipe.id);
+        setSelectedRecipe(fullRecipe);
+        setCopyDialogOpen(true);
+      } catch (error) {
+        console.error('Failed to load recipe details:', error);
+        // Fallback to basic recipe info if fetch fails
+        setSelectedRecipe(recipe);
+        setCopyDialogOpen(true);
+      }
     }
   };
 
@@ -77,6 +86,60 @@ const HomePage = () => {
     return 1;
   };
 
+  // Helper function to format ingredients for RecipeDetails
+  const formatIngredients = (ingredients: Recipe['ingredients']) => 
+    ingredients?.map(ing => `${ing.quantity} ${ing.unit} ${ing.name}`.trim()) || [];
+
+  // Helper function to format instructions for RecipeDetails
+  const formatInstructions = (steps: Recipe['steps']) => 
+    steps?.sort((a, b) => a.order - b.order).map(step => step.description) || [];
+
+  // Helper function to get nutrition data for RecipeDetails
+  const getNutritionData = (nutrients: Recipe['nutrients']) => {
+    const nutritionMap: { [key: string]: number } = {};
+    
+    nutrients?.forEach(nutrient => {
+      const macro = nutrient.macro;
+      const mass = nutrient.mass;
+      
+      // Map backend nutrient names to frontend nutrition interface
+      switch (macro) {
+        case 'calories':
+          nutritionMap.calories = mass;
+          break;
+        case 'fatContent':
+          nutritionMap.fat = mass;
+          break;
+        case 'saturatedFatContent':
+          nutritionMap.saturatedFat = mass;
+          break;
+        case 'unsaturatedFatContent':
+          nutritionMap.unsaturatedFat = mass;
+          break;
+        case 'cholesterolContent':
+          nutritionMap.cholesterol = mass;
+          break;
+        case 'sodiumContent':
+          nutritionMap.sodium = mass;
+          break;
+        case 'carbohydrateContent':
+          nutritionMap.carbs = mass;
+          break;
+        case 'fiberContent':
+          nutritionMap.fiber = mass;
+          break;
+        case 'sugarContent':
+          nutritionMap.sugar = mass;
+          break;
+        case 'proteinContent':
+          nutritionMap.protein = mass;
+          break;
+      }
+    });
+    
+    return nutritionMap;
+  };
+
   if (loading) {
     return (
       <div className={styles.loadingContainer}>
@@ -120,13 +183,21 @@ const HomePage = () => {
         ))
       ])}
       
-      <Dialog open={copyDialogOpen} onClose={handleCancelCopy}>
+      <Dialog open={copyDialogOpen} onClose={handleCancelCopy} maxWidth="md" fullWidth>
         <DialogTitle>Add Recipe to Your Library?</DialogTitle>
         <DialogContent>
           {selectedRecipe && (
-            <Typography>
-              Add <strong>{selectedRecipe.name}</strong> to your recipe library?
-            </Typography>
+            <>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                {selectedRecipe.name}
+              </Typography>
+              <RecipeDetails
+                imageUrl={selectedRecipe.image_url}
+                ingredients={formatIngredients(selectedRecipe.ingredients)}
+                instructions={formatInstructions(selectedRecipe.steps)}
+                nutrition={getNutritionData(selectedRecipe.nutrients)}
+              />
+            </>
           )}
         </DialogContent>
         <DialogActions>

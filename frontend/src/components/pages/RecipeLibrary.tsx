@@ -326,9 +326,30 @@ const RecipeLibrary = () => {
   const formatInstructions = (steps: Recipe['steps']) => 
     steps?.sort((a, b) => a.order - b.order).map(step => step.description) || [];
 
-  if (loading) return <div>Loading recipes...</div>;
-  if (error) return <div>Error loading recipes: {error}</div>;
-  if (!token) return <div>Please log in to view recipes.</div>;
+  if (loading) {
+    return (
+      <div className={styles.loadingContainer}>
+        <h1>Loading recipes...</h1>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className={styles.errorContainer}>
+        <h1>Error loading recipes</h1>
+        <p>{error}</p>
+      </div>
+    );
+  }
+  
+  if (!token) {
+    return (
+      <div className={styles.errorContainer}>
+        <h1>Please log in to view recipes.</h1>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
