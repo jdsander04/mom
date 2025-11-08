@@ -3,6 +3,7 @@ import { Box, TextField, Button, Typography, Alert, InputAdornment } from '@mui/
 import { Person, Lock, ArrowForward } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import loginImage from '../../assets/AdobeStock_307109106.jpeg';
+import momCartImage from '../../assets/mom-cart.png';
 import './Login.css';
 
 const Login: React.FC = () => {
@@ -113,7 +114,8 @@ const Login: React.FC = () => {
         } as React.CSSProperties}
       >
         <Box className="branding-text">
-          Mom Meal Manager
+          <img src={momCartImage} alt="Mom Cart" className="branding-image" />
+          Mom
         </Box>
         
         <Box className="copyright-text">

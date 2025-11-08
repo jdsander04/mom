@@ -1000,15 +1000,48 @@ def recipe_search(request):
 @permission_classes([IsAuthenticated])
 @authentication_classes([BearerTokenAuthentication])
 def recipe_popular(request):
-    """Return globally popular recipes ordered by times_made (desc), then date_added (desc)."""
+    """Return globally popular recipes ordered by times_made (desc), then date_added (desc).
+    Only returns recipes with unique source_urls, keeping the oldest recipe for each source_url.
+    """
+    from django.db.models import Min, Q
+    
     try:
         limit = int(request.GET.get('limit', 10))
     except Exception:
         limit = 10
     limit = max(1, min(limit, 100))
 
-    # Global (no user filter)
-    recipes = Recipe.objects.all().order_by('-times_made', '-date_added')[:limit]
+    # Get the oldest recipe (by date_added, then by id) for each source_url
+    # For recipes with non-null, non-empty source_url
+    oldest_per_source = Recipe.objects.filter(
+        source_url__isnull=False
+    ).exclude(
+        source_url=''
+    ).values('source_url').annotate(
+        oldest_date=Min('date_added')
+    )
+    
+    # For each source_url with oldest_date, get the recipe with that date and minimum id
+    # (to handle ties where multiple recipes have the same date_added)
+    recipe_ids = []
+    
+    for item in oldest_per_source:
+        oldest_recipe = Recipe.objects.filter(
+            source_url=item['source_url'],
+            date_added=item['oldest_date']
+        ).order_by('id').first()
+        
+        if oldest_recipe:
+            recipe_ids.append(oldest_recipe.id)
+    
+    # Combine: recipes with unique source_urls (oldest per source) + recipes without source_url
+    if recipe_ids:
+        q_objects = Q(id__in=recipe_ids) | Q(source_url__isnull=True) | Q(source_url='')
+    else:
+        q_objects = Q(source_url__isnull=True) | Q(source_url='')
+    
+    # Get recipes matching the filter, ordered by popularity
+    recipes = Recipe.objects.filter(q_objects).order_by('-times_made', '-date_added')[:limit]
 
     results = []
     for r in recipes:
