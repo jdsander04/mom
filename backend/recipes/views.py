@@ -50,6 +50,7 @@ def normalize_recipe_response(recipe_data):
                         'recipe_source': {'type': 'string', 'enum': ['explicit']},
                         'name': {'type': 'string', 'example': 'Chocolate Chip Cookies'},
                         'description': {'type': 'string', 'example': 'Classic cookies'},
+                        'image_url': {'type': 'string', 'format': 'uri', 'example': '/media/uploads/images/1_437d4f2c.png', 'description': 'Optional image URL for the recipe'},
                         'serves': {'type': 'integer', 'example': 4},
                         'ingredients': {
                             'type': 'array',
@@ -67,7 +68,8 @@ def normalize_recipe_response(recipe_data):
                             'items': {
                                 'type': 'object',
                                 'properties': {
-                                    'description': {'type': 'string'}
+                                    'description': {'type': 'string'},
+                                    'order': {'type': 'integer', 'description': 'Optional step order (defaults to array index + 1)'}
                                 }
                             }
                         }
@@ -414,11 +416,17 @@ def recipe_list(request):
                     'details': 'When recipe_source is "explicit", you must provide a "name" field'
                 }, status=400)
             
+            # Get image_url from request if provided
+            image_url = request.data.get('image_url', '')
+            if image_url:
+                logger.info(f"RECIPE_POST: Explicit recipe includes image_url: {image_url}")
+            
             logger.info(f"RECIPE_POST: Creating explicit recipe '{recipe_name}' for user {request.user.id}")
             recipe = Recipe.objects.create(
                 user=request.user,
                 name=recipe_name,
                 description=request.data.get('description', ''),
+                image_url=image_url if image_url else None,
                 serves=parse_serves_value(request.data.get('serves'))
             )
             

@@ -239,6 +239,24 @@ class ApiService {
     });
     return this.handleResponse<{ url: string }>(response);
   }
+
+  // Media upload endpoint - upload image only, no recipe creation
+  async uploadImage(file: File): Promise<{ image_url: string }> {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers: HeadersInit = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    // Intentionally do not set Content-Type so the browser sets proper multipart boundary
+
+    const response = await fetch(`${API_BASE_URL}/media/upload/`, {
+      method: 'POST',
+      headers,
+      body: formData
+    });
+    return this.handleResponse<{ image_url: string }>(response);
+  }
 }
 
 export const apiService = new ApiService();

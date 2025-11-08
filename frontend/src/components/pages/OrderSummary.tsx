@@ -5,6 +5,15 @@ import { useCartContext } from '../../contexts/CartContext';
 import { apiService } from '../../services/api';
 import type { CartRecipe, CartItem } from '../../types/cart';
 import UndoPopup from '../UndoPopup';
+import {
+  ShoppingCartIcon,
+  ClipboardIcon,
+  UtensilsIcon,
+  CarrotIcon,
+  TrashIcon,
+  PackageIcon,
+  HourglassIcon,
+} from '../Icons';
 import styles from './OrderSummary.module.css';
 
 interface OrderSummaryProps {
@@ -93,7 +102,10 @@ export default function OrderSummary({ open, onClose, onConfirmOrder, selectedPr
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth className={styles.dialog}>
       <div className={styles.header}>
         <div className={styles.titleSection}>
-          <h2 className={styles.title}>🛒 Order Summary</h2>
+          <h2 className={styles.title}>
+            <ShoppingCartIcon size={24} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '8px' }} />
+            Order Summary
+          </h2>
           <p className={styles.subtitle}>Review your final shopping list</p>
         </div>
         <IconButton onClick={onClose} className={styles.closeButton}>
@@ -107,11 +119,16 @@ export default function OrderSummary({ open, onClose, onConfirmOrder, selectedPr
         ) : (
           <>
             <div className={styles.recipesSection}>
-              <h3 className={styles.sectionTitle}>📋 Recipes ({cart.recipes.length})</h3>
+              <h3 className={styles.sectionTitle}>
+                <ClipboardIcon size={18} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} />
+                Recipes ({cart.recipes.length})
+              </h3>
               <div className={styles.recipesList}>
                 {cart.recipes.map((recipe: CartRecipe) => (
                   <div key={recipe.recipe_id} className={styles.recipeItem}>
-                    <div className={styles.recipeIcon}>🍽️</div>
+                    <div className={styles.recipeIcon}>
+                      <UtensilsIcon size={24} />
+                    </div>
                     <div className={styles.recipeInfo}>
                       <span className={styles.recipeName}>{recipe.name}</span>
                       <span className={styles.servingSize}>{recipe.serving_size} servings • {recipe.ingredients.length} ingredients</span>
@@ -122,7 +139,10 @@ export default function OrderSummary({ open, onClose, onConfirmOrder, selectedPr
             </div>
 
             <div className={styles.ingredientsSection}>
-              <h3 className={styles.sectionTitle}>🥕 Shopping List ({combinedIngredients.length} items)</h3>
+              <h3 className={styles.sectionTitle}>
+                <CarrotIcon size={18} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} />
+                Shopping List ({combinedIngredients.length} items)
+              </h3>
               <div className={styles.ingredientsList}>
                 {combinedIngredients.map((ingredient) => (
                   <div key={`${ingredient.name}-${ingredient.unit}`} className={styles.ingredientItem}>
@@ -137,7 +157,7 @@ export default function OrderSummary({ open, onClose, onConfirmOrder, selectedPr
                       className={styles.removeButton}
                       title="Remove ingredient"
                     >
-                      🗑️
+                      <TrashIcon size={18} />
                     </button>
                   </div>
                 ))}
@@ -155,7 +175,17 @@ export default function OrderSummary({ open, onClose, onConfirmOrder, selectedPr
           disabled={loading || instacartLoading || cart.recipes.length === 0}
           className={styles.orderButton}
         >
-          {instacartLoading ? '⏳ Creating List...' : `📦 Order with ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)}`}
+          {instacartLoading ? (
+            <>
+              <HourglassIcon size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} />
+              Creating List...
+            </>
+          ) : (
+            <>
+              <PackageIcon size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} />
+              Order with {selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)}
+            </>
+          )}
         </Button>
       </div>
       

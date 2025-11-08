@@ -32,6 +32,9 @@ urlpatterns = [
     path('api/auth/logout/', views.logout, name='logout'),
     path('api/auth/account/', views.delete_account, name='delete_account'),
 
+    # Media upload endpoint
+    path('api/media/upload/', views.media_upload, name='media_upload'),
+
     # Standard path
     path('api/', include('cart.urls')),
     path('api/', include('recipes.urls')),
