@@ -9,6 +9,7 @@ from io import BytesIO
 from PIL import Image
 import os
 from .serializers import ProfileImageUploadSerializer
+from core.media_utils import get_media_url
 
 
 class ProfileImageView(APIView):

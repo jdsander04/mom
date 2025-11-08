@@ -251,8 +251,9 @@ if MINIO_ENABLED:
     AWS_DEFAULT_ACL = os.getenv('AWS_DEFAULT_ACL', 'public-read')
     AWS_QUERYSTRING_AUTH = os.getenv('AWS_QUERYSTRING_AUTH', 'false').lower() in ('true', '1', 'yes')
 
-    # MEDIA_URL should be absolute so frontend can reference images directly
-    MEDIA_URL = os.getenv('MEDIA_URL', f"{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/")
+    # MEDIA_URL points to the proxy endpoint so frontend requests go through Django
+    # The proxy view will fetch files from MinIO and serve them
+    MEDIA_URL = '/media/'
     # Do NOT set MEDIA_ROOT when using MinIO - leave it unset to force S3 storage usage
 else:
     # Local development fallback (Django serves from MEDIA_ROOT)

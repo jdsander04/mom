@@ -8,12 +8,23 @@ from .models import Recipe, Ingredient, Step, Nutrient
 from .services import recipe_from_url
 from .tasks import process_llm_recipe_extraction, process_ocr_recipe_extraction
 from .services import parse_ingredient_string, parse_serves_value
+from core.media_utils import get_storage_url, get_media_url
 import logging
 import uuid
 from django.core.files.storage import default_storage
 from PIL import Image
 
 logger = logging.getLogger(__name__)
+
+
+def normalize_recipe_response(recipe_data):
+    """
+    Normalize image_url in recipe response data to use Django media URLs.
+    """
+    if isinstance(recipe_data, dict):
+        if 'image_url' in recipe_data and recipe_data['image_url']:
+            recipe_data['image_url'] = get_media_url(recipe_data['image_url'])
+    return recipe_data
 
 @extend_schema(
     methods=['GET'],
@@ -91,7 +102,7 @@ logger = logging.getLogger(__name__)
                         'id': 1,
                         'name': 'Processing recipe from image...',
                         'description': 'Recipe OCR extraction in progress. Please wait.',
-                        'image_url': 'http://localhost:9000/media/recipe_images/1_abc123.png',
+                        'image_url': '/media/recipe_images/1_abc123.png',
                         'status': 'processing',
                         'ingredients': [],
                         'steps': []
@@ -190,7 +201,7 @@ def recipe_list(request):
                         'id': placeholder_recipe.id,
                         'name': placeholder_recipe.name,
                         'description': placeholder_recipe.description,
-                        'image_url': placeholder_recipe.image_url,
+                        'image_url': get_media_url(placeholder_recipe.image_url),
                         'source_url': placeholder_recipe.source_url,
                         'serves': None,
                         'date_added': placeholder_recipe.date_added.isoformat(),
@@ -341,8 +352,8 @@ def recipe_list(request):
             # Save image to MinIO
             try:
                 saved_path = default_storage.save(file_name, file)
-                image_url = default_storage.url(saved_path)
-                logger.info(f"RECIPE_POST: Saved image to MinIO: {saved_path} -> {image_url}")
+                image_url = get_storage_url(saved_path)
+                logger.info(f"RECIPE_POST: Saved image to storage: {saved_path} -> {image_url}")
             except Exception as e:
                 logger.error(f"RECIPE_POST: Failed to save image to storage for user {request.user.id}: {e}")
                 return Response({
@@ -379,7 +390,7 @@ def recipe_list(request):
                 'id': placeholder_recipe.id,
                 'name': placeholder_recipe.name,
                 'description': placeholder_recipe.description,
-                'image_url': placeholder_recipe.image_url,
+                'image_url': get_media_url(placeholder_recipe.image_url),
                 'source_url': placeholder_recipe.source_url,
                 'serves': None,
                 'date_added': placeholder_recipe.date_added.isoformat(),
@@ -444,7 +455,7 @@ def recipe_list(request):
             'id': recipe.id,
             'name': recipe.name,
             'description': recipe.description,
-            'image_url': recipe.image_url,
+            'image_url': get_media_url(recipe.image_url),
             'source_url': recipe.source_url,
             'date_added': recipe.date_added.isoformat(),
             'serves': recipe.serves,
@@ -549,7 +560,7 @@ def recipe_detail(request, recipe_id):
             'id': recipe.id,
             'name': recipe.name,
             'description': recipe.description,
-            'image_url': recipe.image_url,
+            'image_url': get_media_url(recipe.image_url),
             'source_url': recipe.source_url,
             'date_added': recipe.date_added.isoformat(),
             'serves': recipe.serves,
@@ -923,7 +934,7 @@ def recipe_search(request):
             'id': recipe.id,
             'name': recipe.name,
             'description': recipe.description,
-            'image_url': recipe.image_url,
+            'image_url': get_media_url(recipe.image_url),
             'source_url': recipe.source_url,
             'date_added': recipe.date_added.isoformat(),
             'times_made': recipe.times_made,
@@ -997,7 +1008,7 @@ def recipe_popular(request):
             'id': r.id,
             'name': r.name,
             'description': r.description,
-            'image_url': r.image_url,
+            'image_url': get_media_url(r.image_url),
             'source_url': r.source_url,
             'date_added': r.date_added.isoformat() if r.date_added else None,
             'times_made': r.times_made,

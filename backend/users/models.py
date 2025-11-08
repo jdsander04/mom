@@ -22,7 +22,10 @@ class User(AbstractUser):
     def profile_image_url(self):
         if self.profile_image:
             try:
-                return self.profile_image.url
+                # Use media_utils to convert S3 URLs to Django media URLs
+                from core.media_utils import get_media_url
+                url = self.profile_image.url
+                return get_media_url(url)
             except Exception:
                 return None
         return None
