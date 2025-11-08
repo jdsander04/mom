@@ -169,18 +169,27 @@ const HomePage = () => {
         <h1 key={`${section.title}-title`} className={styles.pageTitle}>
           {section.title}
         </h1>,
-        ...section.recipes.map((recipe) => (
-          <RecipeCard
-            key={recipe.id}
-            title={recipe.name}
-            subtitle={recipe.description}
-            image={recipe.image_url || ''}
-            calories={getCalories(recipe)}
-            servings={getServings(recipe)}
-            onClick={() => handleRecipeClick(recipe)}
-            sourceUrl={recipe.source_url}
-          />
-        ))
+        ...(section.recipes.length === 0 
+          ? [
+              <p key={`${section.title}-empty`} className={styles.emptyDescription}>
+                {section.title === "Popular Recipes" 
+                  ? "No popular recipes available at the moment. Popular recipes are determined by community engagement and views."
+                  : "No recent recipes available. Recent recipes appear here as you add them to your library."}
+              </p>
+            ]
+          : section.recipes.map((recipe) => (
+              <RecipeCard
+                key={recipe.id}
+                title={recipe.name}
+                subtitle={recipe.description}
+                image={recipe.image_url || ''}
+                calories={getCalories(recipe)}
+                servings={getServings(recipe)}
+                onClick={() => handleRecipeClick(recipe)}
+                sourceUrl={recipe.source_url}
+              />
+            ))
+        )
       ])}
       
       <Dialog open={copyDialogOpen} onClose={handleCancelCopy} maxWidth="md" fullWidth>
