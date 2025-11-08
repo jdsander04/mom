@@ -112,6 +112,10 @@ const Login: React.FC = () => {
           '--login-bg-image': `url(${loginImage})`,
         } as React.CSSProperties}
       >
+        <Box className="branding-text">
+          Mom Meal Manager
+        </Box>
+        
         <Box className="copyright-text">
           © 2025 Mom. All Rights Reserved.
         </Box>

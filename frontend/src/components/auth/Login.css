@@ -20,6 +20,17 @@
   animation: scrollImage 60s linear infinite;
 }
 
+.branding-text {
+  position: relative;
+  z-index: 2;
+  color: white;
+  font-family: 'Lexend', sans-serif;
+  font-weight: 500;
+  font-size: 2.5rem;
+  letter-spacing: 0.02em;
+  align-self: flex-start;
+}
+
 
 @keyframes scrollImage {
   0% {
@@ -328,5 +339,9 @@
   
   .logo-container {
     margin-bottom: 2rem;
+  }
+  
+  .branding-text {
+    font-size: 1.5rem;
   }
 }
