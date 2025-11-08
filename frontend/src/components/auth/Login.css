@@ -22,9 +22,8 @@
 
 .branding-text {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  top: 2rem;
+  left: 2rem;
   z-index: 2;
   color: white;
   font-family: 'Lexend', sans-serif;
@@ -34,10 +33,6 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: #1A7A5E;
-  padding: 1rem 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   white-space: nowrap;
   width: fit-content;
 }
