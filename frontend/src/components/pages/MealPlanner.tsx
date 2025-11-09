@@ -8,8 +8,10 @@ import {
   Menu,
   MenuItem,
   Checkbox,
-  FormControlLabel
+  FormControlLabel,
+  IconButton
 } from '@mui/material';
+import { Close as CloseIcon } from '@mui/icons-material';
 import dayjs, { Dayjs } from 'dayjs';
 import { useAuth } from '../../contexts/AuthContext';
 import RecipeDetails from '../common/RecipeAccordion/RecipeDetails';
@@ -458,11 +460,17 @@ const MealPlanner = () => {
         <DialogTitle sx={{ 
           backgroundColor: '#2e7d32', 
           color: 'white',
-          fontWeight: 600
+          fontWeight: 600,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
         }}>
           Add Recipe to {currentMealType.charAt(0).toUpperCase() + currentMealType.slice(1)}
+          <IconButton onClick={() => setDialogOpen(false)} sx={{ color: 'white' }}>
+            <CloseIcon />
+          </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ paddingTop: '32px', paddingX: '24px', paddingBottom: '24px', backgroundColor: '#fafafa' }}>
+        <DialogContent sx={{ paddingTop: '40px', paddingX: '24px', paddingBottom: '24px', backgroundColor: '#fafafa' }}>
           <div className={styles.recipeGrid}>
             {recipes.map((recipe) => {
               const calories = recipe.nutrients?.find(n => n.macro === 'calories')?.mass || 0;
@@ -484,19 +492,6 @@ const MealPlanner = () => {
             )}
           </div>
         </DialogContent>
-        <DialogActions sx={{ padding: '16px', backgroundColor: '#fafafa' }}>
-          <Button 
-            onClick={() => setDialogOpen(false)}
-            sx={{
-              color: '#2e7d32',
-              '&:hover': {
-                backgroundColor: '#f1f8e9'
-              }
-            }}
-          >
-            Cancel
-          </Button>
-        </DialogActions>
       </Dialog>
 
       <Dialog 
@@ -514,11 +509,17 @@ const MealPlanner = () => {
         <DialogTitle sx={{ 
           backgroundColor: '#2e7d32', 
           color: 'white',
-          fontWeight: 600
+          fontWeight: 600,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
         }}>
           {selectedRecipeDetail?.name}
+          <IconButton onClick={() => setRecipeDetailOpen(false)} sx={{ color: 'white' }}>
+            <CloseIcon />
+          </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ paddingTop: '24px', backgroundColor: '#fafafa' }}>
+        <DialogContent sx={{ paddingTop: '40px', backgroundColor: '#fafafa' }}>
           {selectedRecipeDetail && (
             <RecipeDetails
               imageUrl={selectedRecipeDetail.image_url}
@@ -527,19 +528,6 @@ const MealPlanner = () => {
             />
           )}
         </DialogContent>
-        <DialogActions sx={{ padding: '16px', backgroundColor: '#fafafa' }}>
-          <Button 
-            onClick={() => setRecipeDetailOpen(false)}
-            sx={{
-              color: '#2e7d32',
-              '&:hover': {
-                backgroundColor: '#f1f8e9'
-              }
-            }}
-          >
-            Close
-          </Button>
-        </DialogActions>
       </Dialog>
 
       <Menu
