@@ -3,6 +3,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import serializers
 from core.authentication import BearerTokenAuthentication
+from core.error_handlers import (
+    APIError, ErrorCodes, handle_not_found_error, handle_validation_error,
+    handle_external_service_error, safe_api_call
+)
 from drf_spectacular.utils import extend_schema
 import requests
 import os
@@ -100,6 +104,7 @@ def cart_detail(request):
 @api_view(['POST', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([BearerTokenAuthentication])
+@safe_api_call
 def cart_items(request):
 	cart, _ = Cart.objects.get_or_create(user=request.user)
 
@@ -109,12 +114,51 @@ def cart_items(request):
 		ingredient_id = data.get('ingredient_id')
 		quantity = data.get('quantity', 1)
 
+		# Validate required fields
+		if not recipe_id:
+			return APIError(
+				error_code=ErrorCodes.MISSING_REQUIRED_FIELD,
+				message="Missing recipe_id",
+				details="The recipe_id field is required to add an item to the cart."
+			).to_response()
+		
+		if not ingredient_id:
+			return APIError(
+				error_code=ErrorCodes.MISSING_REQUIRED_FIELD,
+				message="Missing ingredient_id",
+				details="The ingredient_id field is required to add an item to the cart."
+			).to_response()
+
+		# Validate quantity
+		try:
+			quantity = float(quantity)
+			if quantity <= 0:
+				return APIError(
+					error_code=ErrorCodes.INVALID_QUANTITY,
+					message="Invalid quantity",
+					details="Quantity must be a positive number greater than 0."
+				).to_response()
+		except (ValueError, TypeError):
+			return APIError(
+				error_code=ErrorCodes.INVALID_FIELD_VALUE,
+				message="Invalid quantity format",
+				details="Quantity must be a valid number."
+			).to_response()
+
 		try:
 			recipe = Recipe.objects.get(id=recipe_id, user=request.user)
+		except Recipe.DoesNotExist:
+			return handle_not_found_error("Recipe", recipe_id).to_response()
+
+		try:
 			from recipes.models import Ingredient as RecipeIngredient
 			recipe_ingredient = RecipeIngredient.objects.get(id=ingredient_id, recipe=recipe)
-		except (Recipe.DoesNotExist, RecipeIngredient.DoesNotExist):
-			return Response({'error': 'Recipe or ingredient not found'}, status=404)
+		except RecipeIngredient.DoesNotExist:
+			return APIError(
+				error_code=ErrorCodes.RESOURCE_NOT_FOUND,
+				message="Ingredient not found",
+				details=f"Ingredient with ID '{ingredient_id}' was not found in recipe '{recipe.name}'."
+			).to_response()
 
 		ci, created = CartItem.objects.get_or_create(
 			cart=cart,
@@ -134,27 +178,92 @@ def cart_items(request):
 			'name': ci.name,
 			'quantity': float(ci.quantity),
 			'unit': ci.unit,
+			'message': f"Added {quantity} {ci.unit} of {ci.name} to cart"
 		}, status=201)
 
 	elif request.method == 'PATCH':
 		item_id = request.data.get('item_id')
 		quantity = request.data.get('quantity')
 
+		# Validate required fields
+		if not item_id:
+			return APIError(
+				error_code=ErrorCodes.MISSING_REQUIRED_FIELD,
+				message="Missing item_id",
+				details="The item_id field is required to update an item."
+			).to_response()
+
+		if quantity is None:
+			return APIError(
+				error_code=ErrorCodes.MISSING_REQUIRED_FIELD,
+				message="Missing quantity",
+				details="The quantity field is required to update an item."
+			).to_response()
+
+		# Validate quantity
+		try:
+			quantity = float(quantity)
+			if quantity < 0:
+				return APIError(
+					error_code=ErrorCodes.INVALID_QUANTITY,
+					message="Invalid quantity",
+					details="Quantity cannot be negative. Use 0 to remove the item or DELETE method."
+				).to_response()
+		except (ValueError, TypeError):
+			return APIError(
+				error_code=ErrorCodes.INVALID_FIELD_VALUE,
+				message="Invalid quantity format",
+				details="Quantity must be a valid number."
+			).to_response()
+
 		try:
 			ci = cart.items.get(id=item_id)
+		except CartItem.DoesNotExist:
+			return APIError(
+				error_code=ErrorCodes.CART_ITEM_NOT_FOUND,
+				message="Cart item not found",
+				details=f"Cart item with ID '{item_id}' was not found in your cart."
+			).to_response()
+
+		if quantity == 0:
+			item_name = ci.name
+			ci.delete()
+			return Response({
+				'message': f"Removed {item_name} from cart",
+				'removed': True
+			})
+		else:
 			ci.quantity = quantity
 			ci.save()
-			return Response({'id': ci.id, 'quantity': float(ci.quantity)})
-		except CartItem.DoesNotExist:
-			return Response({'error': 'Item not found'}, status=404)
+			return Response({
+				'id': ci.id,
+				'quantity': float(ci.quantity),
+				'message': f"Updated {ci.name} quantity to {quantity} {ci.unit}"
+			})
 
 	else:  # DELETE
 		item_id = request.data.get('item_id')
+		
+		if not item_id:
+			return APIError(
+				error_code=ErrorCodes.MISSING_REQUIRED_FIELD,
+				message="Missing item_id",
+				details="The item_id field is required to remove an item."
+			).to_response()
+
 		try:
-			cart.items.get(id=item_id).delete()
-			return Response(status=204)
+			ci = cart.items.get(id=item_id)
+			item_name = ci.name
+			ci.delete()
+			return Response({
+				'message': f"Removed {item_name} from cart"
+			}, status=204)
 		except CartItem.DoesNotExist:
-			return Response({'error': 'Item not found'}, status=404)
+			return APIError(
+				error_code=ErrorCodes.CART_ITEM_NOT_FOUND,
+				message="Cart item not found",
+				details=f"Cart item with ID '{item_id}' was not found in your cart."
+			).to_response()
 
 
 
@@ -205,27 +314,57 @@ def cart_items(request):
 @api_view(['POST', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([BearerTokenAuthentication])
+@safe_api_call
 def add_recipe_to_cart(request):
 	cart, _ = Cart.objects.get_or_create(user=request.user)
 	
 	if request.method == 'POST':
 		recipe_id = request.data.get('recipe_id')
 		serving_size = request.data.get('serving_size', 1.0)
+
+		# Validate required fields
+		if not recipe_id:
+			return APIError(
+				error_code=ErrorCodes.MISSING_REQUIRED_FIELD,
+				message="Missing recipe_id",
+				details="The recipe_id field is required to add a recipe to the cart."
+			).to_response()
+
+		# Validate serving size
+		try:
+			serving_size = float(serving_size)
+			if serving_size <= 0:
+				return APIError(
+					error_code=ErrorCodes.INVALID_FIELD_VALUE,
+					message="Invalid serving size",
+					details="Serving size must be a positive number greater than 0."
+				).to_response()
+		except (ValueError, TypeError):
+			return APIError(
+				error_code=ErrorCodes.INVALID_FIELD_VALUE,
+				message="Invalid serving size format",
+				details="Serving size must be a valid number."
+			).to_response()
 		
 		try:
 			recipe = Recipe.objects.get(id=recipe_id, user=request.user)
 		except Recipe.DoesNotExist:
-			return Response({'error': 'Recipe not found'}, status=404)
+			return handle_not_found_error("Recipe", recipe_id).to_response()
 
-		# Create or get cart recipe
+		# Check if recipe already in cart
 		cr, created = CartRecipe.objects.get_or_create(
 			cart=cart, recipe=recipe, defaults={'serving_size': serving_size}
 		)
 		if not created:
-			return Response({'error': 'Recipe already in cart'}, status=400)
+			return APIError(
+				error_code=ErrorCodes.RECIPE_ALREADY_IN_CART,
+				message="Recipe already in cart",
+				details=f"The recipe '{recipe.name}' is already in your cart. Use PATCH to update serving size."
+			).to_response()
 
 		# Add ingredients
 		from decimal import Decimal
+		ingredients_added = 0
 		for ingredient in recipe.ingredients.all():
 			scaled_quantity = Decimal(ingredient.quantity) * Decimal(serving_size)
 			CartItem.objects.create(
@@ -235,44 +374,114 @@ def add_recipe_to_cart(request):
 				unit=ingredient.unit or '',
 				recipe_ingredient=ingredient,
 			)
+			ingredients_added += 1
 
-		return Response({'message': 'Recipe added to cart'}, status=201)
+		return Response({
+			'message': f"Added '{recipe.name}' to cart with {ingredients_added} ingredients",
+			'recipe_name': recipe.name,
+			'serving_size': float(serving_size),
+			'ingredients_count': ingredients_added
+		}, status=201)
 	
 	elif request.method == 'PATCH':
 		recipe_id = request.data.get('recipe_id')
 		serving_size = request.data.get('serving_size')
+
+		# Validate required fields
+		if not recipe_id:
+			return APIError(
+				error_code=ErrorCodes.MISSING_REQUIRED_FIELD,
+				message="Missing recipe_id",
+				details="The recipe_id field is required to update serving size."
+			).to_response()
+
+		if serving_size is None:
+			return APIError(
+				error_code=ErrorCodes.MISSING_REQUIRED_FIELD,
+				message="Missing serving_size",
+				details="The serving_size field is required to update serving size."
+			).to_response()
+
+		# Validate serving size
+		try:
+			serving_size = float(serving_size)
+			if serving_size <= 0:
+				return APIError(
+					error_code=ErrorCodes.INVALID_FIELD_VALUE,
+					message="Invalid serving size",
+					details="Serving size must be a positive number greater than 0."
+				).to_response()
+		except (ValueError, TypeError):
+			return APIError(
+				error_code=ErrorCodes.INVALID_FIELD_VALUE,
+				message="Invalid serving size format",
+				details="Serving size must be a valid number."
+			).to_response()
 		
 		try:
 			cr = cart.recipes.get(recipe_id=recipe_id)
 		except CartRecipe.DoesNotExist:
-			return Response({'error': 'Recipe not in cart'}, status=404)
+			return APIError(
+				error_code=ErrorCodes.RECIPE_NOT_FOUND,
+				message="Recipe not in cart",
+				details=f"Recipe with ID '{recipe_id}' is not in your cart. Add it first using POST."
+			).to_response()
 		
 		# Update serving size and scale ingredients
 		from decimal import Decimal
+		old_serving_size = float(cr.serving_size)
 		scale_factor = Decimal(serving_size) / cr.serving_size
 		cr.serving_size = serving_size
 		cr.save()
 		
 		# Scale all ingredients for this recipe
+		updated_items = 0
 		for ci in cart.items.filter(recipe_ingredient__recipe_id=recipe_id):
 			ci.quantity = ci.quantity * scale_factor
 			ci.save()
+			updated_items += 1
 		
-		return Response({'message': 'Serving size updated'}, status=200)
+		return Response({
+			'message': f"Updated '{cr.recipe.name}' serving size from {old_serving_size}x to {serving_size}x",
+			'recipe_name': cr.recipe.name,
+			'old_serving_size': old_serving_size,
+			'new_serving_size': float(serving_size),
+			'updated_items': updated_items
+		})
 	
 	else:  # DELETE
 		recipe_id = request.data.get('recipe_id')
+
+		if not recipe_id:
+			return APIError(
+				error_code=ErrorCodes.MISSING_REQUIRED_FIELD,
+				message="Missing recipe_id",
+				details="The recipe_id field is required to remove a recipe from cart."
+			).to_response()
 		
 		try:
 			cr = cart.recipes.get(recipe_id=recipe_id)
+			recipe_name = cr.recipe.name
+			
+			# Count items to be removed
+			items_to_remove = cart.items.filter(recipe_ingredient__recipe_id=recipe_id).count()
+			
 			# Remove all ingredients for this recipe
 			cart.items.filter(recipe_ingredient__recipe_id=recipe_id).delete()
 			# Remove recipe from cart
 			cr.delete()
+			
+			return Response({
+				'message': f"Removed '{recipe_name}' and {items_to_remove} ingredients from cart",
+				'recipe_name': recipe_name,
+				'removed_items': items_to_remove
+			}, status=204)
 		except CartRecipe.DoesNotExist:
-			return Response({'error': 'Recipe not in cart'}, status=404)
-		
-		return Response(status=204)
+			return APIError(
+				error_code=ErrorCodes.RECIPE_NOT_FOUND,
+				message="Recipe not in cart",
+				details=f"Recipe with ID '{recipe_id}' is not in your cart."
+			).to_response()
 
 
 @extend_schema(
@@ -334,6 +543,7 @@ def add_recipe_to_cart(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([BearerTokenAuthentication])
+@safe_api_call
 def create_instacart_list(request):
 	"""
 	Create Instacart Shopping List
@@ -379,7 +589,11 @@ def create_instacart_list(request):
 	api_key = os.getenv('INSTACART_API_KEY')
 	if not api_key:
 		logger.error('INSTACART_API_KEY not found in environment variables')
-		return Response({'success': False, 'error': 'API key not configured'}, status=400)
+		return APIError(
+			error_code=ErrorCodes.EXTERNAL_SERVICE_ERROR,
+			message="Instacart service not configured",
+			details="The Instacart integration is not properly configured. Please contact support."
+		).to_response()
 	
 	# Strip whitespace in case there are leading/trailing spaces
 	api_key = api_key.strip()
@@ -426,31 +640,43 @@ def create_instacart_list(request):
 			order_history.save()
 			return Response({
 				'success': True,
-				'redirect_url': data.get('products_link_url')
+				'redirect_url': data.get('products_link_url'),
+				'message': f"Successfully created Instacart shopping list with {len(line_items)} items"
 			})
 		else:
 			try:
 				error_data = response.json()
-				error_msg = error_data.get('message', f'Status {response.status_code}')
+				error_msg = error_data.get('message', f'HTTP {response.status_code}')
 				error_details = error_data.get('error', '')
 				if error_details:
 					error_msg = f'{error_msg}: {error_details}'
 				logger.error(f'Instacart API error: {error_msg} (status {response.status_code})')
 				logger.error(f'Response body: {error_data}')
+				
+				if response.status_code == 400:
+					details = f"Invalid request to Instacart API: {error_msg}. Please check your cart items and try again."
+				elif response.status_code == 401:
+					details = "Authentication failed with Instacart API. Please contact support."
+				elif response.status_code == 403:
+					details = "Access denied by Instacart API. Please contact support."
+				elif response.status_code == 429:
+					details = "Too many requests to Instacart API. Please wait a moment and try again."
+				else:
+					details = f"Instacart API returned an error: {error_msg}"
 			except:
-				error_msg = f'Status {response.status_code}'
+				error_msg = f'HTTP {response.status_code}'
 				logger.error(f'Instacart API error: {error_msg}')
 				logger.error(f'Response text: {response.text[:200]}')
-			return Response({
-				'success': False,
-				'error': f'Instacart API error: {error_msg}'
-			}, status=response.status_code if response.status_code < 500 else 503)
+				details = f"Instacart API returned status {response.status_code}. Please try again later."
+			
+			return handle_external_service_error("Instacart", details).to_response()
 			
 	except requests.RequestException as e:
-		return Response({
-			'success': False,
-			'error': 'Unable to connect to Instacart API'
-		}, status=503)
+		logger.error(f'Instacart API connection error: {e}')
+		return handle_external_service_error(
+			"Instacart", 
+			"Unable to connect to Instacart API. Please check your internet connection and try again."
+		).to_response()
 
 
 @extend_schema(

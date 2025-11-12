@@ -4,6 +4,9 @@ from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, get_user_model
 from rest_framework import status
+from core.error_handlers import (
+    APIError, ErrorCodes, handle_file_upload_error, safe_api_call
+)
 from drf_spectacular.utils import extend_schema
 from django.http import HttpResponse, Http404
 from django.conf import settings
@@ -37,14 +40,57 @@ logger = logging.getLogger(__name__)
 )
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@safe_api_call
 def signup(request):
     username = request.data.get('username')
     password = request.data.get('password')
     email = request.data.get('email')
     
+    # Validate required fields
+    if not username:
+        return APIError(
+            error_code=ErrorCodes.MISSING_REQUIRED_FIELD,
+            message="Missing username",
+            details="Username is required to create an account."
+        ).to_response()
+    
+    if not password:
+        return APIError(
+            error_code=ErrorCodes.MISSING_REQUIRED_FIELD,
+            message="Missing password",
+            details="Password is required to create an account."
+        ).to_response()
+    
+    # Validate username format
+    if len(username) < 3:
+        return APIError(
+            error_code=ErrorCodes.INVALID_FIELD_VALUE,
+            message="Username too short",
+            details="Username must be at least 3 characters long."
+        ).to_response()
+    
+    if len(username) > 150:
+        return APIError(
+            error_code=ErrorCodes.FIELD_TOO_LONG,
+            message="Username too long",
+            details="Username must be 150 characters or less."
+        ).to_response()
+    
+    # Validate password strength
+    if len(password) < 8:
+        return APIError(
+            error_code=ErrorCodes.INVALID_FIELD_VALUE,
+            message="Password too weak",
+            details="Password must be at least 8 characters long."
+        ).to_response()
+    
     UserModel = get_user_model()
     if UserModel.objects.filter(username=username).exists():
-        return Response({'error': 'Username already exists'}, status=status.HTTP_400_BAD_REQUEST)
+        return APIError(
+            error_code=ErrorCodes.RESOURCE_ALREADY_EXISTS,
+            message="Username already exists",
+            details=f"The username '{username}' is already taken. Please choose a different username."
+        ).to_response()
     
     user = UserModel.objects.create_user(username=username, password=password, email=email)
     token, created = Token.objects.get_or_create(user=user)
@@ -76,9 +122,25 @@ def signup(request):
 )
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@safe_api_call
 def login(request):
     username = request.data.get('username')
     password = request.data.get('password')
+    
+    # Validate required fields
+    if not username:
+        return APIError(
+            error_code=ErrorCodes.MISSING_REQUIRED_FIELD,
+            message="Missing username",
+            details="Username is required to log in."
+        ).to_response()
+    
+    if not password:
+        return APIError(
+            error_code=ErrorCodes.MISSING_REQUIRED_FIELD,
+            message="Missing password",
+            details="Password is required to log in."
+        ).to_response()
     
     user = authenticate(username=username, password=password)
     if user:
@@ -92,10 +154,15 @@ def login(request):
                 'first_name': user.first_name,
                 'last_name': user.last_name,
                 'date_joined': user.date_joined
-            }
+            },
+            'message': f"Welcome back, {user.username}!"
         })
     else:
-        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+        return APIError(
+            error_code=ErrorCodes.INVALID_CREDENTIALS,
+            message="Invalid credentials",
+            details="The username or password you entered is incorrect. Please check your credentials and try again."
+        ).to_response()
 
 @extend_schema(
     methods=['POST'],
@@ -312,6 +379,7 @@ def media_proxy(request, path):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([BearerTokenAuthentication])
+@safe_api_call
 def media_upload(request):
     """
     Upload an image file and return the image URL.
@@ -326,20 +394,22 @@ def media_upload(request):
     file = request.FILES.get('file')
     if not file:
         logger.warning(f"MEDIA_UPLOAD: Missing file parameter for user {request.user.id}")
-        return Response({
-            'error': 'Missing file parameter',
-            'details': 'You must provide a "file" field containing the image'
-        }, status=status.HTTP_400_BAD_REQUEST)
+        return APIError(
+            error_code=ErrorCodes.MISSING_REQUIRED_FIELD,
+            message="Missing file parameter",
+            details='You must provide a "file" field containing the image'
+        ).to_response()
     
     logger.info(f"MEDIA_UPLOAD: Received file '{file.name}' ({file.size} bytes) for user {request.user.id}")
     
     # Validate file size
     if file.size > MAX_FILE_SIZE:
         logger.warning(f"MEDIA_UPLOAD: File too large ({file.size} bytes) for user {request.user.id}")
-        return Response({
-            'error': 'File size exceeds limit',
-            'details': f'Maximum file size is {MAX_FILE_SIZE / (1024 * 1024):.0f}MB. Your file is {file.size / (1024 * 1024):.2f}MB.'
-        }, status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
+        return handle_file_upload_error(
+            'size', 
+            file.name, 
+            max_size=f"{MAX_FILE_SIZE / (1024 * 1024):.0f}"
+        ).to_response()
     
     # Validate that it's an image
     try:
@@ -351,18 +421,20 @@ def media_upload(request):
         # Check if it's a supported format
         if image.format not in ['JPEG', 'PNG', 'GIF', 'WEBP', 'BMP']:
             logger.warning(f"MEDIA_UPLOAD: Unsupported image format '{image.format}' for user {request.user.id}")
-            return Response({
-                'error': 'Invalid file format',
-                'details': f'Unsupported image format: {image.format}. Please upload a JPEG, PNG, GIF, WEBP, or BMP image.'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return handle_file_upload_error(
+                'type',
+                file.name,
+                allowed_types=['JPEG', 'PNG', 'GIF', 'WEBP', 'BMP']
+            ).to_response()
         
         logger.debug(f"MEDIA_UPLOAD: Image validation successful for '{file.name}' (format: {image.format})")
     except Exception as e:
         logger.warning(f"MEDIA_UPLOAD: Invalid image file '{file.name}' for user {request.user.id}: {e}")
-        return Response({
-            'error': 'Invalid image file',
-            'details': f'The file "{file.name}" is not a valid image. Please upload a PNG, JPEG, or other supported image format.'
-        }, status=status.HTTP_400_BAD_REQUEST)
+        return handle_file_upload_error(
+            'type',
+            file.name,
+            allowed_types=['PNG', 'JPEG', 'GIF', 'WEBP', 'BMP']
+        ).to_response()
     
     # Generate unique file name
     unique_id = str(uuid.uuid4())[:8]
@@ -383,7 +455,4 @@ def media_upload(request):
         
     except Exception as e:
         logger.error(f"MEDIA_UPLOAD: Failed to save image to storage for user {request.user.id}: {e}", exc_info=True)
-        return Response({
-            'error': 'Failed to upload image',
-            'details': 'The image could not be saved to storage. Please try again.'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return handle_file_upload_error('upload', file.name).to_response()

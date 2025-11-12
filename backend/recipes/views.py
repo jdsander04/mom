@@ -2,6 +2,10 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from rest_framework.permissions import IsAuthenticated
 from core.authentication import BearerTokenAuthentication
 from rest_framework.response import Response
+from core.error_handlers import (
+    APIError, ErrorCodes, handle_not_found_error, handle_permission_denied_error,
+    handle_file_upload_error, safe_api_call
+)
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 from .models import Recipe, Ingredient, Step, Nutrient
@@ -117,7 +121,7 @@ def normalize_recipe_response(recipe_data):
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([BearerTokenAuthentication])
-# General recipe endpoints
+@safe_api_call
 def recipe_list(request):
     # Get list of all recipe IDs
     if request.method == 'GET':
@@ -132,20 +136,22 @@ def recipe_list(request):
         
         if not recipe_source:
             logger.warning(f"RECIPE_POST: Missing recipe_source parameter for user {request.user.id}")
-            return Response({
-                'error': 'Missing recipe_source parameter',
-                'details': 'Must specify one of: "url", "file", or "explicit"'
-            }, status=400)
+            return APIError(
+                error_code=ErrorCodes.MISSING_REQUIRED_FIELD,
+                message="Missing recipe_source parameter",
+                details='Must specify one of: "url", "file", or "explicit"'
+            ).to_response()
 
         if recipe_source == 'url':
             logger.info(f"RECIPE_POST: Processing URL source for user {request.user.id}")
             url = request.data.get('url', '').strip()
             if not url:
                 logger.warning(f"RECIPE_POST: Missing URL parameter for user {request.user.id}")
-                return Response({
-                    'error': 'Missing URL parameter',
-                    'details': 'When recipe_source is "url", you must provide a "url" field'
-                }, status=400)
+                return APIError(
+                    error_code=ErrorCodes.MISSING_REQUIRED_FIELD,
+                    message="Missing URL parameter",
+                    details='When recipe_source is "url", you must provide a "url" field'
+                ).to_response()
             
             # Basic URL validation
             from urllib.parse import urlparse
@@ -153,16 +159,18 @@ def recipe_list(request):
                 parsed = urlparse(url)
                 if not parsed.scheme in ['http', 'https'] or not parsed.netloc:
                     logger.warning(f"RECIPE_POST: Invalid URL format '{url}' for user {request.user.id}")
-                    return Response({
-                        'error': 'Invalid URL format',
-                        'details': f'URL must start with http:// or https:// and include a domain'
-                    }, status=400)
+                    return APIError(
+                        error_code=ErrorCodes.INVALID_RECIPE_URL,
+                        message="Invalid URL format",
+                        details=f'URL must start with http:// or https:// and include a domain. Received: {url}'
+                    ).to_response()
             except Exception as e:
                 logger.warning(f"RECIPE_POST: URL parse error '{url}' for user {request.user.id}: {e}")
-                return Response({
-                    'error': 'Invalid URL format',
-                    'details': 'Could not parse the provided URL'
-                }, status=400)
+                return APIError(
+                    error_code=ErrorCodes.INVALID_RECIPE_URL,
+                    message="Invalid URL format",
+                    details=f'Could not parse the provided URL: {url}'
+                ).to_response()
             
             logger.info(f"RECIPE_POST: Extracting recipe from URL: {url}")
             try:
@@ -227,10 +235,11 @@ def recipe_list(request):
                 
                 if not recipe_data:
                     logger.error(f"RECIPE_POST: No recipe data returned from URL extraction")
-                    return Response({
-                        'error': 'Failed to extract recipe from URL',
-                        'details': 'The recipe scraper returned empty data. The URL may not contain a valid recipe.'
-                    }, status=400)
+                    return APIError(
+                        error_code=ErrorCodes.RECIPE_EXTRACTION_FAILED,
+                        message="Failed to extract recipe from URL",
+                        details=f'No recipe data could be extracted from {url}. The URL may not contain a valid recipe or the site may not be supported.'
+                    ).to_response()
                 # Make title validation less strict - allow empty title
                 title = recipe_data.get('title') or recipe_data.get('name') or 'Untitled Recipe'
                 logger.info(f"RECIPE_POST: Processing recipe with title: {title}")
@@ -238,10 +247,11 @@ def recipe_list(request):
                 logger.error(f"RECIPE_POST: Recipe extraction error: {e}")
                 import traceback
                 logger.error(f"RECIPE_POST: Traceback: {traceback.format_exc()}")
-                return Response({
-                    'error': 'Failed to process recipe URL',
-                    'details': str(e)
-                }, status=500)
+                return APIError(
+                    error_code=ErrorCodes.RECIPE_EXTRACTION_FAILED,
+                    message="Failed to process recipe URL",
+                    details=f'An error occurred while processing the recipe from {url}. Please verify the URL is correct and try again.'
+                ).to_response()
             
             # Try to compute serves from common fields like yields/servings
             serves = None
@@ -324,10 +334,11 @@ def recipe_list(request):
             file = request.FILES.get('file')
             if not file:
                 logger.warning(f"RECIPE_POST: Missing file parameter for user {request.user.id}")
-                return Response({
-                    'error': 'Missing file parameter',
-                    'details': 'When recipe_source is "file", you must provide a "file" field containing the image'
-                }, status=400)
+                return APIError(
+                    error_code=ErrorCodes.MISSING_REQUIRED_FIELD,
+                    message="Missing file parameter",
+                    details='When recipe_source is "file", you must provide a "file" field containing the image'
+                ).to_response()
             
             logger.info(f"RECIPE_POST: Received file '{file.name}' ({file.size} bytes) for user {request.user.id}")
             
@@ -340,10 +351,11 @@ def recipe_list(request):
                 logger.debug(f"RECIPE_POST: Image validation successful for '{file.name}'")
             except Exception as e:
                 logger.warning(f"RECIPE_POST: Invalid image file '{file.name}' for user {request.user.id}: {e}")
-                return Response({
-                    'error': 'Invalid image file',
-                    'details': f'The file "{file.name}" is not a valid image. Please upload a PNG, JPEG, or other supported image format.'
-                }, status=400)
+                return handle_file_upload_error(
+                    'type', 
+                    file.name, 
+                    allowed_types=['PNG', 'JPEG', 'GIF', 'WEBP', 'BMP']
+                ).to_response()
             
             # Generate unique file name
             unique_id = str(uuid.uuid4())[:8]
@@ -358,10 +370,7 @@ def recipe_list(request):
                 logger.info(f"RECIPE_POST: Saved image to storage: {saved_path} -> {image_url}")
             except Exception as e:
                 logger.error(f"RECIPE_POST: Failed to save image to storage for user {request.user.id}: {e}")
-                return Response({
-                    'error': 'Failed to save image',
-                    'details': 'The image could not be saved to storage. Please try again.'
-                }, status=500)
+                return handle_file_upload_error('upload', file.name).to_response()
             
             # Create placeholder recipe
             placeholder_recipe = Recipe.objects.create(
@@ -411,10 +420,11 @@ def recipe_list(request):
             recipe_name = request.data.get('name', '')
             if not recipe_name:
                 logger.warning(f"RECIPE_POST: Missing name for explicit recipe, user {request.user.id}")
-                return Response({
-                    'error': 'Missing required field',
-                    'details': 'When recipe_source is "explicit", you must provide a "name" field'
-                }, status=400)
+                return APIError(
+                    error_code=ErrorCodes.MISSING_REQUIRED_FIELD,
+                    message="Missing recipe name",
+                    details='When recipe_source is "explicit", you must provide a "name" field'
+                ).to_response()
             
             # Get image_url from request if provided
             image_url = request.data.get('image_url', '')
@@ -453,10 +463,11 @@ def recipe_list(request):
                 
         else:
             logger.warning(f"RECIPE_POST: Invalid recipe_source '{recipe_source}' for user {request.user.id}")
-            return Response({
-                'error': 'Invalid recipe_source',
-                'details': 'recipe_source must be one of: "url", "file", or "explicit"'
-            }, status=400)
+            return APIError(
+                error_code=ErrorCodes.INVALID_FIELD_VALUE,
+                message="Invalid recipe_source",
+                details=f'recipe_source must be one of: "url", "file", or "explicit". Received: "{recipe_source}"'
+            ).to_response()
 
         # Return complete recipe data after creation
         created_recipe = {
@@ -549,6 +560,7 @@ def recipe_list(request):
 @api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([BearerTokenAuthentication])
+@safe_api_call
 def recipe_detail(request, recipe_id):
     try:
         # For GET, allow reading any recipe (for popular recipes from other users)
@@ -557,9 +569,12 @@ def recipe_detail(request, recipe_id):
         
         # Check ownership for write operations
         if request.method in ['PATCH', 'DELETE'] and recipe.user != request.user:
-            return Response({'error': 'Permission denied. You can only modify your own recipes.'}, status=403)
+            return handle_permission_denied_error(
+                'modify' if request.method == 'PATCH' else 'delete',
+                'recipe'
+            ).to_response()
     except Recipe.DoesNotExist:
-        return Response({'error': 'Recipe not found'}, status=404)
+        return handle_not_found_error("Recipe", recipe_id).to_response()
     
 
     # Get specific recipe info
@@ -663,6 +678,7 @@ def recipe_detail(request, recipe_id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([BearerTokenAuthentication])
+@safe_api_call
 def recipe_made(request, recipe_id):
     """Increment the times_made counter for a recipe when it's used.
     
@@ -671,7 +687,7 @@ def recipe_made(request, recipe_id):
     try:
         recipe = Recipe.objects.get(id=recipe_id)
     except Recipe.DoesNotExist:
-        return Response({'error': 'Recipe not found'}, status=404)
+        return handle_not_found_error("Recipe", recipe_id).to_response()
     
     recipe.times_made += 1
     recipe.save()
@@ -704,12 +720,13 @@ def recipe_made(request, recipe_id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([BearerTokenAuthentication])
+@safe_api_call
 def recipe_copy(request, recipe_id):
     """Copy a recipe to the current user's library."""
     try:
         source_recipe = Recipe.objects.get(id=recipe_id)
     except Recipe.DoesNotExist:
-        return Response({'error': 'Recipe not found'}, status=404)
+        return handle_not_found_error("Recipe", recipe_id).to_response()
     
     # Check if user already has this recipe (by name or same recipe)
     # This is optional - we could allow multiple copies if desired
@@ -821,6 +838,7 @@ def recipe_copy(request, recipe_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([BearerTokenAuthentication])
+@safe_api_call
 def recipe_search(request):
     """Enhanced fuzzy text search for recipes by name and description."""
     from django.db import models
@@ -901,11 +919,19 @@ def recipe_search(request):
     fuzziness = int(request.GET.get('fuzziness', 2))
     
     if not query:
-        return Response({'error': 'Search query is required'}, status=400)
+        return APIError(
+            error_code=ErrorCodes.MISSING_REQUIRED_FIELD,
+            message="Missing search query",
+            details="The 'q' parameter is required to search for recipes."
+        ).to_response()
     
     # Validate fuzziness level
     if fuzziness not in [0, 1, 2]:
-        return Response({'error': 'Fuzziness must be 0, 1, or 2'}, status=400)
+        return APIError(
+            error_code=ErrorCodes.INVALID_FIELD_VALUE,
+            message="Invalid fuzziness level",
+            details="Fuzziness must be 0 (exact), 1 (word-based), or 2 (typo-tolerant)."
+        ).to_response()
     
     # Limit the number of results to prevent performance issues
     limit = min(limit, 100)
@@ -999,6 +1025,7 @@ def recipe_search(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([BearerTokenAuthentication])
+@safe_api_call
 def recipe_popular(request):
     """Return globally popular recipes ordered by times_made (desc), then date_added (desc).
     Only returns recipes with unique source_urls, keeping the oldest recipe for each source_url.
