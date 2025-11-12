@@ -156,9 +156,9 @@ export default function Cart() {
   const [instacartPriceOpen, setInstacartPriceOpen] = useState(false);
 
   const handleOrderConfirmed = () => {
-    // close the order summary and open the price popup
+    // close the order summary - price popup disabled
     setOrderSummaryOpen(false);
-    setInstacartPriceOpen(true);
+    // setInstacartPriceOpen(true); // Disabled - use order history to set price
   };
 
   const handlePriceSaved = async (amount: number) => {
@@ -425,11 +425,13 @@ export default function Cart() {
         clearUndo={clearUndo}
       />
 
+      {/* InstacartPricePopup disabled - use order history to set price
       <InstacartPricePopup
         open={instacartPriceOpen}
         onClose={() => setInstacartPriceOpen(false)}
         onSaved={handlePriceSaved}
       />
+      */}
       
       {undoAction && (
         <UndoPopup
