@@ -19,6 +19,7 @@ const Login: React.FC = () => {
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
   const [passwordMatchError, setPasswordMatchError] = useState('');
+  const [maxLengthError, setMaxLengthError] = useState<string | null>(null);
   const { login, signup } = useAuth();
 
   const validatePassword = (password: string): string[] => {
@@ -43,13 +44,26 @@ const Login: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    const fieldName = e.target.name;
+    const maxLength = fieldName === 'email' ? 50 : 30;
+    
+    // Check if max length is reached
+    if (value.length >= maxLength) {
+      const fieldLabel = fieldName === 'email' ? 'Email' : 
+                        fieldName === 'username' ? 'Username' : 
+                        fieldName === 'password' ? 'Password' : 'Re-enter Password';
+      setMaxLengthError(`${fieldLabel} has reached the maximum length of ${maxLength} characters`);
+    } else {
+      setMaxLengthError(null);
+    }
+    
     setFormData({
       ...formData,
-      [e.target.name]: value
+      [fieldName]: value
     });
     setError('');
     
-    if (e.target.name === 'password' && !isLogin) {
+    if (fieldName === 'password' && !isLogin) {
       const errors = validatePassword(value);
       setPasswordErrors(errors);
       // Check if passwords match when password changes
@@ -58,14 +72,14 @@ const Login: React.FC = () => {
       } else if (formData.confirmPassword && value === formData.confirmPassword) {
         setPasswordMatchError('');
       }
-    } else if (e.target.name === 'confirmPassword' && !isLogin) {
+    } else if (fieldName === 'confirmPassword' && !isLogin) {
       // Check if passwords match when confirm password changes
       if (value !== formData.password) {
         setPasswordMatchError('Passwords do not match');
       } else {
         setPasswordMatchError('');
       }
-    } else if (e.target.name === 'password' && isLogin) {
+    } else if (fieldName === 'password' && isLogin) {
       setPasswordErrors([]);
     }
   };
@@ -91,6 +105,7 @@ const Login: React.FC = () => {
     setError('');
     setPasswordErrors([]);
     setPasswordMatchError('');
+    setMaxLengthError(null);
 
     try {
       if (isLogin) {
@@ -136,6 +151,7 @@ const Login: React.FC = () => {
           </Typography>
           
           {error && <Alert severity="error" sx={{ mb: 2, mt: 2 }}>{error}</Alert>}
+          {maxLengthError && <Alert severity="error" sx={{ mb: 2, mt: 2 }}>{maxLengthError}</Alert>}
           
           <form onSubmit={handleSubmit} className="login-form">
             <Box className="input-wrapper">
@@ -153,6 +169,7 @@ const Login: React.FC = () => {
                   variant="standard"
                   className="modern-input"
                   required
+                  inputProps={{ maxLength: 30 }}
                   InputProps={{
                     disableUnderline: true,
                     endAdornment: (
@@ -183,6 +200,7 @@ const Login: React.FC = () => {
                     variant="standard"
                     className="modern-input"
                     required
+                    inputProps={{ maxLength: 50 }}
                     InputProps={{
                       disableUnderline: true,
                       endAdornment: (
@@ -214,6 +232,7 @@ const Login: React.FC = () => {
                   className="modern-input"
                   required
                   error={!isLogin && passwordErrors.length > 0}
+                  inputProps={{ maxLength: 30 }}
                   InputProps={{
                     disableUnderline: true,
                     endAdornment: (
@@ -254,6 +273,7 @@ const Login: React.FC = () => {
                     className="modern-input"
                     required
                     error={passwordMatchError.length > 0}
+                    inputProps={{ maxLength: 30 }}
                     InputProps={{
                       disableUnderline: true,
                       endAdornment: (
@@ -296,7 +316,10 @@ const Login: React.FC = () => {
             <Button
               fullWidth
               variant="text"
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setMaxLengthError(null);
+              }}
               className="toggle-auth-button"
               sx={{ mt: 2 }}
             >
