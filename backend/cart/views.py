@@ -1,6 +1,7 @@
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework import serializers
 from core.authentication import BearerTokenAuthentication
 from drf_spectacular.utils import extend_schema
 import requests
@@ -8,11 +9,18 @@ import os
 import logging
 
 from .models import Cart, CartItem, CartRecipe
+from .order_models import OrderHistory
 from recipes.models import Recipe
 from meal_calendar.models import MealPlan
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
+
+
+class OrderHistorySerializer(serializers.ModelSerializer):
+	class Meta:
+		model = OrderHistory
+		fields = ['id', 'created_at', 'instacart_url', 'items_data']
 
 
 @extend_schema(
@@ -390,6 +398,12 @@ def create_instacart_list(request):
 		'line_items': line_items
 	}
 	
+	# Store order history before sending to Instacart
+	order_history = OrderHistory.objects.create(
+		user=request.user,
+		items_data=payload
+	)
+	
 	try:
 		logger.info(f'Making Instacart API request with {len(line_items)} items')
 		response = requests.post(
@@ -407,6 +421,9 @@ def create_instacart_list(request):
 		
 		if response.status_code == 200:
 			data = response.json()
+			# Update order history with Instacart URL
+			order_history.instacart_url = data.get('products_link_url')
+			order_history.save()
 			return Response({
 				'success': True,
 				'redirect_url': data.get('products_link_url')
@@ -588,4 +605,16 @@ def add_week_to_cart(request):
 	}, status=201)
 
 
-
+@extend_schema(
+	methods=['GET'],
+	responses={200: OrderHistorySerializer(many=True)},
+)
+@extend_schema(tags=['Cart'])
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([BearerTokenAuthentication])
+def order_history(request):
+	"""Get user's order history"""
+	orders = OrderHistory.objects.filter(user=request.user)
+	serializer = OrderHistorySerializer(orders, many=True)
+	return Response(serializer.data)

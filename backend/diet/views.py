@@ -1,15 +1,9 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status
-import logging
-from django.db import OperationalError
-from drf_spectacular.utils import extend_schema, OpenApiParameter
-from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 
-from .models import DietaryPreference, DietaryRestriction, DietSuggestion, IngredientSuggestion
-
-logger = logging.getLogger(__name__)
+from .models import DietaryPreference, DietaryRestriction
 
 
 @extend_schema(
@@ -39,16 +33,12 @@ def pref_list_create(request):
 		return Response({'preferences': data})
 
 	# POST
-	name = (request.data.get('name') or '').strip()
+	name = request.data.get('name')
 	if not name:
-		return Response({'error': 'Missing "name"'}, status=status.HTTP_400_BAD_REQUEST)
-
-	# Validate that the provided name matches a preset in DietSuggestion (case-insensitive)
-	if not DietSuggestion.objects.filter(name__iexact=name).exists():
-		return Response({'error': f'Invalid preference "{name}". Must match a preset diet suggestion.'}, status=status.HTTP_400_BAD_REQUEST)
+		return Response({'error': 'Missing "name"'}, status=400)
 
 	pref = DietaryPreference.objects.create(user=request.user, name=name)
-	return Response({'id': pref.id, 'name': pref.name}, status=status.HTTP_201_CREATED)
+	return Response({'id': pref.id, 'name': pref.name}, status=201)
 
 
 @extend_schema(
@@ -97,16 +87,12 @@ def rest_list_create(request):
 		data = [{'id': r.id, 'name': r.name} for r in rests]
 		return Response({'restrictions': data})
 
-	name = (request.data.get('name') or '').strip()
+	name = request.data.get('name')
 	if not name:
-		return Response({'error': 'Missing "name"'}, status=status.HTTP_400_BAD_REQUEST)
-
-	# Validate that the provided name matches a preset in IngredientSuggestion (case-insensitive)
-	if not IngredientSuggestion.objects.filter(name__iexact=name).exists():
-		return Response({'error': f'Invalid restriction "{name}". Must match a preset ingredient/allergen suggestion.'}, status=status.HTTP_400_BAD_REQUEST)
+		return Response({'error': 'Missing "name"'}, status=400)
 
 	rest = DietaryRestriction.objects.create(user=request.user, name=name)
-	return Response({'id': rest.id, 'name': rest.name}, status=status.HTTP_201_CREATED)
+	return Response({'id': rest.id, 'name': rest.name}, status=201)
 
 
 @extend_schema(
@@ -130,65 +116,3 @@ def rest_delete(request, rest_id: int):
 
 	rest.delete()
 	return Response({'message': f'Restriction {rest_id} deleted'})
-
-
-@extend_schema(
-	methods=['GET'],
-	parameters=[
-		OpenApiParameter(name='q', description='Search prefix (case-insensitive). If omitted returns top 10 by name.', required=False, type=OpenApiTypes.STR),
-	],
-	responses={200: {'description': 'List of dietary suggestions'}}
-)
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def diet_suggestions(request):
-	#logger.debug('HTTP_AUTHORIZATION: %s', request.META.get('HTTP_AUTHORIZATION'))
-	q = (request.GET.get('q') or '').strip()
-	try:
-		qs = DietSuggestion.objects.all()
-		if q:
-			qs = qs.filter(name__istartswith=q)
-		qs = qs.order_by('name')[:10]
-		data = [{'id': p.id, 'name': p.name, 'description': p.description} for p in qs]
-		return Response({'results': data})
-	except OperationalError:
-		# Table might not exist yet — return empty list per requirements
-		return Response({'results': []})
-
-
-@extend_schema(
-	methods=['GET'],
-	parameters=[
-		OpenApiParameter(name='q', description='Search prefix (case-insensitive). If omitted returns top 10 by name.', required=False, type=OpenApiTypes.STR),
-	],
-	responses={200: {'description': 'List of ingredient suggestions'}}
-)
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def ingredient_suggestions(request):
-	#logger.debug('HTTP_AUTHORIZATION: %s', request.META.get('HTTP_AUTHORIZATION'))
-	q = (request.GET.get('q') or '').strip()
-	try:
-		qs = IngredientSuggestion.objects.all()
-		if q:
-			qs = qs.filter(name__istartswith=q)
-		qs = qs.order_by('name')[:10]
-		data = [{'id': p.id, 'name': p.name, 'description': p.description} for p in qs]
-		return Response({'results': data})
-	except OperationalError:
-		return Response({'results': []})
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def ingredient_suggestions(request):
-    #logger.debug('HTTP_AUTHORIZATION: %s', request.META.get('HTTP_AUTHORIZATION'))
-    q = (request.GET.get('q') or '').strip()
-    try:
-        qs = IngredientSuggestion.objects.all()
-        if q:
-            qs = qs.filter(name__istartswith=q)
-        qs = qs.order_by('name')[:10]
-        data = [{'id': p.id, 'name': p.name, 'description': p.description} for p in qs]
-        return Response({'results': data})
-    except OperationalError:
-        return Response({'results': []})

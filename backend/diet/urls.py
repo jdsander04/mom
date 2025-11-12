@@ -8,6 +8,6 @@ urlpatterns = [
     path('diet-rest', views.rest_list_create, name='rest_list_create'),
     path('diet-rest/<int:rest_id>/', views.rest_delete, name='rest_delete'),
 
-    path('diet_suggestions/', views.diet_suggestions, name='diet_suggestions'),
-    path('ingredient_suggestions/', views.ingredient_suggestions, name='ingredient_suggestions'),
+    #path('diet_suggestions/', views.diet_suggestions, name='diet_suggestions'),
+    #path('ingredient_suggestions/', views.ingredient_suggestions, name='ingredient_suggestions'),
 ]

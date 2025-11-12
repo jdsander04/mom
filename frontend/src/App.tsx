@@ -10,6 +10,7 @@ import Cart from './components/pages/Cart'
 import MealPlanner from './components/pages/MealPlanner'
 import Health from './components/pages/Health'
 import UserProfile from './components/pages/UserProfile'
+import OrderHistory from './components/pages/OrderHistory'
 
 function AppContent() {
   const { isAuthenticated } = useAuth();
@@ -28,6 +29,7 @@ function AppContent() {
           <Route path="/planner" element={<MealPlanner />} />
           <Route path="/health" element={<Health />} />
           <Route path="/profile" element={<UserProfile />} />
+          <Route path="/order-history" element={<OrderHistory />} />
         </Routes>
       </Layout>
     </CartProvider>

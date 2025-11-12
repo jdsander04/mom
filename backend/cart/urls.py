@@ -8,4 +8,5 @@ urlpatterns = [
     path('cart/meal-plans/', views.add_meal_plans_to_cart, name='add_meal_plans_to_cart'),
     path('cart/week/', views.add_week_to_cart, name='add_week_to_cart'),
     path('cart/instacart/', views.create_instacart_list, name='create_instacart_list'),
+    path('cart/order-history/', views.order_history, name='order_history'),
 ]

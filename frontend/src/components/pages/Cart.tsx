@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useCartContext } from '../../contexts/CartContext';
 import type { CartRecipe, CartItem } from '../../types/cart';
 import OrderSummary from './OrderSummary';
+import InstacartPricePopup from './InstacartPricePopup';
 import UndoPopup from '../UndoPopup';
 import styles from './Cart.module.css';
 import {
@@ -116,8 +117,24 @@ export default function Cart() {
     );
   };
 
-  const handleConfirmOrder = () => {
+  
+
+  // Open the Instacart price popup after an order is confirmed
+  const [instacartPriceOpen, setInstacartPriceOpen] = useState(false);
+
+  const handleOrderConfirmed = () => {
+    // close the order summary and open the price popup
     setOrderSummaryOpen(false);
+    setInstacartPriceOpen(true);
+  };
+
+  const handlePriceSaved = async (amount: number) => {
+    // Optionally refresh cart or other user info after saving
+    try {
+      await refreshCartRef.current();
+    } catch (e) {
+      // ignore refresh errors here
+    }
   };
 
   if (loading) return <div className={styles.loading}>Loading cart...</div>;
@@ -363,11 +380,17 @@ export default function Cart() {
       <OrderSummary 
         open={orderSummaryOpen}
         onClose={() => setOrderSummaryOpen(false)}
-        onConfirmOrder={handleConfirmOrder}
+        onConfirmOrder={handleOrderConfirmed}
         selectedProvider={selectedProvider}
         undoAction={undoAction}
         undoRemoval={undoRemoval}
         clearUndo={clearUndo}
+      />
+
+      <InstacartPricePopup
+        open={instacartPriceOpen}
+        onClose={() => setInstacartPriceOpen(false)}
+        onSaved={handlePriceSaved}
       />
       
       {undoAction && (
