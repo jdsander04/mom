@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 import re
 
 from openai import OpenAI
+from ingredient_parser import parse_ingredient
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(message)s', datefmt='%d/%b/%Y %H:%M:%S')
@@ -118,71 +119,35 @@ def _normalize_unicode_fractions(text: str) -> str:
     return text
 
 def parse_ingredient_string(ingredient_str: str) -> dict:
-    """Parse an ingredient string into {name, quantity, unit}.
-
-    Handles cases like:
-    - "2 3/4 cup flour"
-    - "0  2/3 cup milk" (stray zero)
-    - "1-1/2 cups sugar"
-    - "1½ teaspoons salt"
-    - "3/4 tsp pepper"
-    Returns quantity as float, unit as first token after quantity, name as the rest.
+    """Parse an ingredient string into {name, quantity, unit} using ingredient-parser-nlp.
+    
+    Returns quantity as float, unit as string, name as string.
     Fallbacks to quantity=0, unit="" if not detectable.
     """
-    s = _normalize_unicode_fractions(str(ingredient_str))
-    if not s:
+    if not ingredient_str or not str(ingredient_str).strip():
         return {"name": "", "quantity": 0.0, "unit": ""}
-
-    # Patterns to capture various leading quantity formats
-    # 1) mixed number with space: 2 3/4
-    m = re.match(r'^(?:0+\s+)?(\d+)\s+(\d+)/(\d+)\b', s)
-    if m:
-        whole = int(m.group(1))
-        num = int(m.group(2))
-        den = int(m.group(3)) or 1
-        qty = whole + (num / den)
-        rest = s[m.end():].strip()
-    else:
-        # 2) hyphen mixed: 1-1/2 or 1 – 1/2
-        m2 = re.match(r'^(?:0+\s+)?(\d+)\s*[\-–]\s*(\d+)/(\d+)\b', s)
-        if m2:
-            whole = int(m2.group(1))
-            num = int(m2.group(2))
-            den = int(m2.group(3)) or 1
-            qty = whole + (num / den)
-            rest = s[m2.end():].strip()
-        else:
-            # 3) standalone fraction: 3/4
-            m3 = re.match(r'^(?:0+\s+)?(\d+)/(\d+)\b', s)
-            if m3:
-                num = int(m3.group(1))
-                den = int(m3.group(2)) or 1
-                qty = num / den
-                rest = s[m3.end():].strip()
-            else:
-                # 4) decimal or integer: 2 or 2.5
-                m4 = re.match(r'^(?:0+\s+)?(\d+(?:\.\d+)?)\b', s)
-                if m4:
-                    qty = float(m4.group(1))
-                    rest = s[m4.end():].strip()
-                else:
-                    # 5) unicode-adjacent mixed like 1 1/2 already normalized, else none
-                    qty = 0.0
-                    rest = s
-
-    # After quantity, extract unit as first token, everything else is name
-    if qty == 0.0:
-        # No quantity found; treat entire string as name
-        return {"name": rest, "quantity": 0.0, "unit": ""}
-
-    if not rest:
-        return {"name": "", "quantity": qty, "unit": ""}
-
-    tokens = rest.split()
-    unit = tokens[0] if tokens else ""
-    name = ' '.join(tokens[1:]) if len(tokens) > 1 else ''
-
-    return {"name": name, "quantity": qty, "unit": unit}
+    
+    try:
+        parsed = parse_ingredient(str(ingredient_str))
+        
+        # Extract name
+        name = parsed.name[0].text if parsed.name else ""
+        
+        # Extract quantity and unit from amount
+        quantity = 0.0
+        unit = ""
+        if parsed.amount:
+            amount = parsed.amount[0]
+            try:
+                quantity = float(amount.quantity)
+            except (ValueError, TypeError):
+                quantity = 0.0
+            unit = amount.unit.name if amount.unit else ""
+        
+        return {"name": name, "quantity": quantity, "unit": unit}
+    except Exception as e:
+        logger.warning(f"Failed to parse ingredient '{ingredient_str}': {e}")
+        return {"name": str(ingredient_str), "quantity": 0.0, "unit": ""}
 
 def parse_serves_value(value) -> int:
     """Parse a serves/servings/yields value into a positive integer if possible.

@@ -14,15 +14,40 @@ class ApiService {
 
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
-      let errorMessage = `Request failed with status ${response.status}`;
+      let errorInfo = {
+        code: 'UNKNOWN_ERROR',
+        message: `Request failed with status ${response.status}`,
+        details: response.statusText || 'Unknown error occurred',
+        fieldErrors: {} as Record<string, string[]>
+      };
+      
       try {
-        const error = await response.json();
-        errorMessage = error.error || error.message || errorMessage;
+        const errorData = await response.json();
+        
+        // Handle new structured error format
+        if (errorData.error) {
+          errorInfo.code = errorData.error;
+          errorInfo.message = errorData.message || errorInfo.message;
+          errorInfo.details = errorData.details || errorInfo.details;
+          errorInfo.fieldErrors = errorData.field_errors || {};
+        } else {
+          // Fallback for legacy error format
+          errorInfo.message = errorData.message || errorData.error || errorInfo.message;
+          errorInfo.details = errorData.details || errorInfo.details;
+        }
       } catch {
         // If response is not JSON, use the status text
-        errorMessage = response.statusText || errorMessage;
+        errorInfo.details = response.statusText || errorInfo.details;
       }
-      throw new Error(errorMessage);
+      
+      // Create enhanced error with structured information
+      const error = new Error(errorInfo.message) as any;
+      error.code = errorInfo.code;
+      error.details = errorInfo.details;
+      error.fieldErrors = errorInfo.fieldErrors;
+      error.status = response.status;
+      
+      throw error;
     }
     
     const text = await response.text();
@@ -88,9 +113,7 @@ class ApiService {
       method: 'DELETE',
       headers: this.getAuthHeaders()
     });
-    if (!response.ok) {
-      throw new Error(`Failed to delete recipe: ${response.statusText}`);
-    }
+    await this.handleResponse(response);
   }
 
   async copyRecipe(id: number): Promise<{ id: number; name: string; message: string }> {
@@ -205,6 +228,14 @@ class ApiService {
     await this.handleResponse(response);
   }
 
+  async get(url: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+    return { data: await this.handleResponse(response) };
+  }
+
   async post(url: string, data?: any): Promise<any> {
     const response = await fetch(`${API_BASE_URL}${url}`, {
       method: 'POST',
@@ -212,6 +243,14 @@ class ApiService {
       body: data ? JSON.stringify(data) : undefined
     });
     return { data: await this.handleResponse(response) };
+  }
+
+  async getOrderHistory(): Promise<any[]> {
+    const response = await fetch(`${API_BASE_URL}/cart/order-history/`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<any[]>(response);
   }
 
   // User profile image endpoints

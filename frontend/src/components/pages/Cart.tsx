@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useCartContext } from '../../contexts/CartContext';
 import type { CartRecipe, CartItem } from '../../types/cart';
+import { getShortErrorMessage, type APIError } from '../../utils/errorHandler';
 import OrderSummary from './OrderSummary';
 import InstacartPricePopup from './InstacartPricePopup';
 import UndoPopup from '../UndoPopup';
@@ -28,6 +29,7 @@ export default function Cart() {
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingItems, setLoadingItems] = useState<Set<number>>(new Set());
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const refreshCartRef = useRef(refreshCart);
   refreshCartRef.current = refreshCart;
 
@@ -39,8 +41,13 @@ export default function Cart() {
 
   const handleRemoveItem = async (itemId: number) => {
     setLoadingItems(prev => new Set(prev).add(itemId));
+    setErrorMessage('');
     try {
       await removeItem(itemId);
+    } catch (error) {
+      const errorMsg = getShortErrorMessage(error as APIError);
+      setErrorMessage(errorMsg);
+      console.error('Failed to remove item:', error);
     } finally {
       setLoadingItems(prev => {
         const newSet = new Set(prev);
@@ -51,20 +58,39 @@ export default function Cart() {
   };
 
   const handleRemoveRecipe = async (recipeId: number) => {
-    await removeRecipe(recipeId);
+    setErrorMessage('');
+    try {
+      await removeRecipe(recipeId);
+    } catch (error) {
+      const errorMsg = getShortErrorMessage(error as APIError);
+      setErrorMessage(errorMsg);
+      console.error('Failed to remove recipe:', error);
+    }
   };
 
   const handleUpdateMultiples = async (recipeId: number, multiples: number) => {
-    // Convert multiples (whole numbers) to serving_size for backend
-    await updateServingSize(recipeId, multiples);
-    await refreshCart();
+    setErrorMessage('');
+    try {
+      // Convert multiples (whole numbers) to serving_size for backend
+      await updateServingSize(recipeId, multiples);
+      await refreshCart();
+    } catch (error) {
+      const errorMsg = getShortErrorMessage(error as APIError);
+      setErrorMessage(errorMsg);
+      console.error('Failed to update serving size:', error);
+    }
   };
 
   const handleUpdateItemQuantity = async (itemId: number, quantity: number) => {
     setLoadingItems(prev => new Set(prev).add(itemId));
+    setErrorMessage('');
     try {
       await updateItemQuantity(itemId, quantity);
       await refreshCart();
+    } catch (error) {
+      const errorMsg = getShortErrorMessage(error as APIError);
+      setErrorMessage(errorMsg);
+      console.error('Failed to update item quantity:', error);
     } finally {
       setLoadingItems(prev => {
         const newSet = new Set(prev);
@@ -99,9 +125,16 @@ export default function Cart() {
   };
 
   const handleBulkRemove = async () => {
-    const itemIds = Array.from(selectedItems);
-    await removeBulkItems(itemIds);
-    setSelectedItems(new Set());
+    setErrorMessage('');
+    try {
+      const itemIds = Array.from(selectedItems);
+      await removeBulkItems(itemIds);
+      setSelectedItems(new Set());
+    } catch (error) {
+      const errorMsg = getShortErrorMessage(error as APIError);
+      setErrorMessage(errorMsg);
+      console.error('Failed to remove items:', error);
+    }
   };
 
   const filteredIngredients = (ingredients: CartItem[]) => {
@@ -147,6 +180,11 @@ export default function Cart() {
           Shopping Cart
         </h1>
         <p className={styles.subtitle}>Review your recipes and ingredients before ordering</p>
+        {errorMessage && (
+          <div className={styles.errorMessage}>
+            {errorMessage}
+          </div>
+        )}
       </div>
       
       {!cart || !cart.recipes || cart.recipes.length === 0 ? (
