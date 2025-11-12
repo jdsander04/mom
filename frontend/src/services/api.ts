@@ -205,6 +205,14 @@ class ApiService {
     await this.handleResponse(response);
   }
 
+  async get(url: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+    return { data: await this.handleResponse(response) };
+  }
+
   async post(url: string, data?: any): Promise<any> {
     const response = await fetch(`${API_BASE_URL}${url}`, {
       method: 'POST',
@@ -212,6 +220,14 @@ class ApiService {
       body: data ? JSON.stringify(data) : undefined
     });
     return { data: await this.handleResponse(response) };
+  }
+
+  async getOrderHistory(): Promise<any[]> {
+    const response = await fetch(`${API_BASE_URL}/cart/order-history/`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<any[]>(response);
   }
 
   // User profile image endpoints

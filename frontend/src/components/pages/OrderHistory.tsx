@@ -25,8 +25,20 @@ export default function OrderHistory() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await apiService.get('/cart/order-history/');
-        setOrders(response.data);
+        const response = await fetch('/api/cart/order-history/', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const orders = await response.json();
+        setOrders(orders);
       } catch (error) {
         console.error('Failed to fetch order history:', error);
       } finally {
