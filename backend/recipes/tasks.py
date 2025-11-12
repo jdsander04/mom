@@ -1,9 +1,12 @@
 from celery import shared_task
 import logging
 import base64
+from datetime import timedelta
 from django.core.files.storage import default_storage
-from .models import Recipe, Ingredient, Step, Nutrient
+from django.utils import timezone
+from .models import Recipe, Ingredient, Step, Nutrient, TrendingRecipe
 from .services import _get_recipe_from_llm, _get_text_from_website, parse_serves_value, _get_recipe_from_image
+from .services import get_spoonacular_api_key, fetch_trending_recipes_from_spoonacular
 
 logger = logging.getLogger(__name__)
 
@@ -406,4 +409,124 @@ def process_ocr_recipe_extraction(self, recipe_id, image_path, user_id):
             raise self.retry(exc=e, countdown=60 * (self.request.retries + 1))
         
         return None
+
+
+@shared_task(bind=True, max_retries=3)
+def fetch_weekly_trending_recipes(self):
+    """
+    Celery task to fetch trending recipes from Spoonacular API.
+    Runs every Friday at 11pm to get top 10 trending recipes for the past week.
+    
+    Stores recipes with week identifier (YYYY-WW format) for historical access.
+    """
+    try:
+        logger.info("TRENDING_TASK: Starting weekly trending recipes fetch")
+        
+        # Get API key
+        try:
+            api_key = get_spoonacular_api_key()
+        except ValueError as e:
+            logger.error(f"TRENDING_TASK: {e}")
+            return {'status': 'error', 'message': str(e)}
+        
+        # Calculate current week (ISO week format: YYYY-WW)
+        now = timezone.now()
+        # Get ISO week number and year
+        year, week_num, _ = now.isocalendar()
+        week_str = f"{year}-{week_num:02d}"
+        
+        # Calculate week start date (Monday of the week)
+        days_since_monday = now.weekday()  # Monday is 0
+        week_start = now.date() - timedelta(days=days_since_monday)
+        
+        logger.info(f"TRENDING_TASK: Fetching recipes for week {week_str} (start: {week_start})")
+        
+        # Check if we already have recipes for this week
+        existing_count = TrendingRecipe.objects.filter(week=week_str).count()
+        if existing_count > 0:
+            logger.warning(f"TRENDING_TASK: Recipes for week {week_str} already exist ({existing_count} recipes). Skipping.")
+            return {
+                'status': 'skipped',
+                'message': f'Recipes for week {week_str} already exist',
+                'week': week_str,
+                'count': existing_count
+            }
+        
+        # Fetch recipes from Spoonacular
+        try:
+            recipes = fetch_trending_recipes_from_spoonacular(api_key, number=10)
+        except Exception as e:
+            logger.error(f"TRENDING_TASK: Failed to fetch from Spoonacular: {e}")
+            raise
+        
+        if not recipes or len(recipes) == 0:
+            logger.warning("TRENDING_TASK: No recipes returned from Spoonacular")
+            return {'status': 'error', 'message': 'No recipes returned from Spoonacular'}
+        
+        # Store recipes in database
+        created_count = 0
+        for position, recipe_data in enumerate(recipes, 1):
+            try:
+                spoonacular_id = recipe_data.get('id')
+                if not spoonacular_id:
+                    logger.warning(f"TRENDING_TASK: Recipe at position {position} has no ID, skipping")
+                    continue
+                
+                # Extract recipe information
+                title = recipe_data.get('title', 'Untitled Recipe')
+                description = recipe_data.get('summary', '')
+                # Clean HTML from description
+                if description:
+                    import re
+                    description = re.sub(r'<[^>]+>', '', description)
+                
+                image_url = recipe_data.get('image', '')
+                source_url = recipe_data.get('sourceUrl', '')
+                ready_in_minutes = recipe_data.get('readyInMinutes')
+                servings = recipe_data.get('servings')
+                
+                # Create or update TrendingRecipe
+                trending_recipe, created = TrendingRecipe.objects.update_or_create(
+                    week=week_str,
+                    position=position,
+                    defaults={
+                        'spoonacular_id': spoonacular_id,
+                        'title': title[:500],  # Ensure it fits in CharField
+                        'description': description,
+                        'image_url': image_url,
+                        'source_url': source_url,
+                        'ready_in_minutes': ready_in_minutes,
+                        'servings': servings,
+                        'recipe_data': recipe_data,  # Store full data as JSON
+                        'week_start_date': week_start,
+                    }
+                )
+                
+                if created:
+                    created_count += 1
+                    logger.info(f"TRENDING_TASK: Created trending recipe #{position}: {title}")
+                else:
+                    logger.info(f"TRENDING_TASK: Updated trending recipe #{position}: {title}")
+                    
+            except Exception as e:
+                logger.error(f"TRENDING_TASK: Error saving recipe at position {position}: {e}")
+                continue
+        
+        logger.info(f"TRENDING_TASK: Successfully stored {created_count} trending recipes for week {week_str}")
+        return {
+            'status': 'success',
+            'week': week_str,
+            'count': created_count,
+            'week_start': week_start.isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"TRENDING_TASK: Unexpected error: {e}", exc_info=True)
+        
+        # Retry up to max_retries times
+        if self.request.retries < self.max_retries:
+            logger.info(f"TRENDING_TASK: Retrying (attempt {self.request.retries + 1})")
+            raise self.retry(exc=e, countdown=300)  # Retry after 5 minutes
+        
+        return {'status': 'error', 'message': str(e)}
 

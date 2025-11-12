@@ -1,10 +1,10 @@
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from core.authentication import BearerTokenAuthentication
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
-from .models import Recipe, Ingredient, Step, Nutrient
+from .models import Recipe, Ingredient, Step, Nutrient, TrendingRecipe
 from .services import recipe_from_url
 from .tasks import process_llm_recipe_extraction, process_ocr_recipe_extraction
 from .services import parse_ingredient_string, parse_serves_value
@@ -1058,4 +1058,174 @@ def recipe_popular(request):
         })
 
     return Response({'results': results, 'total': len(results)})
+
+
+@extend_schema(
+    methods=['GET'],
+    operation_id='trending_recipes_list',
+    summary='Get trending recipes',
+    description='Get trending recipes for a specific week. If no week is provided, returns the most recent week.',
+    parameters=[
+        OpenApiParameter(
+            name='week',
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description='Week in format YYYY-WW (e.g., "2025-01"). If not provided, returns most recent week.',
+        ),
+    ],
+    responses={
+        200: {
+            'description': 'List of trending recipes for the specified week',
+            'content': {
+                'application/json': {
+                    'schema': {
+                        'type': 'object',
+                        'properties': {
+                            'week': {'type': 'string', 'example': '2025-01'},
+                            'week_start_date': {'type': 'string', 'format': 'date', 'example': '2025-01-06'},
+                            'recipes': {
+                                'type': 'array',
+                                'items': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'id': {'type': 'integer'},
+                                        'spoonacular_id': {'type': 'integer'},
+                                        'title': {'type': 'string'},
+                                        'description': {'type': 'string'},
+                                        'image_url': {'type': 'string'},
+                                        'source_url': {'type': 'string'},
+                                        'ready_in_minutes': {'type': 'integer'},
+                                        'servings': {'type': 'integer'},
+                                        'position': {'type': 'integer'},
+                                        'recipe_data': {'type': 'object'},
+                                    }
+                                }
+                            },
+                            'count': {'type': 'integer'},
+                        }
+                    }
+                }
+            }
+        },
+        404: {'description': 'No trending recipes found for the specified week'},
+    }
+)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def trending_recipes_list(request):
+    """
+    Get trending recipes for a specific week.
+    If no week is provided, returns the most recent week available.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    week_param = request.query_params.get('week', None)
+    
+    if week_param:
+        # Get recipes for specified week
+        trending_recipes = TrendingRecipe.objects.filter(week=week_param).order_by('position')
+        if not trending_recipes.exists():
+            return Response(
+                {'error': f'No trending recipes found for week {week_param}'},
+                status=404
+            )
+        week_str = week_param
+        # Get week_start_date from first recipe
+        week_start_date = trending_recipes.first().week_start_date
+    else:
+        # Get most recent week
+        most_recent = TrendingRecipe.objects.order_by('-week').first()
+        if not most_recent:
+            return Response(
+                {'error': 'No trending recipes available'},
+                status=404
+            )
+        week_str = most_recent.week
+        week_start_date = most_recent.week_start_date
+        trending_recipes = TrendingRecipe.objects.filter(week=week_str).order_by('position')
+    
+    # Format response
+    recipes_data = []
+    for recipe in trending_recipes:
+        recipes_data.append({
+            'id': recipe.id,
+            'spoonacular_id': recipe.spoonacular_id,
+            'title': recipe.title,
+            'description': recipe.description,
+            'image_url': recipe.image_url,
+            'source_url': recipe.source_url,
+            'ready_in_minutes': recipe.ready_in_minutes,
+            'servings': recipe.servings,
+            'position': recipe.position,
+            'recipe_data': recipe.recipe_data,  # Full recipe data from Spoonacular
+            'created_at': recipe.created_at.isoformat() if recipe.created_at else None,
+        })
+    
+    return Response({
+        'week': week_str,
+        'week_start_date': week_start_date.isoformat() if week_start_date else None,
+        'recipes': recipes_data,
+        'count': len(recipes_data),
+    })
+
+
+@extend_schema(
+    methods=['GET'],
+    operation_id='trending_recipes_weeks',
+    summary='List available weeks with trending recipes',
+    description='Get a list of all weeks that have trending recipes available.',
+    responses={
+        200: {
+            'description': 'List of available weeks',
+            'content': {
+                'application/json': {
+                    'schema': {
+                        'type': 'object',
+                        'properties': {
+                            'weeks': {
+                                'type': 'array',
+                                'items': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'week': {'type': 'string', 'example': '2025-01'},
+                                        'week_start_date': {'type': 'string', 'format': 'date', 'example': '2025-01-06'},
+                                        'recipe_count': {'type': 'integer', 'example': 10},
+                                    }
+                                }
+                            },
+                            'count': {'type': 'integer'},
+                        }
+                    }
+                }
+            }
+        },
+    }
+)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def trending_recipes_weeks(request):
+    """
+    Get a list of all weeks that have trending recipes available.
+    """
+    from django.db.models import Count
+    
+    # Get distinct weeks with recipe counts
+    weeks_data = TrendingRecipe.objects.values('week', 'week_start_date').annotate(
+        recipe_count=Count('id')
+    ).order_by('-week')
+    
+    weeks_list = []
+    for week_info in weeks_data:
+        weeks_list.append({
+            'week': week_info['week'],
+            'week_start_date': week_info['week_start_date'].isoformat() if week_info['week_start_date'] else None,
+            'recipe_count': week_info['recipe_count'],
+        })
+    
+    return Response({
+        'weeks': weeks_list,
+        'count': len(weeks_list),
+    })
 

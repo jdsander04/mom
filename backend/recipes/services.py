@@ -552,6 +552,92 @@ def recipe_from_url(url, use_async=False):
 def recipe_from_file(file):
     pass
 
+def get_spoonacular_api_key():
+    """Get Spoonacular API key from environment."""
+    api_key = os.getenv('SPOONACULAR_API_KEY')
+    if not api_key:
+        raise ValueError("SPOONACULAR_API_KEY not found in environment")
+    return api_key
+
+def get_recipe_instructions_from_spoonacular(api_key, recipe_id):
+    """
+    Fetch detailed instructions for a specific recipe from Spoonacular.
+    
+    Args:
+        api_key: Spoonacular API key
+        recipe_id: Recipe ID from Spoonacular
+    
+    Returns:
+        List of instruction steps or None if not found
+    """
+    base_url = f"https://api.spoonacular.com/recipes/{recipe_id}/analyzedInstructions"
+    
+    params = {
+        'apiKey': api_key,
+        'stepBreakdown': True
+    }
+    
+    try:
+        response = requests.get(base_url, params=params, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+        if data and len(data) > 0:
+            return data[0].get('steps', [])
+        return None
+    except Exception as e:
+        logger.warning(f"Could not fetch instructions for recipe {recipe_id}: {e}")
+        return None
+
+def fetch_trending_recipes_from_spoonacular(api_key, number=10):
+    """
+    Fetch trending/popular recipes from Spoonacular API.
+    
+    Args:
+        api_key: Spoonacular API key
+        number: Number of recipes to retrieve (default: 10)
+    
+    Returns:
+        List of recipe dictionaries with full details
+    """
+    base_url = "https://api.spoonacular.com/recipes/random"
+    
+    params = {
+        'apiKey': api_key,
+        'number': number,
+        'tags': 'main course,dessert'  # Popular meal types
+    }
+    
+    try:
+        logger.info(f"Fetching {number} trending recipes from Spoonacular...")
+        response = requests.get(base_url, params=params, timeout=30)
+        response.raise_for_status()
+        
+        data = response.json()
+        recipes = data.get('recipes', [])
+        
+        # Fetch instructions for recipes that don't have them
+        for recipe in recipes:
+            recipe_id = recipe.get('id')
+            if not recipe.get('analyzedInstructions') or len(recipe.get('analyzedInstructions', [])) == 0:
+                if recipe_id:
+                    logger.info(f"Fetching instructions for recipe {recipe_id}...")
+                    steps = get_recipe_instructions_from_spoonacular(api_key, recipe_id)
+                    if steps:
+                        recipe['analyzedInstructions'] = [{'steps': steps}]
+        
+        logger.info(f"Successfully retrieved {len(recipes)} recipes from Spoonacular")
+        return recipes
+        
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error fetching recipes from Spoonacular: {e}")
+        if hasattr(e, 'response') and e.response is not None:
+            logger.error(f"Response status: {e.response.status_code}")
+            logger.error(f"Response body: {e.response.text}")
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error fetching from Spoonacular: {e}")
+        raise
+
 if __name__ == "__main__":
     url = "https://www.allrecipes.com/recipe/279394/air-fryer-prosciutto-and-mozzarella-grilled-cheese/"
     recipe = recipe_from_url(url)
