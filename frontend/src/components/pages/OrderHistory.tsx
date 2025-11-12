@@ -7,6 +7,7 @@ interface OrderHistoryItem {
   id: number;
   created_at: string;
   instacart_url: string | null;
+  recipe_names: string[];
   items_data: {
     title: string;
     line_items: Array<{
@@ -80,7 +81,7 @@ export default function OrderHistory() {
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                   <Typography variant="h6">
-                    {order.items_data.title}
+                    {order.items_data?.title || 'Shopping List'}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     {new Date(order.created_at).toLocaleDateString()}
@@ -88,18 +89,19 @@ export default function OrderHistory() {
                 </Box>
                 
                 <Typography variant="body2" color="text.secondary" gutterBottom>
-                  {order.items_data.line_items.length} items
+                  {order.recipe_names?.length || 0} recipes • {order.items_data?.line_items?.length || 0} items
                 </Typography>
                 
                 <Box sx={{ mb: 2 }}>
-                  {order.items_data.line_items.slice(0, 3).map((item, index) => (
-                    <Typography key={index} variant="body2">
-                      {item.quantity} {item.unit} {item.name}
+                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>Recipes:</Typography>
+                  {order.recipe_names?.slice(0, 3).map((recipeName, index) => (
+                    <Typography key={index} variant="body2" sx={{ ml: 1 }}>
+                      • {recipeName}
                     </Typography>
-                  ))}
-                  {order.items_data.line_items.length > 3 && (
-                    <Typography variant="body2" color="text.secondary">
-                      +{order.items_data.line_items.length - 3} more items
+                  )) || []}
+                  {(order.recipe_names?.length || 0) > 3 && (
+                    <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                      +{(order.recipe_names?.length || 0) - 3} more recipes
                     </Typography>
                   )}
                 </Box>

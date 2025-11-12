@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class OrderHistorySerializer(serializers.ModelSerializer):
 	class Meta:
 		model = OrderHistory
-		fields = ['id', 'created_at', 'instacart_url', 'items_data']
+		fields = ['id', 'created_at', 'instacart_url', 'items_data', 'recipe_names']
 
 
 @extend_schema(
@@ -607,15 +607,24 @@ def create_instacart_list(request):
 			'unit': ingredient['unit'] or 'item'
 		})
 	
+	# Create title with date and username
+	from datetime import datetime
+	current_date = datetime.now().strftime('%Y-%m-%d')
+	title = f"{current_date} - {request.user.username}"
+	
 	payload = {
-		'title': f"Recipe Shopping List - {request.user.username}",
+		'title': title,
 		'line_items': line_items
 	}
+	
+	# Get recipe names for this order
+	recipe_names = [cr.recipe.name for cr in cart.recipes.select_related('recipe').all()]
 	
 	# Store order history before sending to Instacart
 	order_history = OrderHistory.objects.create(
 		user=request.user,
-		items_data=payload
+		items_data=payload,
+		recipe_names=recipe_names
 	)
 	
 	try:
