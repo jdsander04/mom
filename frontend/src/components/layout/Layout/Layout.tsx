@@ -6,7 +6,8 @@ import {
   MenuBook, 
   ShoppingCart, 
   CalendarMonth, 
-  HealthAndSafety 
+  HealthAndSafety,
+  History
 } from '@mui/icons-material';
 import SideBar from '../SideBar';
 
@@ -19,7 +20,8 @@ const NAV_ITEMS = [
   { label: 'Recipe Library', href: '/recipes', icon: <MenuBook /> },
   { label: 'Cart', href: '/cart', icon: <ShoppingCart /> },
   { label: 'Meal Planner', href: '/planner', icon: <CalendarMonth /> },
-  { label: 'Health and budgeting', href: '/health', icon: <HealthAndSafety /> }
+  { label: 'Health and budgeting', href: '/health', icon: <HealthAndSafety /> },
+  { label: 'Order History', href: '/order-history', icon: <History /> }
 ];
 
 const DEFAULT_CONTENT_STYLES = {

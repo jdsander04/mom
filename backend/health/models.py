@@ -63,13 +63,18 @@ class UserNutritionSnapshot(models.Model):
 
         Returns a dict: { 'totals': {macro: float}, 'calories': float }
         """
+        
         from recipes.models import Nutrient as RecipeNutrient
         from django.db.models import Sum
 
         qs = RecipeNutrient.objects.filter(recipe__user=user)
         agg = qs.values('macro').annotate(total=Sum('mass'))
         totals: dict = {}
+
+        print(qs)
+
         for row in agg:
+            print(row)
             macro = row['macro'] or 'unknown'
             totals[macro] = float(row['total'] or 0)
 

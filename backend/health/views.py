@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from .models import Allergy, Nutrient, Budget, UserNutritionSnapshot
 from .serializers import AllergySerializer, NutrientSerializer, BudgetSerializer
 from django.db import DatabaseError
+from decimal import Decimal, InvalidOperation
+from django.db import transaction
 
 
 class HealthSummaryView(APIView):
@@ -117,3 +119,40 @@ class BudgetRetrieveUpdateView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AddSpentView(APIView):
+    """POST { amount: number } -> increment the user's Budget.spent by amount.
+
+    This keeps a history-free running total of money spent that the frontend
+    can increment after placing an order. If the Budget record does not exist,
+    it will be created.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        data = request.data or {}
+        amount = data.get('amount')
+        if amount is None:
+            return Response({'detail': 'Missing amount'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            amt = Decimal(str(amount))
+        except (InvalidOperation, ValueError, TypeError):
+            return Response({'detail': 'Invalid amount'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if amt < 0:
+            return Response({'detail': 'Amount must be non-negative'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create or update the Budget record atomically
+        try:
+            with transaction.atomic():
+                budget, _ = Budget.objects.select_for_update().get_or_create(user=request.user)
+                # budget.spent is DecimalField; ensure Decimal arithmetic
+                current = budget.spent or Decimal('0')
+                budget.spent = current + amt
+                budget.save()
+        except Exception as e:
+            return Response({'detail': 'Failed to update budget', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response(BudgetSerializer(budget).data)
