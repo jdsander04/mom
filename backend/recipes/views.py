@@ -77,7 +77,7 @@ def _recipe_to_dict(recipe: Recipe, include_related=True) -> dict:
     
     if include_related:
         data['ingredients'] = [
-            {'name': i.name, 'quantity': float(i.quantity), 'unit': i.unit}
+            {'name': i.name, 'quantity': float(i.quantity), 'unit': i.unit, 'original_text': i.original_text}
             for i in recipe.ingredients.all()
         ]
         data['steps'] = [
@@ -475,23 +475,33 @@ def recipe_list(request):
             for ingredient in ingredients_data:
                 try:
                     if isinstance(ingredient, str):
-                        parsed = parse_ingredient_string(ingredient)
-                        name = parsed.get('name', '')[:255]
-                        quantity = float(parsed.get('quantity', 0))
-                        unit = parsed.get('unit', '')[:50]
+                        # parse_ingredient_string returns a list of dicts
+                        parsed_list = parse_ingredient_string(ingredient)
+                        for parsed in parsed_list:
+                            name = parsed.get('name', '')[:255]
+                            quantity = float(parsed.get('quantity', 0))
+                            unit = parsed.get('unit', '')[:50]
+                            if name.strip():
+                                Ingredient.objects.create(
+                                    recipe=recipe,
+                                    name=name.strip(),
+                                    quantity=max(0, quantity),
+                                    unit=unit.strip(),
+                                    original_text=ingredient
+                                )
                     else:
                         # Handle dict format
                         name = str(ingredient.get('name', ''))[:255]
                         quantity = float(ingredient.get('quantity', 0))
                         unit = str(ingredient.get('unit', ''))[:50]
-                    
-                    if name.strip():  # Only create if name exists
-                        Ingredient.objects.create(
-                            recipe=recipe,
-                            name=name.strip(),
-                            quantity=max(0, quantity),
-                            unit=unit.strip()
-                        )
+                        if name.strip():
+                            Ingredient.objects.create(
+                                recipe=recipe,
+                                name=name.strip(),
+                                quantity=max(0, quantity),
+                                unit=unit.strip(),
+                                original_text=ingredient.get('original_text', '')
+                            )
                 except (ValueError, TypeError) as e:
                     continue  # Skip invalid ingredients
             
@@ -681,7 +691,7 @@ def recipe_list(request):
             'favorite': recipe.favorite,
             'user_id': recipe.user.id,
             'ingredients': [
-                {'name': i.name, 'quantity': float(i.quantity), 'unit': i.unit}
+                {'name': i.name, 'quantity': float(i.quantity), 'unit': i.unit, 'original_text': i.original_text}
                 for i in recipe.ingredients.all()
             ],
             'steps': [
