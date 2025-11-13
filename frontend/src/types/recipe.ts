@@ -28,6 +28,8 @@ export interface Recipe {
   times_made?: number; // Number of times this recipe has been made
   favorite?: boolean;
   user_id?: number; // ID of the user who owns this recipe
+  ready_in_minutes?: number;
+  is_trending?: boolean;
 }
 
 export interface RecipeSummary {

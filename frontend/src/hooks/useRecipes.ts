@@ -5,6 +5,7 @@ import { apiService } from '../services/api';
 interface UseRecipesReturn {
   recipes: Recipe[];
   popularRecipes: Recipe[];
+  trendingRecipes: Recipe[];
   recentRecipes: Recipe[];
   loading: boolean;
   error: string | null;
@@ -14,6 +15,7 @@ interface UseRecipesReturn {
 export const useRecipes = (): UseRecipesReturn => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [popularRecipes, setPopularRecipes] = useState<Recipe[]>([]);
+  const [trendingRecipes, setTrendingRecipes] = useState<Recipe[]>([]);
   const [recentRecipes, setRecentRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,14 +45,18 @@ export const useRecipes = (): UseRecipesReturn => {
       // Set all recipes
       setRecipes(sortedRecipes);
       
-      // Get properly sorted popular and recent recipes
-      const [popular, recent] = await Promise.all([
-        apiService.getPopularRecipes(6),
+      // Get trending and recent recipes
+      const [trending, recent] = await Promise.all([
+        apiService.getTrendingRecipes(),
         apiService.getRecentRecipes()
       ]);
       
-      setPopularRecipes(popular);
+      setTrendingRecipes(trending);
       setRecentRecipes(recent);
+      
+      // Keep popular recipes for backward compatibility (can be removed later)
+      const popular = await apiService.getPopularRecipes(6);
+      setPopularRecipes(popular);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch recipes');
       console.error('Error fetching recipes:', err);
@@ -66,6 +72,7 @@ export const useRecipes = (): UseRecipesReturn => {
   return {
     recipes,
     popularRecipes,
+    trendingRecipes,
     recentRecipes,
     loading,
     error,

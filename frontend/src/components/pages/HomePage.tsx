@@ -11,7 +11,7 @@ import type { Recipe } from '../../types/recipe';
 
 const HomePage = () => {
   const navigate = useNavigate();
-  const { popularRecipes, recentRecipes, loading, error, refetch } = useRecipes();
+  const { trendingRecipes, recentRecipes, loading, error, refetch } = useRecipes();
   const { user } = useAuth();
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
@@ -159,7 +159,7 @@ const HomePage = () => {
   }
 
   const sections = [
-    { title: "Popular Recipes", recipes: popularRecipes },
+    { title: "Trending Recipes", recipes: trendingRecipes },
     { title: "Recent Recipes", recipes: recentRecipes }
   ];
 
@@ -172,8 +172,8 @@ const HomePage = () => {
         ...(section.recipes.length === 0 
           ? [
               <p key={`${section.title}-empty`} className={styles.emptyDescription}>
-                {section.title === "Popular Recipes" 
-                  ? "No popular recipes available at the moment. Popular recipes are determined by community engagement and views."
+                {section.title === "Trending Recipes" 
+                  ? "No trending recipes available at the moment. Trending recipes are updated weekly from popular recipe sources."
                   : "No recent recipes available. Recent recipes appear here as you add them to your library."}
               </p>
             ]

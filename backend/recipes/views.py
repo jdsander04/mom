@@ -9,7 +9,7 @@ from core.error_handlers import (
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 from .models import Recipe, Ingredient, Step, Nutrient, TrendingRecipe
-from .services import recipe_from_url
+from .services import recipe_from_url, normalize_spoonacular_recipe_data
 from .tasks import process_llm_recipe_extraction, process_ocr_recipe_extraction
 from .services import parse_ingredient_string, parse_serves_value
 from core.media_utils import get_storage_url, get_media_url
@@ -17,6 +17,7 @@ import logging
 import uuid
 from django.core.files.storage import default_storage
 from PIL import Image
+from decimal import Decimal, InvalidOperation
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,204 @@ def normalize_recipe_response(recipe_data):
         if 'image_url' in recipe_data and recipe_data['image_url']:
             recipe_data['image_url'] = get_media_url(recipe_data['image_url'])
     return recipe_data
+
+
+def _safe_float(value, default=0.0):
+    try:
+        if value is None or value == '':
+            return float(default)
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def _safe_int(value, default=0):
+    try:
+        if value is None or value == '':
+            return int(default)
+        return int(value)
+    except (TypeError, ValueError):
+        return int(default)
+
+
+def _safe_decimal(value):
+    try:
+        if value is None or value == '':
+            return Decimal('0')
+        rounded = round(float(value), 3)
+        return Decimal(str(rounded))
+    except (InvalidOperation, TypeError, ValueError):
+        return Decimal('0')
+
+
+def _recipe_to_dict(recipe: Recipe, include_related=True) -> dict:
+    """Convert a Recipe model instance to a dictionary for API responses."""
+    data = {
+        'id': recipe.id,
+        'name': recipe.name,
+        'description': recipe.description,
+        'image_url': get_media_url(recipe.image_url),
+        'source_url': recipe.source_url,
+        'date_added': recipe.date_added.isoformat() if recipe.date_added else None,
+        'serves': recipe.serves,
+        'times_made': recipe.times_made,
+        'favorite': recipe.favorite,
+        'user_id': recipe.user.id,
+    }
+    
+    if include_related:
+        data['ingredients'] = [
+            {'name': i.name, 'quantity': float(i.quantity), 'unit': i.unit}
+            for i in recipe.ingredients.all()
+        ]
+        data['steps'] = [
+            {'description': s.description, 'order': s.order}
+            for s in recipe.steps.all().order_by('order')
+        ]
+        data['nutrients'] = [
+            {'macro': n.macro, 'mass': float(n.mass)}
+            for n in recipe.nutrients.all()
+        ]
+    
+    return data
+
+
+def _get_normalized_trending_recipe(trending_recipe: TrendingRecipe) -> dict:
+    recipe_data = trending_recipe.recipe_data or {}
+    normalized = recipe_data.get('normalized_recipe')
+    if not normalized:
+        normalized = normalize_spoonacular_recipe_data(recipe_data)
+    return normalized
+
+
+def _format_trending_ingredients(ingredients):
+    formatted = []
+    if not ingredients:
+        return formatted
+    for ingredient in ingredients:
+        if not isinstance(ingredient, dict):
+            continue
+        name = str(ingredient.get('name') or '').strip()
+        if not name:
+            continue
+        quantity = _safe_float(ingredient.get('quantity'), 0.0)
+        unit = str(ingredient.get('unit') or '').strip()
+        formatted.append({
+            'name': name[:500],
+            'quantity': quantity,
+            'unit': unit[:100],
+        })
+    return formatted
+
+
+def _format_trending_steps(steps):
+    formatted = []
+    if not steps:
+        return formatted
+    sorted_steps = sorted(
+        (step for step in steps if isinstance(step, dict)),
+        key=lambda step: step.get('order') if isinstance(step.get('order'), int) else 10_000
+    )
+    for idx, step in enumerate(sorted_steps, start=1):
+        description = str(step.get('description') or step.get('step') or '').strip()
+        if not description:
+            continue
+        order = step.get('order')
+        if not isinstance(order, int):
+            order = idx
+        formatted.append({
+            'description': description[:1000],
+            'order': order,
+        })
+    return formatted
+
+
+def _format_trending_nutrients(nutrients):
+    formatted = []
+    if not nutrients:
+        return formatted
+    for nutrient in nutrients:
+        if not isinstance(nutrient, dict):
+            continue
+        macro = str(nutrient.get('macro') or nutrient.get('name') or '').strip()
+        if not macro:
+            continue
+        mass = _safe_float(nutrient.get('mass') or nutrient.get('amount'), 0.0)
+        formatted.append({
+            'macro': macro,
+            'mass': mass,
+        })
+    return formatted
+
+
+def _trending_recipe_to_payload(trending_recipe: TrendingRecipe) -> dict:
+    normalized = _get_normalized_trending_recipe(trending_recipe)
+    ingredients = _format_trending_ingredients(normalized.get('ingredients'))
+    steps = _format_trending_steps(normalized.get('steps'))
+    nutrients = _format_trending_nutrients(normalized.get('nutrients'))
+
+    return {
+        'id': -int(trending_recipe.spoonacular_id),
+        'name': normalized.get('name') or trending_recipe.title,
+        'description': normalized.get('description') or trending_recipe.description or '',
+        'image_url': get_media_url(normalized.get('image_url') or trending_recipe.image_url),
+        'source_url': normalized.get('source_url') or trending_recipe.source_url,
+        'date_added': trending_recipe.created_at.isoformat() if trending_recipe.created_at else None,
+        'serves': normalized.get('serves'),
+        'times_made': _safe_int(normalized.get('times_made') or (trending_recipe.recipe_data or {}).get('aggregateLikes'), 0),
+        'favorite': False,
+        'user_id': None,
+        'ingredients': ingredients,
+        'steps': steps,
+        'nutrients': nutrients,
+        'ready_in_minutes': normalized.get('ready_in_minutes') or trending_recipe.ready_in_minutes,
+        'is_trending': True,
+    }
+
+
+def _create_recipe_from_trending(trending_recipe: TrendingRecipe, user) -> Recipe:
+    normalized = _get_normalized_trending_recipe(trending_recipe)
+    ingredients = _format_trending_ingredients(normalized.get('ingredients'))
+    steps = _format_trending_steps(normalized.get('steps'))
+    nutrients = _format_trending_nutrients(normalized.get('nutrients'))
+
+    serves_value = normalized.get('serves')
+    serves = parse_serves_value(serves_value) if serves_value is not None else None
+
+    new_recipe = Recipe.objects.create(
+        user=user,
+        name=(normalized.get('name') or trending_recipe.title or 'Untitled Recipe')[:255],
+        description=normalized.get('description') or trending_recipe.description or '',
+        image_url=normalized.get('image_url') or trending_recipe.image_url,
+        source_url=normalized.get('source_url') or trending_recipe.source_url,
+        serves=serves,
+        times_made=0,
+        favorite=False,
+    )
+
+    for ingredient in ingredients:
+        Ingredient.objects.create(
+            recipe=new_recipe,
+            name=ingredient['name'],
+            quantity=_safe_decimal(ingredient.get('quantity')),
+            unit=ingredient['unit'],
+        )
+
+    for idx, step in enumerate(steps, start=1):
+        Step.objects.create(
+            recipe=new_recipe,
+            description=step['description'],
+            order=step.get('order') or idx,
+        )
+
+    for nutrient in nutrients:
+        Nutrient.objects.create(
+            recipe=new_recipe,
+            macro=str(nutrient.get('macro') or '')[:100],
+            mass=_safe_decimal(nutrient.get('mass')),
+        )
+
+    return new_recipe
 
 @extend_schema(
     methods=['GET'],
@@ -574,35 +773,21 @@ def recipe_detail(request, recipe_id):
                 'recipe'
             ).to_response()
     except Recipe.DoesNotExist:
-        return handle_not_found_error("Recipe", recipe_id).to_response()
+        # Handle negative IDs (trending recipes) - lookup by spoonacular_id
+        if recipe_id < 0:
+            lookup_id = abs(recipe_id)
+            trending_recipe = TrendingRecipe.objects.filter(spoonacular_id=lookup_id).select_related('recipe').first()
+            if trending_recipe and trending_recipe.recipe:
+                recipe = trending_recipe.recipe
+            else:
+                return handle_not_found_error("Recipe", recipe_id).to_response()
+        else:
+            return handle_not_found_error("Recipe", recipe_id).to_response()
     
 
     # Get specific recipe info
     if request.method == 'GET':
-        recipe_data = {
-            'id': recipe.id,
-            'name': recipe.name,
-            'description': recipe.description,
-            'image_url': get_media_url(recipe.image_url),
-            'source_url': recipe.source_url,
-            'date_added': recipe.date_added.isoformat(),
-            'serves': recipe.serves,
-            'times_made': recipe.times_made,
-            'favorite': recipe.favorite,
-            'user_id': recipe.user.id,
-            'ingredients': [
-                {'name': i.name, 'quantity': float(i.quantity), 'unit': i.unit}
-                for i in recipe.ingredients.all()
-            ],
-            'steps': [
-                {'description': s.description, 'order': s.order}
-                for s in recipe.steps.all().order_by('order')
-            ],
-            'nutrients': [
-                {'macro': n.macro, 'mass': float(n.mass)}
-                for n in recipe.nutrients.all()
-            ]
-        }
+        recipe_data = _recipe_to_dict(recipe, include_related=True)
         return Response(recipe_data)
     
     # Update existing recipe
@@ -723,10 +908,19 @@ def recipe_made(request, recipe_id):
 @safe_api_call
 def recipe_copy(request, recipe_id):
     """Copy a recipe to the current user's library."""
-    try:
-        source_recipe = Recipe.objects.get(id=recipe_id)
-    except Recipe.DoesNotExist:
-        return handle_not_found_error("Recipe", recipe_id).to_response()
+    # Handle trending recipes (negative IDs) - lookup by spoonacular_id
+    if recipe_id < 0:
+        lookup_id = abs(recipe_id)
+        trending_recipe = TrendingRecipe.objects.filter(spoonacular_id=lookup_id).select_related('recipe').first()
+        if trending_recipe and trending_recipe.recipe:
+            source_recipe = trending_recipe.recipe
+        else:
+            return handle_not_found_error("Recipe", recipe_id).to_response()
+    else:
+        try:
+            source_recipe = Recipe.objects.get(id=recipe_id)
+        except Recipe.DoesNotExist:
+            return handle_not_found_error("Recipe", recipe_id).to_response()
     
     # Check if user already has this recipe (by name or same recipe)
     # This is optional - we could allow multiple copies if desired
@@ -1038,8 +1232,21 @@ def recipe_popular(request):
         limit = 10
     limit = max(1, min(limit, 100))
 
-    # Get the oldest recipe (by date_added, then by id) for each source_url
-    # For recipes with non-null, non-empty source_url
+    # Prefer trending recipes if available
+    latest_trending = TrendingRecipe.objects.order_by('-week').first()
+    if latest_trending:
+        trending_recipes = TrendingRecipe.objects.filter(
+            week=latest_trending.week
+        ).select_related('recipe').order_by('position')[:limit]
+        
+        if trending_recipes.exists():
+            results = [
+                _recipe_to_dict(tr.recipe, include_related=False)
+                for tr in trending_recipes
+            ]
+            return Response({'results': results, 'total': len(results)})
+
+    # Fallback to legacy popularity algorithm
     oldest_per_source = Recipe.objects.filter(
         source_url__isnull=False
     ).exclude(
@@ -1048,8 +1255,6 @@ def recipe_popular(request):
         oldest_date=Min('date_added')
     )
     
-    # For each source_url with oldest_date, get the recipe with that date and minimum id
-    # (to handle ties where multiple recipes have the same date_added)
     recipe_ids = []
     
     for item in oldest_per_source:
@@ -1061,13 +1266,11 @@ def recipe_popular(request):
         if oldest_recipe:
             recipe_ids.append(oldest_recipe.id)
     
-    # Combine: recipes with unique source_urls (oldest per source) + recipes without source_url
     if recipe_ids:
         q_objects = Q(id__in=recipe_ids) | Q(source_url__isnull=True) | Q(source_url='')
     else:
         q_objects = Q(source_url__isnull=True) | Q(source_url='')
     
-    # Get recipes matching the filter, ordered by popularity
     recipes = Recipe.objects.filter(q_objects).order_by('-times_made', '-date_added')[:limit]
 
     results = []
@@ -1173,21 +1376,18 @@ def trending_recipes_list(request):
         week_start_date = most_recent.week_start_date
         trending_recipes = TrendingRecipe.objects.filter(week=week_str).order_by('position')
     
-    # Format response
+    # Format response - all trending recipes have Recipe records
     recipes_data = []
-    for recipe in trending_recipes:
+    for trending_recipe in trending_recipes.select_related('recipe'):
+        r = trending_recipe.recipe
+        recipe_dict = _recipe_to_dict(r, include_related=True)
         recipes_data.append({
-            'id': recipe.id,
-            'spoonacular_id': recipe.spoonacular_id,
-            'title': recipe.title,
-            'description': recipe.description,
-            'image_url': recipe.image_url,
-            'source_url': recipe.source_url,
-            'ready_in_minutes': recipe.ready_in_minutes,
-            'servings': recipe.servings,
-            'position': recipe.position,
-            'recipe_data': recipe.recipe_data,  # Full recipe data from Spoonacular
-            'created_at': recipe.created_at.isoformat() if recipe.created_at else None,
+            **recipe_dict,
+            'spoonacular_id': trending_recipe.spoonacular_id,
+            'ready_in_minutes': trending_recipe.ready_in_minutes,
+            'position': trending_recipe.position,
+            'recipe_data': trending_recipe.recipe_data,  # Full Spoonacular data for reference
+            'created_at': trending_recipe.created_at.isoformat() if trending_recipe.created_at else None,
         })
     
     return Response({
