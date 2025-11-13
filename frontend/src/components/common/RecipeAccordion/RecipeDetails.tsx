@@ -17,7 +17,7 @@ export interface Nutrition {
 interface Props {
   imageUrl?: string;
   nutrition?: Nutrition;
-  ingredients?: string[];
+  ingredients?: Array<{ name: string; quantity: number; unit: string; original_text?: string }> | string[];
   instructions?: string[];
 }
 
@@ -57,7 +57,9 @@ const RecipeDetails = ({ imageUrl, nutrition, ingredients = [], instructions = [
           ) : (
             <ul>
               {ingredients.map((ing, i) => (
-                <li key={i}>{ing}</li>
+                <li key={i}>
+                  {typeof ing === 'string' ? ing : (ing.original_text || `${ing.quantity} ${ing.unit} ${ing.name}`)}
+                </li>
               ))}
             </ul>
           )}

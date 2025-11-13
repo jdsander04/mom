@@ -19,6 +19,7 @@ class Ingredient(models.Model):
     name = models.CharField(max_length=500)
     quantity = models.DecimalField(max_digits=10, decimal_places=3)
     unit = models.CharField(max_length=100)
+    original_text = models.TextField(blank=True, default='')  # Full ingredient sentence for display
 
 class Step(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='steps')
