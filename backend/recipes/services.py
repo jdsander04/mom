@@ -122,6 +122,7 @@ def parse_ingredient_string(ingredient_str: str) -> dict:
     """Parse an ingredient string into {name, quantity, unit} using ingredient-parser-nlp.
     
     Returns quantity as float, unit as string, name as string.
+    If multiple ingredient names are detected, uses the first one.
     Fallbacks to quantity=0, unit="" if not detectable.
     """
     if not ingredient_str or not str(ingredient_str).strip():
@@ -130,19 +131,37 @@ def parse_ingredient_string(ingredient_str: str) -> dict:
     try:
         parsed = parse_ingredient(str(ingredient_str))
         
-        # Extract name
-        name = parsed.name[0].text if parsed.name else ""
+        # Extract name - handle both single and multiple names
+        name = ""
+        if parsed.name:
+            if isinstance(parsed.name, list) and len(parsed.name) > 0:
+                name = parsed.name[0].text
+            elif hasattr(parsed.name, 'text'):
+                name = parsed.name.text
         
         # Extract quantity and unit from amount
         quantity = 0.0
         unit = ""
         if parsed.amount:
-            amount = parsed.amount[0]
+            amount = parsed.amount[0] if isinstance(parsed.amount, list) else parsed.amount
+            # Handle quantity - it might be a string like "2" or a Quantity object
             try:
-                quantity = float(amount.quantity)
-            except (ValueError, TypeError):
+                if hasattr(amount.quantity, 'value'):
+                    quantity = float(amount.quantity.value)
+                else:
+                    quantity = float(amount.quantity)
+            except (ValueError, TypeError, AttributeError):
                 quantity = 0.0
-            unit = amount.unit.name if amount.unit else ""
+            # Handle unit - it might be a Unit object or string
+            try:
+                if hasattr(amount.unit, 'name'):
+                    unit = amount.unit.name
+                elif amount.unit:
+                    unit = str(amount.unit)
+                else:
+                    unit = ""
+            except (AttributeError, TypeError):
+                unit = ""
         
         return {"name": name, "quantity": quantity, "unit": unit}
     except Exception as e:
