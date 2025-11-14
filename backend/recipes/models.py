@@ -19,6 +19,7 @@ class Ingredient(models.Model):
     name = models.CharField(max_length=500)
     quantity = models.DecimalField(max_digits=10, decimal_places=3)
     unit = models.CharField(max_length=100)
+    original_text = models.TextField(blank=True, default='')  # Full ingredient sentence for display
 
 class Step(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='steps')
@@ -32,24 +33,29 @@ class Nutrient(models.Model):
 
 class TrendingRecipe(models.Model):
     """
-    Model to store trending recipes fetched from Spoonacular API.
-    Recipes are stored by week (year-week format) to allow historical access.
+    Metadata model for trending recipes fetched from Spoonacular API.
+    All recipe data is stored in the linked Recipe model.
+    Recipes are stored by week (year-week format) for historical access.
     """
     # Week identifier: format "YYYY-WW" (e.g., "2025-01" for first week of 2025)
     week = models.CharField(max_length=7, db_index=True)
     # Position/rank in the trending list for that week (1-10)
     position = models.PositiveIntegerField()
     
-    # Recipe data from Spoonacular
+    # Spoonacular identifier
     spoonacular_id = models.IntegerField(unique=True, db_index=True)
-    title = models.CharField(max_length=500)
-    description = models.TextField(blank=True, null=True)
-    image_url = models.TextField(blank=True, null=True)
-    source_url = models.TextField(blank=True, null=True)
-    ready_in_minutes = models.PositiveIntegerField(blank=True, null=True)
-    servings = models.PositiveIntegerField(blank=True, null=True)
     
-    # Store full recipe data as JSON for flexibility
+    # Link to the actual Recipe model (required - all recipe data is in Recipe)
+    recipe = models.OneToOneField(
+        Recipe,
+        on_delete=models.CASCADE,
+        related_name='trending_recipe'
+    )
+    
+    # Metadata specific to trending (not in Recipe model)
+    ready_in_minutes = models.PositiveIntegerField(blank=True, null=True)
+    
+    # Store full recipe data as JSON for historical reference and debugging
     recipe_data = models.JSONField(default=dict)
     
     # Timestamps
@@ -65,4 +71,4 @@ class TrendingRecipe(models.Model):
         ]
     
     def __str__(self):
-        return f"{self.title} - Week {self.week} (#{self.position})"
+        return f"{self.recipe.name} - Week {self.week} (#{self.position})"
