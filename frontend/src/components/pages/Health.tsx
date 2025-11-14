@@ -126,14 +126,14 @@ const Health: React.FC = () => {
               <Typography variant="h6">Budget</Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
                 {/* Circular progress showing percent of budget spent */}
-                <Box sx={{ position: 'relative', display: 'inline-flex', width: 140, flex: '0 0 140px', justifyContent: 'center' }}>
+                <Box sx={{ position: 'relative', display: 'inline-flex', width: 200, flex: '0 0 200px', justifyContent: 'center' }}>
                   {/**
                    * If weekly_budget is 0, show an empty grey circle and a note below.
                    */}
                   <CircularProgress
                     variant="determinate"
-                    size={100}
-                    thickness={6}
+                    size={160}
+                    thickness={7}
                     value={budget && budget.weekly_budget > 0 ? Math.min(100, (budget.spent / budget.weekly_budget) * 100) : 0}
                     sx={{
                       color: (theme) => {
