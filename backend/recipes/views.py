@@ -77,7 +77,12 @@ def _recipe_to_dict(recipe: Recipe, include_related=True) -> dict:
     
     if include_related:
         data['ingredients'] = [
-            {'name': i.name, 'quantity': float(i.quantity), 'unit': i.unit, 'original_text': i.original_text}
+            {
+                'name': i.name, 
+                'quantity': float(i.quantity), 
+                'unit': i.unit, 
+                'original_text': getattr(i, 'original_text', '')
+            }
             for i in recipe.ingredients.all()
         ]
         data['steps'] = [
@@ -691,7 +696,12 @@ def recipe_list(request):
             'favorite': recipe.favorite,
             'user_id': recipe.user.id,
             'ingredients': [
-                {'name': i.name, 'quantity': float(i.quantity), 'unit': i.unit, 'original_text': i.original_text}
+                {
+                    'name': i.name, 
+                    'quantity': float(i.quantity), 
+                    'unit': i.unit, 
+                    'original_text': getattr(i, 'original_text', '')
+                }
                 for i in recipe.ingredients.all()
             ],
             'steps': [
