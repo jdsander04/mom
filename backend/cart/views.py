@@ -634,9 +634,9 @@ def create_instacart_list(request):
 		for nutrient in cr.recipe.nutrients.all():
 			macro = nutrient.macro
 			if macro in nutrition_totals:
-				nutrition_totals[macro] += nutrient.mass * float(cr.serving_size)
+				nutrition_totals[macro] += float(nutrient.mass) * float(cr.serving_size)
 			else:
-				nutrition_totals[macro] = nutrient.mass * float(cr.serving_size)
+				nutrition_totals[macro] = float(nutrient.mass) * float(cr.serving_size)
 	
 	# Store order history before sending to Instacart
 	order_history = OrderHistory.objects.create(
