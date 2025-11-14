@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'ingredient',
     'users',
     'health',
+    'django_celery_beat',  # For managing periodic tasks in admin
 ]
 
 MIDDLEWARE = [
@@ -216,6 +217,8 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
+# Use database scheduler for django-celery-beat (allows admin management)
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
 # OCR Service Configuration
 OCR_SERVICE_URL = os.getenv('OCR_SERVICE_URL', 'http://ocr:8000')

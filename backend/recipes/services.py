@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 import re
 
 from openai import OpenAI
+from ingredient_parser import parse_ingredient
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(message)s', datefmt='%d/%b/%Y %H:%M:%S')
@@ -117,72 +118,52 @@ def _normalize_unicode_fractions(text: str) -> str:
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
-def parse_ingredient_string(ingredient_str: str) -> dict:
-    """Parse an ingredient string into {name, quantity, unit}.
-
-    Handles cases like:
-    - "2 3/4 cup flour"
-    - "0  2/3 cup milk" (stray zero)
-    - "1-1/2 cups sugar"
-    - "1½ teaspoons salt"
-    - "3/4 tsp pepper"
-    Returns quantity as float, unit as first token after quantity, name as the rest.
+def parse_ingredient_string(ingredient_str: str) -> list:
+    """Parse an ingredient string into list of {name, quantity, unit} dicts using ingredient-parser-nlp.
+    
+    Returns list of dicts with quantity as float, unit as string, name as string.
+    If multiple ingredient names are detected (e.g., "butter or margarine"), returns separate entries.
     Fallbacks to quantity=0, unit="" if not detectable.
     """
-    s = _normalize_unicode_fractions(str(ingredient_str))
-    if not s:
-        return {"name": "", "quantity": 0.0, "unit": ""}
-
-    # Patterns to capture various leading quantity formats
-    # 1) mixed number with space: 2 3/4
-    m = re.match(r'^(?:0+\s+)?(\d+)\s+(\d+)/(\d+)\b', s)
-    if m:
-        whole = int(m.group(1))
-        num = int(m.group(2))
-        den = int(m.group(3)) or 1
-        qty = whole + (num / den)
-        rest = s[m.end():].strip()
-    else:
-        # 2) hyphen mixed: 1-1/2 or 1 – 1/2
-        m2 = re.match(r'^(?:0+\s+)?(\d+)\s*[\-–]\s*(\d+)/(\d+)\b', s)
-        if m2:
-            whole = int(m2.group(1))
-            num = int(m2.group(2))
-            den = int(m2.group(3)) or 1
-            qty = whole + (num / den)
-            rest = s[m2.end():].strip()
-        else:
-            # 3) standalone fraction: 3/4
-            m3 = re.match(r'^(?:0+\s+)?(\d+)/(\d+)\b', s)
-            if m3:
-                num = int(m3.group(1))
-                den = int(m3.group(2)) or 1
-                qty = num / den
-                rest = s[m3.end():].strip()
-            else:
-                # 4) decimal or integer: 2 or 2.5
-                m4 = re.match(r'^(?:0+\s+)?(\d+(?:\.\d+)?)\b', s)
-                if m4:
-                    qty = float(m4.group(1))
-                    rest = s[m4.end():].strip()
-                else:
-                    # 5) unicode-adjacent mixed like 1 1/2 already normalized, else none
-                    qty = 0.0
-                    rest = s
-
-    # After quantity, extract unit as first token, everything else is name
-    if qty == 0.0:
-        # No quantity found; treat entire string as name
-        return {"name": rest, "quantity": 0.0, "unit": ""}
-
-    if not rest:
-        return {"name": "", "quantity": qty, "unit": ""}
-
-    tokens = rest.split()
-    unit = tokens[0] if tokens else ""
-    name = ' '.join(tokens[1:]) if len(tokens) > 1 else ''
-
-    return {"name": name, "quantity": qty, "unit": unit}
+    if not ingredient_str or not str(ingredient_str).strip():
+        return [{"name": "", "quantity": 0.0, "unit": ""}]
+    
+    try:
+        parsed = parse_ingredient(str(ingredient_str), separate_names=True)
+        
+        results = []
+        # Handle multiple names (e.g., "butter or margarine")
+        names = parsed.name if isinstance(parsed.name, list) else [parsed.name] if parsed.name else []
+        
+        for name_obj in names:
+            name = name_obj.text if hasattr(name_obj, 'text') else str(name_obj)
+            
+            # Extract quantity and unit from amount
+            quantity = 0.0
+            unit = ""
+            if parsed.amount:
+                amount = parsed.amount[0] if isinstance(parsed.amount, list) else parsed.amount
+                try:
+                    if hasattr(amount.quantity, 'value'):
+                        quantity = float(amount.quantity.value)
+                    else:
+                        quantity = float(amount.quantity)
+                except (ValueError, TypeError, AttributeError):
+                    quantity = 0.0
+                try:
+                    if hasattr(amount.unit, 'name'):
+                        unit = amount.unit.name
+                    elif amount.unit:
+                        unit = str(amount.unit)
+                except (AttributeError, TypeError):
+                    unit = ""
+            
+            results.append({"name": name, "quantity": quantity, "unit": unit})
+        
+        return results if results else [{"name": "", "quantity": 0.0, "unit": ""}]
+    except Exception as e:
+        logger.warning(f"Failed to parse ingredient '{ingredient_str}': {e}")
+        return [{"name": str(ingredient_str), "quantity": 0.0, "unit": ""}]
 
 def parse_serves_value(value) -> int:
     """Parse a serves/servings/yields value into a positive integer if possible.
@@ -207,6 +188,182 @@ def parse_serves_value(value) -> int:
     except Exception:
         return None
     return None
+
+
+def _sanitize_html_summary(summary: str) -> str:
+    """Remove HTML tags and extra whitespace from Spoonacular summaries."""
+    if not summary:
+        return ""
+    try:
+        # Remove HTML tags
+        cleaned = re.sub(r'<[^>]+>', ' ', summary)
+        # Collapse whitespace
+        cleaned = re.sub(r'\s+', ' ', cleaned)
+        return cleaned.strip()
+    except Exception:
+        return summary or ""
+
+
+_NUTRIENT_NAME_MAP = {
+    'calories': 'calories',
+    'energy': 'calories',
+    'fat': 'fatContent',
+    'total lipid (fat)': 'fatContent',
+    'saturated fat': 'saturatedFatContent',
+    'unsaturated fat': 'unsaturatedFatContent',
+    'carbohydrates': 'carbohydrateContent',
+    'net carbs': 'carbohydrateContent',
+    'fiber': 'fiberContent',
+    'sugar': 'sugarContent',
+    'protein': 'proteinContent',
+    'cholesterol': 'cholesterolContent',
+    'sodium': 'sodiumContent',
+}
+
+
+def normalize_spoonacular_recipe_data(recipe: dict) -> dict:
+    """Convert Spoonacular recipe payload into MOM recipe schema."""
+    if not recipe:
+        return {
+            'name': '',
+            'description': '',
+            'image_url': '',
+            'source_url': '',
+            'serves': None,
+            'ingredients': [],
+            'steps': [],
+            'nutrients': [],
+            'times_made': 0,
+            'ready_in_minutes': None,
+        }
+
+    def _get_float(value, default=0.0):
+        try:
+            if value is None or value == '':
+                return float(default)
+            return float(value)
+        except (TypeError, ValueError):
+            return float(default)
+
+    def _get_int(value, default=0):
+        try:
+            if value is None or value == '':
+                return int(default)
+            return int(value)
+        except (TypeError, ValueError):
+            return int(default)
+
+    title = recipe.get('title') or recipe.get('name') or 'Untitled Recipe'
+    description = _sanitize_html_summary(recipe.get('summary') or recipe.get('instructions', ''))
+    image_url = recipe.get('image') or recipe.get('imageUrl') or ''
+    source_url = recipe.get('sourceUrl') or recipe.get('spoonacularSourceUrl') or ''
+    serves = parse_serves_value(recipe.get('servings'))
+
+    # Ingredients
+    ingredients = []
+    ingredient_sources = []
+    if recipe.get('extendedIngredients'):
+        ingredient_sources.append(recipe.get('extendedIngredients') or [])
+    if recipe.get('usedIngredients'):
+        ingredient_sources.append(recipe.get('usedIngredients') or [])
+    if recipe.get('missedIngredients'):
+        ingredient_sources.append(recipe.get('missedIngredients') or [])
+
+    for ingredient_list in ingredient_sources:
+        for ingredient in ingredient_list:
+            name = (
+                ingredient.get('nameClean')
+                or ingredient.get('originalName')
+                or ingredient.get('name')
+                or ingredient.get('original')
+                or ''
+            ).strip()
+            if not name:
+                continue
+
+            amount = ingredient.get('amount')
+            if amount is None and isinstance(ingredient.get('measures'), dict):
+                amount = (
+                    ingredient['measures'].get('us', {}).get('amount')
+                    or ingredient['measures'].get('metric', {}).get('amount')
+                )
+
+            unit = (
+                ingredient.get('unit')
+                or ingredient.get('unitShort')
+                or ingredient.get('unitLong')
+                or (
+                    ingredient.get('measures', {}).get('us', {}).get('unitShort')
+                    if isinstance(ingredient.get('measures'), dict)
+                    else ''
+                )
+                or ''
+            ).strip()
+
+            ingredients.append({
+                'name': name[:255],
+                'quantity': round(_get_float(amount, 0.0), 3),
+                'unit': unit[:50],
+            })
+
+    # Steps / Instructions
+    steps = []
+    analyzed = recipe.get('analyzedInstructions') or []
+    for instruction in analyzed:
+        steps_list = instruction.get('steps') or []
+        for step in steps_list:
+            description_text = (step.get('step') or '').strip()
+            if not description_text:
+                continue
+            order = step.get('number')
+            if order is None:
+                order = len(steps) + 1
+            steps.append({
+                'description': description_text[:1000],
+                'order': _get_int(order, len(steps) + 1),
+            })
+
+    if not steps:
+        instructions_text = recipe.get('instructions')
+        if instructions_text:
+            steps.append({
+                'description': instructions_text.strip()[:1000],
+                'order': 1,
+            })
+
+    # Nutrients
+    nutrients = []
+    nutrition_data = recipe.get('nutrition', {})
+    for nutrient in nutrition_data.get('nutrients', []):
+        if not isinstance(nutrient, dict):
+            continue
+        name = (nutrient.get('name') or '').lower()
+        macro = _NUTRIENT_NAME_MAP.get(name)
+        if not macro:
+            continue
+        amount = _get_float(nutrient.get('amount'), 0.0)
+
+        # Avoid duplicate macro entries - keep the first non-zero
+        if any(existing.get('macro') == macro for existing in nutrients):
+            continue
+
+        nutrients.append({
+            'macro': macro,
+            'mass': round(amount, 3),
+        })
+
+    return {
+        'name': title.strip()[:255],
+        'description': description,
+        'image_url': image_url,
+        'source_url': source_url,
+        'serves': serves,
+        'ingredients': ingredients,
+        'steps': steps,
+        'nutrients': nutrients,
+        'times_made': _get_int(recipe.get('aggregateLikes') or recipe.get('likes'), 0),
+        'ready_in_minutes': recipe.get('readyInMinutes') or recipe.get('cookingMinutes'),
+    }
 
 def _get_openai_client():
     """Get OpenAI client with lazy initialization."""
@@ -301,9 +458,10 @@ def _get_recipe_from_llm(text: str) -> dict:
         if result['ingredients'] and isinstance(result['ingredients'][0], str):
             formatted_ingredients = []
             for ing in result['ingredients']:
-                parsed = parse_ingredient_string(ing)
-                if parsed["name"] or parsed["quantity"]:
-                    formatted_ingredients.append(parsed)
+                parsed_list = parse_ingredient_string(ing)
+                for parsed in parsed_list:
+                    if parsed["name"] or parsed["quantity"]:
+                        formatted_ingredients.append(parsed)
             result['ingredients'] = formatted_ingredients
 
         # Normalize serves under various possible keys
@@ -400,9 +558,10 @@ def _get_recipe_from_image(image_base64: str, image_format: str = "png") -> dict
         if result['ingredients'] and isinstance(result['ingredients'][0], str):
             formatted_ingredients = []
             for ing in result['ingredients']:
-                parsed = parse_ingredient_string(ing)
-                if parsed["name"] or parsed["quantity"]:
-                    formatted_ingredients.append(parsed)
+                parsed_list = parse_ingredient_string(ing)
+                for parsed in parsed_list:
+                    if parsed["name"] or parsed["quantity"]:
+                        formatted_ingredients.append(parsed)
             result['ingredients'] = formatted_ingredients
         
         # Normalize serves under various possible keys
@@ -551,6 +710,151 @@ def recipe_from_url(url, use_async=False):
 
 def recipe_from_file(file):
     pass
+
+def get_spoonacular_api_key():
+    """Get Spoonacular API key from environment."""
+    api_key = os.getenv('SPOONACULAR_API_KEY')
+    if not api_key:
+        raise ValueError("SPOONACULAR_API_KEY not found in environment")
+    return api_key
+
+def get_recipe_instructions_from_spoonacular(api_key, recipe_id):
+    """
+    Fetch detailed instructions for a specific recipe from Spoonacular.
+    
+    Args:
+        api_key: Spoonacular API key
+        recipe_id: Recipe ID from Spoonacular
+    
+    Returns:
+        List of instruction steps or None if not found
+    """
+    base_url = f"https://api.spoonacular.com/recipes/{recipe_id}/analyzedInstructions"
+    
+    params = {
+        'apiKey': api_key,
+        'stepBreakdown': True
+    }
+    
+    try:
+        response = requests.get(base_url, params=params, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+        if data and len(data) > 0:
+            return data[0].get('steps', [])
+        return None
+    except Exception as e:
+        logger.warning(f"Could not fetch instructions for recipe {recipe_id}: {e}")
+        return None
+
+def fetch_trending_recipes_from_spoonacular(api_key, number=10):
+    """
+    Fetch trending/popular recipes from Spoonacular API.
+    
+    Tries the random endpoint first, then falls back to complexSearch sorted by
+    popularity if the random endpoint returns no recipes.
+    
+    Args:
+        api_key: Spoonacular API key
+        number: Number of recipes to retrieve (default: 10)
+    
+    Returns:
+        List of recipe dictionaries with full details
+    """
+    random_url = "https://api.spoonacular.com/recipes/random"
+    random_params = {
+        'apiKey': api_key,
+        'number': number,
+        'tags': 'main course,dessert'  # Popular meal types
+    }
+    
+    def ensure_instructions(recipes_list):
+        """Populate analyzedInstructions if missing."""
+        for recipe in recipes_list:
+            recipe_id = recipe.get('id')
+            if not recipe.get('analyzedInstructions') or len(recipe.get('analyzedInstructions', [])) == 0:
+                if recipe_id:
+                    logger.info(f"Fetching instructions for recipe {recipe_id}...")
+                    steps = get_recipe_instructions_from_spoonacular(api_key, recipe_id)
+                    if steps:
+                        recipe['analyzedInstructions'] = [{'steps': steps}]
+    
+    try:
+        logger.info(f"Fetching {number} trending recipes from Spoonacular (random endpoint)...")
+        response = requests.get(random_url, params=random_params, timeout=30)
+        response.raise_for_status()
+        
+        data = response.json()
+        if isinstance(data, dict) and data.get('status') and data.get('status') != 'success':
+            logger.warning(f"Spoonacular random endpoint status='{data.get('status')}' message='{data.get('message', '')}'")
+        recipes = data.get('recipes') or []
+        
+        if recipes:
+            ensure_instructions(recipes)
+            for recipe in recipes:
+                try:
+                    recipe['normalized_recipe'] = normalize_spoonacular_recipe_data(recipe)
+                except Exception as normalize_error:
+                    logger.warning(f"Failed to normalize Spoonacular recipe {recipe.get('id')}: {normalize_error}")
+                    recipe['normalized_recipe'] = normalize_spoonacular_recipe_data({})
+            logger.info(f"Successfully retrieved {len(recipes)} recipes from Spoonacular (random endpoint)")
+            return recipes
+        
+        logger.warning("Random endpoint returned 0 recipes; falling back to popularity search endpoint.")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error fetching recipes from Spoonacular random endpoint: {e}")
+        if hasattr(e, 'response') and e.response is not None:
+            logger.error(f"Response status: {e.response.status_code}")
+            logger.error(f"Response body: {e.response.text}")
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error while using Spoonacular random endpoint: {e}")
+        raise
+    
+    # Fallback: use complexSearch sorted by popularity
+    fallback_url = "https://api.spoonacular.com/recipes/complexSearch"
+    fallback_params = {
+        'apiKey': api_key,
+        'number': number,
+        'sort': 'popularity',
+        'sortDirection': 'desc',
+        'addRecipeInformation': True,
+        'fillIngredients': True
+    }
+    
+    try:
+        logger.info(f"Fetching {number} trending recipes from Spoonacular (fallback popularity search)...")
+        response = requests.get(fallback_url, params=fallback_params, timeout=30)
+        response.raise_for_status()
+        
+        data = response.json()
+        if isinstance(data, dict) and data.get('status') and data.get('status') != 'success':
+            logger.warning(f"Spoonacular fallback endpoint status='{data.get('status')}' message='{data.get('message', '')}'")
+        recipes = data.get('results') or []
+        
+        if recipes:
+            ensure_instructions(recipes)
+            for recipe in recipes:
+                try:
+                    recipe['normalized_recipe'] = normalize_spoonacular_recipe_data(recipe)
+                except Exception as normalize_error:
+                    logger.warning(f"Failed to normalize Spoonacular fallback recipe {recipe.get('id')}: {normalize_error}")
+                    recipe['normalized_recipe'] = normalize_spoonacular_recipe_data({})
+            logger.info(f"Successfully retrieved {len(recipes)} recipes from Spoonacular (fallback endpoint)")
+        else:
+            logger.warning("Fallback popularity search endpoint returned 0 recipes.")
+        
+        return recipes
+        
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error fetching recipes from Spoonacular fallback endpoint: {e}")
+        if hasattr(e, 'response') and e.response is not None:
+            logger.error(f"Response status: {e.response.status_code}")
+            logger.error(f"Response body: {e.response.text}")
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error while using Spoonacular fallback endpoint: {e}")
+        raise
 
 if __name__ == "__main__":
     url = "https://www.allrecipes.com/recipe/279394/air-fryer-prosciutto-and-mozzarella-grilled-cheese/"

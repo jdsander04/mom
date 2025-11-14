@@ -149,6 +149,49 @@ class ApiService {
     return fullRecipes;
   }
 
+  // Get trending recipes from Spoonacular
+  async getTrendingRecipes(): Promise<Recipe[]> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/recipes/trending/`, {
+        method: 'GET',
+        headers: this.getAuthHeaders()
+      });
+      const result = await this.handleResponse<{ recipes: any[], week: string, count: number }>(response);
+      
+      // The trending endpoint now returns Recipe IDs directly (not negative IDs)
+      // Extract the normalized recipes and convert them to Recipe format
+      const trendingRecipes: Recipe[] = result.recipes.map((trending: any) => {
+        const normalized = trending.normalized_recipe || trending;
+        return {
+          id: normalized.id || trending.id,  // Use Recipe ID (positive)
+          name: normalized.name || trending.title,
+          description: normalized.description || trending.description || '',
+          image_url: normalized.image_url || trending.image_url,
+          source_url: normalized.source_url || trending.source_url,
+          serves: normalized.serves || trending.servings,
+          ingredients: normalized.ingredients || [],
+          steps: normalized.steps || [],
+          nutrients: normalized.nutrients || [],
+          date_added: normalized.date_added || trending.created_at,
+          times_made: normalized.times_made || 0,
+          favorite: normalized.favorite || false,
+          user_id: normalized.user_id || null,
+          ready_in_minutes: normalized.ready_in_minutes || trending.ready_in_minutes,
+          is_trending: true,
+        };
+      });
+      
+      return trendingRecipes;
+    } catch (error: any) {
+      if (error?.status === 404) {
+        // The backend returns 404 when no trending data is available yet.
+        // Treat this as an empty trending list instead of surfacing an error.
+        return [];
+      }
+      throw error;
+    }
+  }
+
   // Helper method to get recent recipes (sorted by date_added)
   async getRecentRecipes(): Promise<Recipe[]> {
     const response = await this.getRecipes();
@@ -228,6 +271,14 @@ class ApiService {
     await this.handleResponse(response);
   }
 
+  async get(url: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+    return { data: await this.handleResponse(response) };
+  }
+
   async post(url: string, data?: any): Promise<any> {
     const response = await fetch(`${API_BASE_URL}${url}`, {
       method: 'POST',
@@ -235,6 +286,14 @@ class ApiService {
       body: data ? JSON.stringify(data) : undefined
     });
     return { data: await this.handleResponse(response) };
+  }
+
+  async getOrderHistory(): Promise<any[]> {
+    const response = await fetch(`${API_BASE_URL}/cart/order-history/`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<any[]>(response);
   }
 
   // User profile image endpoints

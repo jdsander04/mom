@@ -47,9 +47,13 @@ const TITLE_STYLES = {
   fontSize: '16px',
   fontWeight: 600,
   color: 'black',
-  whiteSpace: 'nowrap',
+  display: '-webkit-box',
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: 'vertical',
   overflow: 'hidden',
-  textOverflow: 'ellipsis'
+  textOverflow: 'ellipsis',
+  wordBreak: 'break-word',
+  lineHeight: '1.4'
 };
 
 const SUBTITLE_STYLES = {
@@ -123,7 +127,7 @@ const RecipeCard = ({ title, subtitle, image, calories, servings, onClick, sourc
       )}
       <CardContent sx={CONTENT_STYLES}>
         <Box sx={{ marginBottom: '8px', overflow: 'hidden' }}>
-          <Typography variant="body1" component="span" sx={TITLE_STYLES}>
+          <Typography variant="body1" component="div" sx={TITLE_STYLES}>
             {title}
           </Typography>
           {subtitle && (

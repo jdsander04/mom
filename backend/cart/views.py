@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class OrderHistorySerializer(serializers.ModelSerializer):
 	class Meta:
 		model = OrderHistory
-		fields = ['id', 'created_at', 'instacart_url', 'items_data']
+		fields = ['id', 'created_at', 'instacart_url', 'items_data', 'recipe_names', 'top_recipe_image', 'nutrition_data', 'total_price']
 
 
 @extend_schema(
@@ -607,15 +607,44 @@ def create_instacart_list(request):
 			'unit': ingredient['unit'] or 'item'
 		})
 	
+	# Create title with date and username
+	from datetime import datetime
+	current_date = datetime.now().strftime('%Y-%m-%d')
+	title = f"{current_date} - {request.user.username}"
+	
 	payload = {
-		'title': f"Recipe Shopping List - {request.user.username}",
+		'title': title,
 		'line_items': line_items
 	}
+	
+	# Get recipe data for this order
+	cart_recipes = cart.recipes.select_related('recipe').all()
+	recipe_names = [cr.recipe.name for cr in cart_recipes]
+	
+	# Get top recipe image (first recipe with image)
+	top_recipe_image = None
+	for cr in cart_recipes:
+		if cr.recipe.image_url:
+			top_recipe_image = cr.recipe.image_url
+			break
+	
+	# Calculate total nutrition
+	nutrition_totals = {}
+	for cr in cart_recipes:
+		for nutrient in cr.recipe.nutrients.all():
+			macro = nutrient.macro
+			if macro in nutrition_totals:
+				nutrition_totals[macro] += nutrient.mass * float(cr.serving_size)
+			else:
+				nutrition_totals[macro] = nutrient.mass * float(cr.serving_size)
 	
 	# Store order history before sending to Instacart
 	order_history = OrderHistory.objects.create(
 		user=request.user,
-		items_data=payload
+		items_data=payload,
+		recipe_names=recipe_names,
+		top_recipe_image=top_recipe_image,
+		nutrition_data=nutrition_totals
 	)
 	
 	try:
@@ -844,3 +873,92 @@ def order_history(request):
 	orders = OrderHistory.objects.filter(user=request.user)
 	serializer = OrderHistorySerializer(orders, many=True)
 	return Response(serializer.data)
+
+
+@extend_schema(
+	methods=['POST'],
+	responses={201: {'description': 'Order re-added to cart'}},
+)
+@extend_schema(tags=['Cart'])
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([BearerTokenAuthentication])
+def reorder(request, order_id):
+	"""Re-add a previous order to cart"""
+	try:
+		order = OrderHistory.objects.get(id=order_id, user=request.user)
+	except OrderHistory.DoesNotExist:
+		return Response({'error': 'Order not found'}, status=404)
+	
+	cart, _ = Cart.objects.get_or_create(user=request.user)
+	added_recipes = []
+	
+	for recipe_name in order.recipe_names:
+		try:
+			recipe = Recipe.objects.get(name=recipe_name, user=request.user)
+			cr, created = CartRecipe.objects.get_or_create(
+				cart=cart, recipe=recipe, defaults={'serving_size': 1.0}
+			)
+			if created:
+				from decimal import Decimal
+				for ingredient in recipe.ingredients.all():
+					CartItem.objects.create(
+						cart=cart,
+						name=ingredient.name,
+						quantity=ingredient.quantity,
+						unit=ingredient.unit or '',
+						recipe_ingredient=ingredient,
+					)
+				added_recipes.append(recipe.name)
+		except Recipe.DoesNotExist:
+			continue
+	
+	return Response({
+		'message': f'Re-added {len(added_recipes)} recipes to cart',
+		'recipes': added_recipes
+	}, status=201)
+
+
+@extend_schema(
+	methods=['POST'],
+	responses={200: {'description': 'Price updated'}},
+)
+@extend_schema(tags=['Cart'])
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([BearerTokenAuthentication])
+def set_order_price(request, order_id):
+	"""Set the price for an order"""
+	try:
+		order = OrderHistory.objects.get(id=order_id, user=request.user)
+	except OrderHistory.DoesNotExist:
+		return Response({'error': 'Order not found'}, status=404)
+	
+	price = request.data.get('price')
+	if price is None:
+		return Response({'error': 'Price is required'}, status=400)
+	
+	try:
+		order.total_price = float(price)
+		order.save()
+		return Response({'message': 'Price updated successfully'})
+	except ValueError:
+		return Response({'error': 'Invalid price format'}, status=400)
+
+
+@extend_schema(
+	methods=['DELETE'],
+	responses={204: {'description': 'Order deleted'}},
+)
+@extend_schema(tags=['Cart'])
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([BearerTokenAuthentication])
+def delete_order(request, order_id):
+	"""Delete an order from history"""
+	try:
+		order = OrderHistory.objects.get(id=order_id, user=request.user)
+		order.delete()
+		return Response(status=204)
+	except OrderHistory.DoesNotExist:
+		return Response({'error': 'Order not found'}, status=404)
