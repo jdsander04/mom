@@ -122,48 +122,54 @@ def parse_ingredient_string(ingredient_str: str) -> list:
     """Parse an ingredient string into list of {name, quantity, unit} dicts using ingredient-parser-nlp.
     
     Returns list of dicts with quantity as float, unit as string, name as string.
-    If multiple ingredient names are detected (e.g., "butter or margarine"), returns separate entries.
-    Fallbacks to quantity=0, unit="" if not detectable.
+    Detects 'or' alternatives and merges them to avoid quantity duplication.
+    Fallbacks to quantity=1, unit="" if not detectable.
     """
     if not ingredient_str or not str(ingredient_str).strip():
-        return [{"name": "", "quantity": 0.0, "unit": ""}]
+        return [{"name": "", "quantity": 1.0, "unit": ""}]
     
     try:
         parsed = parse_ingredient(str(ingredient_str), separate_names=True)
         
-        results = []
-        # Handle multiple names (e.g., "butter or margarine")
+        # Extract quantity and unit from amount
+        quantity = 1.0
+        unit = ""
+        if parsed.amount:
+            amount = parsed.amount[0] if isinstance(parsed.amount, list) else parsed.amount
+            try:
+                if hasattr(amount.quantity, 'value'):
+                    quantity = float(amount.quantity.value)
+                else:
+                    quantity = float(amount.quantity)
+            except (ValueError, TypeError, AttributeError):
+                quantity = 1.0
+            try:
+                if hasattr(amount.unit, 'name'):
+                    unit = amount.unit.name
+                elif amount.unit:
+                    unit = str(amount.unit)
+            except (AttributeError, TypeError):
+                unit = ""
+        
         names = parsed.name if isinstance(parsed.name, list) else [parsed.name] if parsed.name else []
+        if not names:
+            return [{"name": "", "quantity": 1.0, "unit": ""}]
         
-        for name_obj in names:
-            name = name_obj.text if hasattr(name_obj, 'text') else str(name_obj)
-            
-            # Extract quantity and unit from amount
-            quantity = 0.0
-            unit = ""
-            if parsed.amount:
-                amount = parsed.amount[0] if isinstance(parsed.amount, list) else parsed.amount
-                try:
-                    if hasattr(amount.quantity, 'value'):
-                        quantity = float(amount.quantity.value)
-                    else:
-                        quantity = float(amount.quantity)
-                except (ValueError, TypeError, AttributeError):
-                    quantity = 0.0
-                try:
-                    if hasattr(amount.unit, 'name'):
-                        unit = amount.unit.name
-                    elif amount.unit:
-                        unit = str(amount.unit)
-                except (AttributeError, TypeError):
-                    unit = ""
-            
-            results.append({"name": name, "quantity": quantity, "unit": unit})
-        
-        return results if results else [{"name": "", "quantity": 0.0, "unit": ""}]
+        # Check if original text contains "or" - if so, it's alternatives not separate ingredients
+        if ' or ' in ingredient_str.lower():
+            name_texts = [n.text if hasattr(n, 'text') else str(n) for n in names]
+            name = " or ".join(name_texts)
+            return [{"name": name, "quantity": quantity, "unit": unit}]
+        else:
+            # Return all as separate ingredients
+            results = []
+            for name_obj in names:
+                name = name_obj.text if hasattr(name_obj, 'text') else str(name_obj)
+                results.append({"name": name, "quantity": quantity, "unit": unit})
+            return results
     except Exception as e:
         logger.warning(f"Failed to parse ingredient '{ingredient_str}': {e}")
-        return [{"name": str(ingredient_str), "quantity": 0.0, "unit": ""}]
+        return [{"name": str(ingredient_str), "quantity": 1.0, "unit": ""}]
 
 def parse_serves_value(value) -> int:
     """Parse a serves/servings/yields value into a positive integer if possible.

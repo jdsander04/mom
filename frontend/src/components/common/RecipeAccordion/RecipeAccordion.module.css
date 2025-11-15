@@ -64,6 +64,10 @@
   text-decoration: none;
 }
 
+.titleLink {
+  display: inline;
+}
+
 .titleLink:hover {
   color: #1976d2;
   text-decoration: underline;
@@ -94,6 +98,7 @@
   justify-content: center;
   margin-right: .25rem;
   padding: 0;
+  margin-left: auto;
 }
 
 .addButton svg {
