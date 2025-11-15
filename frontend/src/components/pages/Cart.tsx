@@ -300,27 +300,28 @@ export default function Cart() {
                         <UtensilsIcon size={32} />
                       </div>
                       <div className={styles.recipeTitleSection}>
-                        <h3 className={styles.recipeTitle}>{recipe.name}</h3>
+                        <div className={styles.titleRow}>
+                          <h3 className={styles.recipeTitle}>{recipe.name}</h3>
+                          <div className={styles.servingControls}>
+                            <label>Quantity:</label>
+                            <input
+                              type="number"
+                              min="1"
+                              step="1"
+                              value={Math.round(recipe.serving_size)}
+                              onChange={(e) => handleUpdateMultiples(recipe.recipe_id, parseInt(e.target.value) || 1)}
+                              className={styles.servingInput}
+                            />
+                            <span className={styles.servingLabel}>x recipe</span>
+                          </div>
+                        </div>
                         <div className={styles.recipeSummary}>
                           <ClipboardIcon size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
-                          {recipe.ingredients.length} ingredients • 
-                          <UtensilsIcon size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginLeft: '4px', marginRight: '4px' }} />
-                          {Math.round(recipe.serving_size)}x recipe
+                          {recipe.ingredients.length} ingredients
                         </div>
                       </div>
                     </div>
                     <div className={styles.recipeControls}>
-                      <div className={styles.servingControls}>
-                        <label>Multiples:</label>
-                        <input
-                          type="number"
-                          min="1"
-                          step="1"
-                          value={Math.round(recipe.serving_size)}
-                          onChange={(e) => handleUpdateMultiples(recipe.recipe_id, parseInt(e.target.value) || 1)}
-                          className={styles.servingInput}
-                        />
-                      </div>
                       <button 
                         onClick={() => toggleRecipeCollapse(recipe.recipe_id)}
                         className={styles.collapseBtn}
