@@ -757,8 +757,8 @@ def fetch_trending_recipes_from_spoonacular(api_key, number=10):
     """
     Fetch trending/popular recipes from Spoonacular API.
     
-    Tries the random endpoint first, then falls back to complexSearch sorted by
-    popularity if the random endpoint returns no recipes.
+    Uses complexSearch sorted by popularity first (most appropriate for trending),
+    then falls back to random endpoint if the popularity search fails.
     
     Args:
         api_key: Spoonacular API key
@@ -767,13 +767,6 @@ def fetch_trending_recipes_from_spoonacular(api_key, number=10):
     Returns:
         List of recipe dictionaries with full details
     """
-    random_url = "https://api.spoonacular.com/recipes/random"
-    random_params = {
-        'apiKey': api_key,
-        'number': number,
-        'tags': 'main course,dessert'  # Popular meal types
-    }
-    
     def ensure_instructions(recipes_list):
         """Populate analyzedInstructions if missing."""
         for recipe in recipes_list:
@@ -785,8 +778,59 @@ def fetch_trending_recipes_from_spoonacular(api_key, number=10):
                     if steps:
                         recipe['analyzedInstructions'] = [{'steps': steps}]
     
+    # Primary: use complexSearch sorted by popularity (most appropriate for trending)
+    popularity_url = "https://api.spoonacular.com/recipes/complexSearch"
+    popularity_params = {
+        'apiKey': api_key,
+        'number': number,
+        'sort': 'popularity',
+        'sortDirection': 'desc',
+        'addRecipeInformation': True,
+        'fillIngredients': True
+    }
+    
     try:
-        logger.info(f"Fetching {number} trending recipes from Spoonacular (random endpoint)...")
+        logger.info(f"Fetching {number} trending recipes from Spoonacular (popularity search)...")
+        response = requests.get(popularity_url, params=popularity_params, timeout=30)
+        response.raise_for_status()
+        
+        data = response.json()
+        if isinstance(data, dict) and data.get('status') and data.get('status') != 'success':
+            logger.warning(f"Spoonacular popularity endpoint status='{data.get('status')}' message='{data.get('message', '')}'")
+        recipes = data.get('results') or []
+        
+        if recipes:
+            ensure_instructions(recipes)
+            for recipe in recipes:
+                try:
+                    recipe['normalized_recipe'] = normalize_spoonacular_recipe_data(recipe)
+                except Exception as normalize_error:
+                    logger.warning(f"Failed to normalize Spoonacular recipe {recipe.get('id')}: {normalize_error}")
+                    recipe['normalized_recipe'] = normalize_spoonacular_recipe_data({})
+            logger.info(f"Successfully retrieved {len(recipes)} recipes from Spoonacular (popularity search)")
+            return recipes
+        
+        logger.warning("Popularity search returned 0 recipes; falling back to random endpoint.")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error fetching recipes from Spoonacular popularity endpoint: {e}")
+        if hasattr(e, 'response') and e.response is not None:
+            logger.error(f"Response status: {e.response.status_code}")
+            logger.error(f"Response body: {e.response.text}")
+        logger.warning("Falling back to random endpoint due to error.")
+    except Exception as e:
+        logger.error(f"Unexpected error while using Spoonacular popularity endpoint: {e}")
+        logger.warning("Falling back to random endpoint due to error.")
+    
+    # Fallback: use random endpoint if popularity search fails
+    random_url = "https://api.spoonacular.com/recipes/random"
+    random_params = {
+        'apiKey': api_key,
+        'number': number,
+        'tags': 'main course,dessert'  # Popular meal types
+    }
+    
+    try:
+        logger.info(f"Fetching {number} recipes from Spoonacular (fallback random endpoint)...")
         response = requests.get(random_url, params=random_params, timeout=30)
         response.raise_for_status()
         
@@ -801,12 +845,14 @@ def fetch_trending_recipes_from_spoonacular(api_key, number=10):
                 try:
                     recipe['normalized_recipe'] = normalize_spoonacular_recipe_data(recipe)
                 except Exception as normalize_error:
-                    logger.warning(f"Failed to normalize Spoonacular recipe {recipe.get('id')}: {normalize_error}")
+                    logger.warning(f"Failed to normalize Spoonacular random recipe {recipe.get('id')}: {normalize_error}")
                     recipe['normalized_recipe'] = normalize_spoonacular_recipe_data({})
             logger.info(f"Successfully retrieved {len(recipes)} recipes from Spoonacular (random endpoint)")
-            return recipes
+        else:
+            logger.warning("Random endpoint returned 0 recipes.")
         
-        logger.warning("Random endpoint returned 0 recipes; falling back to popularity search endpoint.")
+        return recipes
+        
     except requests.exceptions.RequestException as e:
         logger.error(f"Error fetching recipes from Spoonacular random endpoint: {e}")
         if hasattr(e, 'response') and e.response is not None:
@@ -815,51 +861,6 @@ def fetch_trending_recipes_from_spoonacular(api_key, number=10):
         raise
     except Exception as e:
         logger.error(f"Unexpected error while using Spoonacular random endpoint: {e}")
-        raise
-    
-    # Fallback: use complexSearch sorted by popularity
-    fallback_url = "https://api.spoonacular.com/recipes/complexSearch"
-    fallback_params = {
-        'apiKey': api_key,
-        'number': number,
-        'sort': 'popularity',
-        'sortDirection': 'desc',
-        'addRecipeInformation': True,
-        'fillIngredients': True
-    }
-    
-    try:
-        logger.info(f"Fetching {number} trending recipes from Spoonacular (fallback popularity search)...")
-        response = requests.get(fallback_url, params=fallback_params, timeout=30)
-        response.raise_for_status()
-        
-        data = response.json()
-        if isinstance(data, dict) and data.get('status') and data.get('status') != 'success':
-            logger.warning(f"Spoonacular fallback endpoint status='{data.get('status')}' message='{data.get('message', '')}'")
-        recipes = data.get('results') or []
-        
-        if recipes:
-            ensure_instructions(recipes)
-            for recipe in recipes:
-                try:
-                    recipe['normalized_recipe'] = normalize_spoonacular_recipe_data(recipe)
-                except Exception as normalize_error:
-                    logger.warning(f"Failed to normalize Spoonacular fallback recipe {recipe.get('id')}: {normalize_error}")
-                    recipe['normalized_recipe'] = normalize_spoonacular_recipe_data({})
-            logger.info(f"Successfully retrieved {len(recipes)} recipes from Spoonacular (fallback endpoint)")
-        else:
-            logger.warning("Fallback popularity search endpoint returned 0 recipes.")
-        
-        return recipes
-        
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error fetching recipes from Spoonacular fallback endpoint: {e}")
-        if hasattr(e, 'response') and e.response is not None:
-            logger.error(f"Response status: {e.response.status_code}")
-            logger.error(f"Response body: {e.response.text}")
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error while using Spoonacular fallback endpoint: {e}")
         raise
 
 if __name__ == "__main__":
