@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { CartProvider } from './contexts/CartContext'
 import Layout from './components/layout/Layout'
 import Login from './components/auth/Login'
+import LandingPage from './components/pages/LandingPage'
 import HomePage from './components/pages/HomePage'
 import RecipeLibrary from './components/pages/RecipeLibrary'
 import Cart from './components/pages/Cart'
@@ -16,7 +17,12 @@ function AppContent() {
   const { isAuthenticated } = useAuth();
 
   if (!isAuthenticated) {
-    return <Login />;
+    return (
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<Login />} />
+      </Routes>
+    );
   }
 
   return (
