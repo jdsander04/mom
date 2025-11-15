@@ -123,16 +123,16 @@ def parse_ingredient_string(ingredient_str: str) -> list:
     
     Returns list of dicts with quantity as float, unit as string, name as string.
     Detects 'or' alternatives and merges them to avoid quantity duplication.
-    Fallbacks to quantity=0, unit="" if not detectable.
+    Fallbacks to quantity=1, unit="" if not detectable.
     """
     if not ingredient_str or not str(ingredient_str).strip():
-        return [{"name": "", "quantity": 0.0, "unit": ""}]
+        return [{"name": "", "quantity": 1.0, "unit": ""}]
     
     try:
         parsed = parse_ingredient(str(ingredient_str), separate_names=True)
         
         # Extract quantity and unit from amount
-        quantity = 0.0
+        quantity = 1.0
         unit = ""
         if parsed.amount:
             amount = parsed.amount[0] if isinstance(parsed.amount, list) else parsed.amount
@@ -142,7 +142,7 @@ def parse_ingredient_string(ingredient_str: str) -> list:
                 else:
                     quantity = float(amount.quantity)
             except (ValueError, TypeError, AttributeError):
-                quantity = 0.0
+                quantity = 1.0
             try:
                 if hasattr(amount.unit, 'name'):
                     unit = amount.unit.name
@@ -153,7 +153,7 @@ def parse_ingredient_string(ingredient_str: str) -> list:
         
         names = parsed.name if isinstance(parsed.name, list) else [parsed.name] if parsed.name else []
         if not names:
-            return [{"name": "", "quantity": 0.0, "unit": ""}]
+            return [{"name": "", "quantity": 1.0, "unit": ""}]
         
         # Check if original text contains "or" - if so, it's alternatives not separate ingredients
         if ' or ' in ingredient_str.lower():
@@ -169,7 +169,7 @@ def parse_ingredient_string(ingredient_str: str) -> list:
             return results
     except Exception as e:
         logger.warning(f"Failed to parse ingredient '{ingredient_str}': {e}")
-        return [{"name": str(ingredient_str), "quantity": 0.0, "unit": ""}]
+        return [{"name": str(ingredient_str), "quantity": 1.0, "unit": ""}]
 
 def parse_serves_value(value) -> int:
     """Parse a serves/servings/yields value into a positive integer if possible.

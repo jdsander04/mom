@@ -21,6 +21,22 @@ from datetime import datetime, timedelta
 logger = logging.getLogger(__name__)
 
 
+def normalize_ingredient_for_instacart(name: str) -> str:
+	"""Normalize ingredient names for Instacart shopping.
+	
+	Maps specific ingredient variations to their base form.
+	For example: 'egg yolk' -> 'eggs', 'egg' -> 'eggs'
+	"""
+	name_lower = name.lower().strip()
+	
+	if 'egg yolk' in name_lower:
+		return 'eggs'
+	if name_lower == 'egg':
+		return 'eggs'
+	
+	return name
+
+
 class OrderHistorySerializer(serializers.ModelSerializer):
 	class Meta:
 		model = OrderHistory
@@ -562,12 +578,13 @@ def create_instacart_list(request):
 	combined = {}
 	for cr in cart.recipes.select_related('recipe').all():
 		for ci in cart.items.filter(recipe_ingredient__recipe=cr.recipe):
-			key = f"{ci.name}-{ci.unit}"
+			normalized_name = normalize_ingredient_for_instacart(ci.name)
+			key = f"{normalized_name}-{ci.unit}"
 			if key in combined:
 				combined[key]['quantity'] += float(ci.quantity)
 			else:
 				combined[key] = {
-					'name': ci.name,
+					'name': normalized_name,
 					'quantity': float(ci.quantity),
 					'unit': ci.unit
 				}
