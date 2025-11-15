@@ -201,34 +201,37 @@ const RecipeAccordion = ({ recipeId, title, calories, serves, children, sourceUr
           ) : (
             <span className={styles.title}>{title}</span>
           )}
-          <span className={styles.calories}>{calories} cal</span>
-          <span className={styles.serves}>Serves {serves}</span>
-          <div className={styles.quantitySelector}>
-            <div 
-              className={styles.quantityButton}
-              onClick={(e) => handleQuantityChange(e, -1)}
-            >
-              -
+          
+          <div className={styles.rightSide}>
+            <span className={styles.calories}>{calories} cal</span>
+            <span className={styles.serves}>Serves {serves}</span>
+            <div className={styles.quantitySelector}>
+              <div 
+                className={styles.quantityButton}
+                onClick={(e) => handleQuantityChange(e, -1)}
+              >
+                -
+              </div>
+              <span className={styles.quantity}>{currentQuantity}</span>
+              <div 
+                className={styles.quantityButton}
+                onClick={(e) => handleQuantityChange(e, 1)}
+              >
+                +
+              </div>
             </div>
-            <span className={styles.quantity}>{currentQuantity}</span>
             <div 
-              className={styles.quantityButton}
-              onClick={(e) => handleQuantityChange(e, 1)}
+              className={`${styles.addButton} ${isAdded ? styles.added : ''}`}
+              onClick={handleAddClick}
             >
-              +
+              {isAdded ? <RemoveShoppingCartIcon /> : <AddShoppingCartIcon />}
             </div>
-          </div>
-          <div 
-            className={`${styles.addButton} ${isAdded ? styles.added : ''}`}
-            onClick={handleAddClick}
-          >
-            {isAdded ? <RemoveShoppingCartIcon /> : <AddShoppingCartIcon />}
-          </div>
-          <div 
-            className={styles.deleteButton}
-            onClick={handleDeleteClick}
-          >
-            <Delete />
+            <div 
+              className={styles.deleteButton}
+              onClick={handleDeleteClick}
+            >
+              <Delete />
+            </div>
           </div>
         </div>
         <ExpandMore className={`${styles.arrow} ${isOpen ? styles.open : ''}`} />

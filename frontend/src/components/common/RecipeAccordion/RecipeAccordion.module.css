@@ -52,14 +52,13 @@
 .headerContent {
   display: flex;
   align-items: center;
+  gap: 1rem;
   width: 100%;
-  gap: 1.5rem;
 }
 
 .title {
   font-weight: 600;
-  flex: 1;
-  /* clamp(min, preferred, max) — adapts to viewport */
+  display: inline;
   font-size: clamp(0.8rem, .9rem, 1.15rem);
   color: inherit;
   text-decoration: none;
@@ -177,4 +176,11 @@
   padding: 0 8px;
   background: white;
   font-weight: 500;
+}
+
+.rightSide {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }

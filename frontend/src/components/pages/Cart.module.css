@@ -230,6 +230,19 @@
   }
 }
 
+@media (max-width: 480px) {
+  .ingredientMainRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  .ingredientRight {
+    align-self: stretch;
+    justify-content: flex-start;
+  }
+}
+
 .recipeCard {
   border: 1px solid #e9ecef;
   border-radius: 16px;
@@ -502,23 +515,28 @@
 }
 
 .ingredientItem {
-  padding: 20px;
-  border: 1px solid #e9ecef;
-  border-radius: 12px;
-  background: #fafbfc;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e2e2;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0.35rem;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  position: relative;
+  background: white;
 }
 
 .ingredientItem:hover {
   border-color: #4caf50;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.15);
-  background: white;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+}
+
+.ingredientItem.checked {
+  opacity: 0.6;
+}
+
+.ingredientItem.checked .itemName {
+  text-decoration: line-through;
 }
 
 .ingredientItem.loading {
@@ -526,15 +544,28 @@
   pointer-events: none;
 }
 
-.ingredientHeader {
+.ingredientMainRow {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+}
+
+.ingredientLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.ingredientRight {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .itemCheckbox {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   cursor: pointer;
 }
 
@@ -546,24 +577,23 @@
   line-height: 1.4;
 }
 
-.quantityControls {
+.ingredientActions {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin: 8px 0;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  opacity: 0.8;
 }
 
 .quantityBtn {
-  background: #4caf50;
-  color: white;
-  border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  background: #f8f9fa;
+  color: #495057;
+  border: 1px solid #dee2e6;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 18px;
-  font-weight: bold;
+  font-size: 16px;
+  font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -571,8 +601,8 @@
 }
 
 .quantityBtn:hover:not(:disabled) {
-  background: #45a049;
-  transform: scale(1.1);
+  background: #e9ecef;
+  border-color: #adb5bd;
 }
 
 .quantityBtn:disabled {
@@ -580,63 +610,83 @@
   cursor: not-allowed;
 }
 
-.quantityDisplay {
-  font-weight: 600;
+.quantityInput {
+  font-weight: 500;
   color: #2c3e50;
-  font-size: 16px;
-  min-width: 120px;
+  font-size: 14px;
+  padding: 6px 8px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-left: none;
+  border-right: none;
+  width: 60px;
   text-align: center;
-  padding: 8px 12px;
-  background: white;
-  border: 2px solid #e9ecef;
-  border-radius: 8px;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
 }
 
-.quickActions {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 4px;
+.quantityInput:focus {
+  outline: none;
+  background: white;
 }
+
+.unitSelect {
+  font-weight: 500;
+  color: #2c3e50;
+  font-size: 12px;
+  padding: 6px 4px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-left: none;
+  border-right: none;
+  min-width: 70px;
+  max-width: 90px;
+}
+
+.unitSelect:focus {
+  outline: none;
+  background: white;
+}
+
+/* Remove old quickActions - now using ingredientActions */
 
 .quickBtn {
-  background: #e9ecef;
+  background: #f8f9fa;
   color: #495057;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
+  border: 1px solid #ced4da;
+  padding: 4px 8px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   transition: all 0.2s;
-  min-width: 40px;
+  min-width: 32px;
 }
 
 .quickBtn:hover {
-  background: #dee2e6;
-  transform: translateY(-1px);
+  background: #e9ecef;
+  border-color: #adb5bd;
+  color: #343a40;
 }
 
 .removeBtn {
-  background: #dc3545;
-  color: white;
+  background: transparent;
+  color: #6c757d;
   border: none;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
-  font-weight: bold;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  opacity: 0.6;
 }
 
 .removeBtn:hover:not(:disabled) {
-  background: #c82333;
-  transform: scale(1.1);
+  background: #fee;
+  color: #dc3545;
+  opacity: 1;
 }
 
 .removeBtn:disabled {

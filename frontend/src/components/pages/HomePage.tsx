@@ -90,7 +90,7 @@ const HomePage = () => {
 
   // Helper function to format ingredients for RecipeDetails
   const formatIngredients = (ingredients: Recipe['ingredients']) => 
-    ingredients?.map(ing => `${ing.quantity} ${ing.unit} ${ing.name}`.trim()) || [];
+    ingredients?.map(ing => ing.original_text || `${ing.quantity} ${ing.unit} ${ing.name}`.trim()) || [];
 
   // Helper function to format instructions for RecipeDetails
   const formatInstructions = (steps: Recipe['steps']) => 

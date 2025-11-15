@@ -22,7 +22,7 @@ import {
 } from '../Icons';
 
 export default function Cart() {
-  const { cart, loading, undoAction, updateServingSize, removeRecipe, updateItemQuantity, removeItem, removeBulkItems, refreshCart, undoRemoval, clearUndo } = useCartContext();
+  const { cart, loading, undoAction, updateServingSize, removeRecipe, updateItemQuantity, updateItemUnit, removeItem, removeBulkItems, refreshCart, undoRemoval, clearUndo } = useCartContext();
   const [orderSummaryOpen, setOrderSummaryOpen] = useState(false);
   const [selectedProvider] = useState('instacart');
   const [collapsedRecipes, setCollapsedRecipes] = useState<Set<number>>(new Set());
@@ -84,9 +84,17 @@ export default function Cart() {
   const handleUpdateItemQuantity = async (itemId: number, quantity: number) => {
     setLoadingItems(prev => new Set(prev).add(itemId));
     setErrorMessage('');
+    
+    // Check if quantity is being reduced to 0 (item removal)
+    const willRemove = quantity <= 0;
+    
     try {
-      await updateItemQuantity(itemId, quantity);
-      await refreshCart();
+      if (willRemove) {
+        await removeItem(itemId);
+      } else {
+        await updateItemQuantity(itemId, quantity);
+        await refreshCart();
+      }
     } catch (error) {
       const errorMsg = getShortErrorMessage(error as APIError);
       setErrorMessage(errorMsg);
@@ -136,6 +144,33 @@ export default function Cart() {
       console.error('Failed to remove items:', error);
     }
   };
+
+  const handleUpdateItemUnit = async (itemId: number, unit: string) => {
+    setLoadingItems(prev => new Set(prev).add(itemId));
+    setErrorMessage('');
+    try {
+      await updateItemUnit(itemId, unit);
+      await refreshCart();
+    } catch (error) {
+      const errorMsg = getShortErrorMessage(error as APIError);
+      setErrorMessage(errorMsg);
+      console.error('Failed to update item unit:', error);
+    } finally {
+      setLoadingItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(itemId);
+        return newSet;
+      });
+    }
+  };
+
+  const commonUnits = [
+    '', 'cup', 'cups', 'tablespoon', 'tablespoons', 'tbsp', 'teaspoon', 'teaspoons', 'tsp',
+    'ounce', 'ounces', 'oz', 'pound', 'pounds', 'lb', 'gram', 'grams', 'g', 'kilogram', 'kilograms', 'kg',
+    'milliliter', 'milliliters', 'ml', 'liter', 'liters', 'l', 'fluid ounce', 'fluid ounces', 'fl oz',
+    'piece', 'pieces', 'pcs', 'clove', 'cloves', 'slice', 'slices', 'can', 'cans', 'package', 'packages',
+    'pinch', 'dash', 'to taste', 'as needed'
+  ];
 
   const filteredIngredients = (ingredients: CartItem[]) => {
     // Sort ingredients alphabetically by name
@@ -306,68 +341,98 @@ export default function Cart() {
                   {!isCollapsed && (
                     <div className={styles.ingredientsSection}>
                       <div className={styles.ingredientsList}>
-                        {filteredItems.map((item: CartItem) => (
-                          <div key={item.id} className={`${styles.ingredientItem} ${loadingItems.has(item.id) ? styles.loading : ''}`}>
-                            <div className={styles.ingredientHeader}>
-                              <input
-                                type="checkbox"
-                                checked={selectedItems.has(item.id)}
-                                onChange={() => toggleItemSelection(item.id)}
-                                className={styles.itemCheckbox}
-                              />
-                              <span className={styles.itemName}>{item.name}</span>
-                              <button 
-                                onClick={() => handleRemoveItem(item.id)}
-                                className={styles.removeBtn}
-                                disabled={loadingItems.has(item.id)}
-                                title="Remove item"
-                              >
-                                {loadingItems.has(item.id) ? (
-                                  <HourglassIcon size={18} />
-                                ) : (
-                                  <TrashIcon size={18} />
-                                )}
-                              </button>
+                        {filteredItems.map((item: CartItem) => {
+                          const displayQuantity = item.quantity === 0 ? 'Add amount' : `${item.quantity} ${item.unit || ''}`;
+                          const isChecked = selectedItems.has(item.id);
+                          return (
+                            <div key={item.id} className={`${styles.ingredientItem} ${loadingItems.has(item.id) ? styles.loading : ''} ${isChecked ? styles.checked : ''}`}>
+                              <div className={styles.ingredientMainRow}>
+                                <label className={styles.ingredientLeft}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => toggleItemSelection(item.id)}
+                                    className={styles.itemCheckbox}
+                                  />
+                                  <span className={styles.itemName}>{item.name}</span>
+                                </label>
+                                
+                                <div className={styles.ingredientRight}>
+                                  <button 
+                                    onClick={() => handleUpdateItemQuantity(item.id, Math.max(0, item.quantity - 0.1))}
+                                    className={styles.quantityBtn}
+                                    disabled={loadingItems.has(item.id)}
+                                    aria-label="Decrease quantity"
+                                  >
+                                    −
+                                  </button>
+                                  <input
+                                    type="number"
+                                    value={item.quantity || ''}
+                                    onChange={(e) => {
+                                      const value = parseFloat(e.target.value) || 0;
+                                      handleUpdateItemQuantity(item.id, value);
+                                    }}
+                                    className={styles.quantityInput}
+                                    disabled={loadingItems.has(item.id)}
+                                    min="0"
+                                    step="0.1"
+                                  />
+                                  <select
+                                    value={item.unit || ''}
+                                    onChange={(e) => handleUpdateItemUnit(item.id, e.target.value)}
+                                    className={styles.unitSelect}
+                                    disabled={loadingItems.has(item.id)}
+                                  >
+                                    <option value="">Unit</option>
+                                    {commonUnits.filter(unit => unit !== '').map((unit) => (
+                                      <option key={unit} value={unit}>
+                                        {unit}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <button 
+                                    onClick={() => handleUpdateItemQuantity(item.id, item.quantity + 0.1)}
+                                    className={styles.quantityBtn}
+                                    disabled={loadingItems.has(item.id)}
+                                    aria-label="Increase quantity"
+                                  >
+                                    +
+                                  </button>
+                                  <button 
+                                    onClick={() => handleRemoveItem(item.id)}
+                                    className={styles.removeBtn}
+                                    disabled={loadingItems.has(item.id)}
+                                    aria-label="Remove ingredient"
+                                  >
+                                    {loadingItems.has(item.id) ? (
+                                      <HourglassIcon size={16} />
+                                    ) : (
+                                      <TrashIcon size={16} />
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                              
+                              <div className={styles.ingredientActions}>
+                                <button 
+                                  onClick={() => handleUpdateItemQuantity(item.id, item.quantity * 0.5)}
+                                  className={styles.quickBtn}
+                                  title="Half quantity"
+                                >
+                                  ½×
+                                </button>
+                                <button 
+                                  onClick={() => handleUpdateItemQuantity(item.id, item.quantity * 2)}
+                                  className={styles.quickBtn}
+                                  title="Double quantity"
+                                >
+                                  2×
+                                </button>
+                              </div>
                             </div>
-                            <div className={styles.quantityControls}>
-                              <button 
-                                onClick={() => handleUpdateItemQuantity(item.id, Math.max(0, item.quantity - 0.1))}
-                                className={styles.quantityBtn}
-                                disabled={loadingItems.has(item.id)}
-                                title="Decrease quantity"
-                              >
-                                −
-                              </button>
-                              <span className={styles.quantityDisplay}>
-                                {item.quantity} {item.unit}
-                              </span>
-                              <button 
-                                onClick={() => handleUpdateItemQuantity(item.id, item.quantity + 0.1)}
-                                className={styles.quantityBtn}
-                                disabled={loadingItems.has(item.id)}
-                                title="Increase quantity"
-                              >
-                                +
-                              </button>
-                            </div>
-                            <div className={styles.quickActions}>
-                              <button 
-                                onClick={() => handleUpdateItemQuantity(item.id, item.quantity * 0.5)}
-                                className={styles.quickBtn}
-                                title="Half quantity"
-                              >
-                                ½×
-                              </button>
-                              <button 
-                                onClick={() => handleUpdateItemQuantity(item.id, item.quantity * 2)}
-                                className={styles.quickBtn}
-                                title="Double quantity"
-                              >
-                                2×
-                              </button>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}

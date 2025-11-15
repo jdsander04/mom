@@ -321,7 +321,7 @@ const RecipeLibrary = () => {
   };
 
   const formatIngredients = (ingredients: Recipe['ingredients']) => 
-    ingredients?.map(ing => `${ing.quantity} ${ing.unit} ${ing.name}`.trim()) || [];
+    ingredients?.map(ing => ing.original_text || `${ing.quantity} ${ing.unit} ${ing.name}`.trim()) || [];
 
   const formatInstructions = (steps: Recipe['steps']) => 
     steps?.sort((a, b) => a.order - b.order).map(step => step.description) || [];
