@@ -19,13 +19,15 @@ const HomePage = () => {
 
   const handleRecipeClick = async (recipe: Recipe) => {
     // Check if recipe belongs to current user
-    const isOwnRecipe = recipe.user_id && user && recipe.user_id === user.id;
+    // Trending recipes (is_trending=true) always show the "Add to Library" dialog
+    const isOwnRecipe = recipe.user_id && user && recipe.user_id === user.id && !recipe.is_trending;
     
     if (isOwnRecipe) {
       // Navigate to recipe detail page if it's the user's own recipe
       navigate(`/recipes?recipeId=${recipe.id}`);
     } else {
       // Fetch full recipe details and show preview dialog
+      // This handles both trending recipes and other users' recipes
       try {
         const fullRecipe = await apiService.getRecipe(recipe.id);
         setSelectedRecipe(fullRecipe);

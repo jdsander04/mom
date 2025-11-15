@@ -525,6 +525,7 @@ def fetch_weekly_trending_recipes(self):
                     recipe.image_url = image_url
                     recipe.source_url = source_url
                     recipe.serves = serves
+                    recipe.is_trending = True  # Ensure it's marked as trending
                     recipe.save()
                     
                     # Delete old ingredients, steps, and nutrients
@@ -532,7 +533,7 @@ def fetch_weekly_trending_recipes(self):
                     recipe.steps.all().delete()
                     recipe.nutrients.all().delete()
                 else:
-                    # Create new Recipe
+                    # Create new Recipe (system-owned, marked as trending)
                     recipe = Recipe.objects.create(
                         user=trending_user,
                         name=title[:255],
@@ -542,6 +543,7 @@ def fetch_weekly_trending_recipes(self):
                         serves=serves,
                         times_made=0,
                         favorite=False,
+                        is_trending=True,  # Mark as trending recipe
                     )
                 
                 # Create ingredients

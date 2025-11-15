@@ -73,6 +73,7 @@ def _recipe_to_dict(recipe: Recipe, include_related=True) -> dict:
         'times_made': recipe.times_made,
         'favorite': recipe.favorite,
         'user_id': recipe.user.id,
+        'is_trending': recipe.is_trending,
     }
     
     if include_related:
@@ -422,6 +423,7 @@ def recipe_list(request):
                         'times_made': placeholder_recipe.times_made,
                         'favorite': placeholder_recipe.favorite,
                         'user_id': placeholder_recipe.user.id,
+                        'is_trending': placeholder_recipe.is_trending,
                         'ingredients': [],
                         'steps': [],
                         'nutrients': [],
@@ -622,6 +624,7 @@ def recipe_list(request):
                 'times_made': placeholder_recipe.times_made,
                 'favorite': placeholder_recipe.favorite,
                 'user_id': placeholder_recipe.user.id,
+                'is_trending': placeholder_recipe.is_trending,
                 'ingredients': [],
                 'steps': [],
                 'nutrients': [],
@@ -695,6 +698,7 @@ def recipe_list(request):
             'times_made': recipe.times_made,
             'favorite': recipe.favorite,
             'user_id': recipe.user.id,
+        'is_trending': recipe.is_trending,
             'ingredients': [
                 {
                     'name': i.name, 
@@ -787,11 +791,18 @@ def recipe_detail(request, recipe_id):
         recipe = Recipe.objects.get(id=recipe_id)
         
         # Check ownership for write operations
-        if request.method in ['PATCH', 'DELETE'] and recipe.user != request.user:
-            return handle_permission_denied_error(
-                'modify' if request.method == 'PATCH' else 'delete',
-                'recipe'
-            ).to_response()
+        # Trending recipes (is_trending=True) cannot be modified or deleted
+        if request.method in ['PATCH', 'DELETE']:
+            if recipe.is_trending:
+                return handle_permission_denied_error(
+                    'modify' if request.method == 'PATCH' else 'delete',
+                    'recipe'
+                ).to_response()
+            if recipe.user != request.user:
+                return handle_permission_denied_error(
+                    'modify' if request.method == 'PATCH' else 'delete',
+                    'recipe'
+                ).to_response()
     except Recipe.DoesNotExist:
         # Handle negative IDs (trending recipes) - lookup by spoonacular_id
         if recipe_id < 0:
@@ -961,7 +972,8 @@ def recipe_copy(request, recipe_id):
         source_url=source_recipe.source_url,
         serves=source_recipe.serves,
         favorite=False,  # Don't copy favorite status
-        times_made=0  # Reset times_made for the copy
+        times_made=0,  # Reset times_made for the copy
+        is_trending=False  # Copied recipes are not trending
     )
     
     # Copy ingredients
@@ -1188,6 +1200,7 @@ def recipe_search(request):
             'times_made': recipe.times_made,
             'favorite': recipe.favorite,
             'user_id': recipe.user.id,
+        'is_trending': recipe.is_trending,
             'score': round(score, 3)  # Round to 3 decimal places
         })
     
@@ -1305,6 +1318,7 @@ def recipe_popular(request):
             'times_made': r.times_made,
             'serves': r.serves,
             'user_id': r.user.id,
+            'is_trending': r.is_trending,
         })
 
     return Response({'results': results, 'total': len(results)})

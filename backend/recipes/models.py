@@ -13,6 +13,7 @@ class Recipe(models.Model):
     date_added = models.DateTimeField(default=timezone.now)
     times_made = models.PositiveIntegerField(default=0)
     favorite = models.BooleanField(default=False)
+    is_trending = models.BooleanField(default=False, help_text="True for trending recipes from Spoonacular")
 
 class Ingredient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='ingredients')
