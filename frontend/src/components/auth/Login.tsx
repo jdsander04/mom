@@ -1,13 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, TextField, Button, Typography, Alert, InputAdornment } from '@mui/material';
 import { Person, Lock, ArrowForward } from '@mui/icons-material';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import loginImage from '../../assets/AdobeStock_307109106.jpeg';
 import momCartImage from '../../assets/mom-cart.png';
 import './Login.css';
 
 const Login: React.FC = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const location = useLocation();
+  const initialMode = (location.state as { initialMode?: 'login' | 'signup' })?.initialMode || 'login';
+  const [isLogin, setIsLogin] = useState(initialMode === 'login');
+  
+  useEffect(() => {
+    setIsLogin(initialMode === 'login');
+  }, [initialMode]);
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -309,7 +316,7 @@ const Login: React.FC = () => {
                 disabled={loading}
                 endIcon={<ArrowForward />}
               >
-                {loading ? 'Loading...' : 'Login'}
+                {loading ? 'Loading...' : (isLogin ? 'Login' : 'Sign Up')}
               </Button>
             </Box>
             
