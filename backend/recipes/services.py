@@ -126,14 +126,14 @@ def parse_ingredient_string(ingredient_str: str) -> list:
     Fallbacks to quantity=1, unit="" if not detectable.
     """
     if not ingredient_str or not str(ingredient_str).strip():
-        return [{"name": "", "quantity": 1.0, "unit": ""}]
+        return [{"name": "", "quantity": 1.0, "unit": "each"}]
     
     try:
         parsed = parse_ingredient(str(ingredient_str), separate_names=True)
         
         # Extract quantity and unit from amount
         quantity = 1.0
-        unit = ""
+        unit = "each"
         if parsed.amount:
             amount = parsed.amount[0] if isinstance(parsed.amount, list) else parsed.amount
             try:
@@ -153,7 +153,7 @@ def parse_ingredient_string(ingredient_str: str) -> list:
         
         names = parsed.name if isinstance(parsed.name, list) else [parsed.name] if parsed.name else []
         if not names:
-            return [{"name": "", "quantity": 1.0, "unit": ""}]
+            return [{"name": "", "quantity": 1.0, "unit": "each"}]
         
         # Check if original text contains "or" - if so, it's alternatives not separate ingredients
         if ' or ' in ingredient_str.lower():
@@ -169,7 +169,7 @@ def parse_ingredient_string(ingredient_str: str) -> list:
             return results
     except Exception as e:
         logger.warning(f"Failed to parse ingredient '{ingredient_str}': {e}")
-        return [{"name": str(ingredient_str), "quantity": 1.0, "unit": ""}]
+        return [{"name": str(ingredient_str), "quantity": 1.0, "unit": "each"}]
 
 def parse_serves_value(value) -> int:
     """Parse a serves/servings/yields value into a positive integer if possible.
@@ -319,8 +319,12 @@ def normalize_spoonacular_recipe_data(recipe: dict) -> dict:
                 if isinstance(ingredient.get('measures'), dict)
                 else ''
             )
-            or ''
+            or 'each'
         ).strip()
+        
+        # Ensure unit is never empty - default to "each" for Instacart compatibility
+        if not unit:
+            unit = 'each'
 
         ingredients.append({
             'name': name[:255],
