@@ -265,52 +265,69 @@ def normalize_spoonacular_recipe_data(recipe: dict) -> dict:
     source_url = recipe.get('sourceUrl') or recipe.get('spoonacularSourceUrl') or ''
     serves = parse_serves_value(recipe.get('servings'))
 
-    # Ingredients
+    # Ingredients - avoid duplicates by tracking processed ingredients
     ingredients = []
-    ingredient_sources = []
+    seen_ingredients = set()  # Track by original text to avoid duplicates
+    
+    # Only use extendedIngredients if available, otherwise fall back to others
     if recipe.get('extendedIngredients'):
-        ingredient_sources.append(recipe.get('extendedIngredients') or [])
-    if recipe.get('usedIngredients'):
-        ingredient_sources.append(recipe.get('usedIngredients') or [])
-    if recipe.get('missedIngredients'):
-        ingredient_sources.append(recipe.get('missedIngredients') or [])
+        ingredient_list = recipe.get('extendedIngredients')
+    elif recipe.get('usedIngredients'):
+        ingredient_list = recipe.get('usedIngredients')
+    elif recipe.get('missedIngredients'):
+        ingredient_list = recipe.get('missedIngredients')
+    else:
+        ingredient_list = []
 
-    for ingredient_list in ingredient_sources:
-        for ingredient in ingredient_list:
-            name = (
-                ingredient.get('nameClean')
-                or ingredient.get('originalName')
-                or ingredient.get('name')
-                or ingredient.get('original')
-                or ''
-            ).strip()
-            if not name:
-                continue
+    for ingredient in ingredient_list:
+        # Get original text first for deduplication
+        original_text = ingredient.get('original', '').strip()
+        if not original_text:
+            continue
+            
+        # Decode HTML entities
+        import html
+        original_text = html.unescape(original_text)
+        
+        # Skip duplicates based on original text
+        if original_text.lower() in seen_ingredients:
+            continue
+        seen_ingredients.add(original_text.lower())
 
-            amount = ingredient.get('amount')
-            if amount is None and isinstance(ingredient.get('measures'), dict):
-                amount = (
-                    ingredient['measures'].get('us', {}).get('amount')
-                    or ingredient['measures'].get('metric', {}).get('amount')
-                )
+        name = (
+            ingredient.get('nameClean')
+            or ingredient.get('originalName')
+            or ingredient.get('name')
+            or original_text
+        ).strip()
+        if not name:
+            continue
 
-            unit = (
-                ingredient.get('unit')
-                or ingredient.get('unitShort')
-                or ingredient.get('unitLong')
-                or (
-                    ingredient.get('measures', {}).get('us', {}).get('unitShort')
-                    if isinstance(ingredient.get('measures'), dict)
-                    else ''
-                )
-                or ''
-            ).strip()
+        amount = ingredient.get('amount')
+        if amount is None and isinstance(ingredient.get('measures'), dict):
+            amount = (
+                ingredient['measures'].get('us', {}).get('amount')
+                or ingredient['measures'].get('metric', {}).get('amount')
+            )
 
-            ingredients.append({
-                'name': name[:255],
-                'quantity': round(_get_float(amount, 0.0), 3),
-                'unit': unit[:50],
-            })
+        unit = (
+            ingredient.get('unit')
+            or ingredient.get('unitShort')
+            or ingredient.get('unitLong')
+            or (
+                ingredient.get('measures', {}).get('us', {}).get('unitShort')
+                if isinstance(ingredient.get('measures'), dict)
+                else ''
+            )
+            or ''
+        ).strip()
+
+        ingredients.append({
+            'name': name[:255],
+            'quantity': round(_get_float(amount, 0.0), 3),
+            'unit': unit[:50],
+            'original_text': original_text[:500],
+        })
 
     # Steps / Instructions
     steps = []
