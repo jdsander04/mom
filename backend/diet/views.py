@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
 
-from .models import DietaryPreference, DietaryRestriction
+from .models import DietaryPreference, DietaryRestriction, DietSuggestion, IngredientSuggestion
 
 
 @extend_schema(
@@ -116,3 +116,27 @@ def rest_delete(request, rest_id: int):
 
 	rest.delete()
 	return Response({'message': f'Restriction {rest_id} deleted'})
+
+
+@extend_schema(
+	methods=['GET'],
+	responses={200: {'description': 'List of diet suggestions'}}
+)
+@api_view(['GET'])
+def diet_suggestions(request):
+	"""Get all diet suggestions"""
+	suggestions = DietSuggestion.objects.all()
+	data = [{'id': s.id, 'name': s.name, 'description': s.description} for s in suggestions]
+	return Response({'suggestions': data})
+
+
+@extend_schema(
+	methods=['GET'],
+	responses={200: {'description': 'List of ingredient suggestions'}}
+)
+@api_view(['GET'])
+def ingredient_suggestions(request):
+	"""Get all ingredient suggestions"""
+	suggestions = IngredientSuggestion.objects.all()
+	data = [{'id': s.id, 'name': s.name, 'description': s.description} for s in suggestions]
+	return Response({'suggestions': data})

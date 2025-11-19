@@ -93,8 +93,12 @@ class BudgetRetrieveUpdateView(APIView):
     def get(self, request):
         try:
             try:
-                budget = Budget.objects.get(user=request.user)
-                return Response(BudgetSerializer(budget).data)
+                budget, _ = Budget.objects.get_or_create(user=request.user)
+                # Update spent with actual weekly spending from order history
+                weekly_spent = Budget.get_weekly_spent(request.user)
+                data = BudgetSerializer(budget).data
+                data['spent'] = weekly_spent
+                return Response(data)
             except Budget.DoesNotExist:
                 return Response({'weekly_budget': 0, 'spent': 0})
         except DatabaseError:
