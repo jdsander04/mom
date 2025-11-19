@@ -158,12 +158,8 @@ export default function UserProfile() {
         fetchJSON(endpoint, token, { signal: c.signal })
           .then((json) => {
             let list: string[] = [];
-            if (Array.isArray(json.suggestions)) {
-              list = json.suggestions.filter((s: any) => typeof s === 'string');
-            } else if (Array.isArray(json.results)) {
-              list = json.results.map((r: any) => (typeof r === 'string' ? r : r?.name ?? String(r))).filter(Boolean);
-            } else if (Array.isArray(json)) {
-              list = json.map((r: any) => (typeof r === 'string' ? r : r?.name ?? String(r))).filter(Boolean);
+            if (json.suggestions && Array.isArray(json.suggestions)) {
+              list = json.suggestions.map((s: any) => s.name || s).filter(Boolean);
             }
             if (lastRef.current === q) setResults(list);
           })
@@ -469,11 +465,11 @@ export default function UserProfile() {
             <Stack direction="row" spacing={1}>
               <Button
                 variant="contained"
-                onClick={handleUpload}
-                disabled={!token || !selectedFile || uploading}
-                startIcon={uploading ? <CircularProgress size={18} color="inherit" /> : undefined}
+                onClick={selectedFile ? handleUpload : handleSaveAll}
+                disabled={!token || (selectedFile ? uploading : saveAllStatus === 'saving' || (dietPlans.filter(d => !d.serverId && d.value.trim()).length === 0 && allergens.filter(a => !a.serverId && a.value.trim()).length === 0))}
+                startIcon={(selectedFile ? uploading : saveAllStatus === 'saving') ? <CircularProgress size={18} color="inherit" /> : undefined}
               >
-                {uploading ? 'Saving…' : 'Save changes'}
+                {selectedFile ? (uploading ? 'Saving…' : 'Save changes') : (saveAllStatus === 'saving' ? 'Saving...' : 'Save changes')}
               </Button>
             </Stack>
           </Box>

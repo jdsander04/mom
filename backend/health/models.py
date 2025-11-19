@@ -41,6 +41,22 @@ class Budget(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - Budget"
+    
+    @classmethod
+    def get_weekly_spent(cls, user):
+        """Calculate total spent from past week's order history."""
+        from cart.order_models import OrderHistory
+        from datetime import datetime, timedelta
+        from django.db.models import Sum
+        
+        week_ago = datetime.now() - timedelta(days=7)
+        total = OrderHistory.objects.filter(
+            user=user,
+            created_at__gte=week_ago,
+            total_price__isnull=False
+        ).aggregate(total=Sum('total_price'))['total']
+        
+        return float(total or 0)
 
 
 class UserNutritionSnapshot(models.Model):
@@ -59,24 +75,29 @@ class UserNutritionSnapshot(models.Model):
 
     @classmethod
     def compute_for_user(cls, user):
-        """Compute aggregated nutrient totals for a user from recipe nutrients.
+        """Compute aggregated nutrient totals for a user from past week's order history.
 
         Returns a dict: { 'totals': {macro: float}, 'calories': float }
         """
         
-        from recipes.models import Nutrient as RecipeNutrient
-        from django.db.models import Sum
+        from cart.order_models import OrderHistory
+        from datetime import datetime, timedelta
 
-        qs = RecipeNutrient.objects.filter(recipe__user=user)
-        agg = qs.values('macro').annotate(total=Sum('mass'))
-        totals: dict = {}
+        # Get orders from the past week
+        week_ago = datetime.now() - timedelta(days=7)
+        recent_orders = OrderHistory.objects.filter(
+            user=user,
+            created_at__gte=week_ago
+        )
 
-        print(qs)
-
-        for row in agg:
-            print(row)
-            macro = row['macro'] or 'unknown'
-            totals[macro] = float(row['total'] or 0)
+        totals = {}
+        for order in recent_orders:
+            nutrition_data = order.nutrition_data or {}
+            for macro, value in nutrition_data.items():
+                if macro in totals:
+                    totals[macro] += float(value)
+                else:
+                    totals[macro] = float(value)
 
         # try to find calories/energy in macros (case-insensitive)
         calories = 0.0
