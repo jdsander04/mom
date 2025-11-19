@@ -33,6 +33,8 @@ def normalize_ingredient_for_instacart(name: str) -> str:
 		return 'eggs'
 	if name_lower == 'egg':
 		return 'eggs'
+	if name_lower == 'pepper':
+		return 'black pepper'
 	
 	return name
 
