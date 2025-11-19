@@ -556,12 +556,14 @@ def fetch_weekly_trending_recipes(self):
                         continue
                     quantity = Decimal(str(ingredient.get('quantity', 0)))
                     unit = str(ingredient.get('unit', '')).strip()
+                    original_text = str(ingredient.get('original_text', '')).strip()
                     
                     Ingredient.objects.create(
                         recipe=recipe,
                         name=name[:500],
                         quantity=quantity,
-                        unit=unit[:100]
+                        unit=unit[:100],
+                        original_text=original_text[:500]
                     )
                 
                 # Create steps

@@ -118,10 +118,12 @@ def _format_trending_ingredients(ingredients):
             continue
         quantity = _safe_float(ingredient.get('quantity'), 0.0)
         unit = str(ingredient.get('unit') or '').strip()
+        original_text = str(ingredient.get('original_text') or '').strip()
         formatted.append({
             'name': name[:500],
             'quantity': quantity,
             'unit': unit[:100],
+            'original_text': original_text[:500],
         })
     return formatted
 
@@ -217,6 +219,7 @@ def _create_recipe_from_trending(trending_recipe: TrendingRecipe, user) -> Recip
             name=ingredient['name'],
             quantity=_safe_decimal(ingredient.get('quantity')),
             unit=ingredient['unit'],
+            original_text=ingredient.get('original_text', ''),
         )
 
     for idx, step in enumerate(steps, start=1):
@@ -663,7 +666,8 @@ def recipe_list(request):
                     recipe=recipe,
                     name=ing_data.get('name', ''),
                     quantity=ing_data.get('quantity', 0),
-                    unit=ing_data.get('unit', '')
+                    unit=ing_data.get('unit', ''),
+                    original_text=ing_data.get('original_text', '')
                 )
                 ingredients_count += 1
             
@@ -858,7 +862,8 @@ def recipe_detail(request, recipe_id):
                     recipe=recipe,
                     name=ing_data.get('name', ''),
                     quantity=ing_data.get('quantity', 0),
-                    unit=ing_data.get('unit', '')
+                    unit=ing_data.get('unit', ''),
+                    original_text=ing_data.get('original_text', '')
                 )
         if steps is not None:
             recipe.steps.all().delete()
@@ -982,7 +987,8 @@ def recipe_copy(request, recipe_id):
             recipe=copied_recipe,
             name=ingredient.name,
             quantity=ingredient.quantity,
-            unit=ingredient.unit
+            unit=ingredient.unit,
+            original_text=ingredient.original_text
         )
     
     # Copy steps
