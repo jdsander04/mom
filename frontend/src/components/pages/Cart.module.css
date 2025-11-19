@@ -736,6 +736,34 @@
   gap: 12px;
 }
 
+.pantryToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #495057;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.pantryToggle:hover {
+  border-color: #4caf50;
+  background: #f8fff9;
+}
+
+.pantryToggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #4caf50;
+}
+
 .providerSelect {
   padding: 14px 16px;
   border: 2px solid #e0e0e0;

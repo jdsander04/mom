@@ -85,10 +85,11 @@ export default function OrderSummary({ open, onClose, onConfirmOrder, selectedPr
       try {
         const response = await apiService.post('/cart/instacart/');
         if (response.data.success && response.data.redirect_url) {
-          window.open(response.data.redirect_url, '_blank');
+          window.open(response.data.redirect_url, '_blank', 'noopener,noreferrer');
         }
       } catch (error) {
-        console.error('Failed to create Instacart shopping list:', error);
+        console.error('Failed to create Instacart recipe:', error);
+        alert('Failed to create Instacart recipe. Please try again.');
       } finally {
         setInstacartLoading(false);
       }
