@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TextField, Button, Dialog, DialogTitle, DialogContent, DialogActions, Typography, Box, IconButton, InputAdornment } from '@mui/material';
-import { Close as CloseIcon, CloudUpload as UploadIcon, Add as AddIcon, FilterList as FilterIcon, Sort as SortIcon, Search as SearchIcon } from '@mui/icons-material';
+import { Close as CloseIcon, CloudUpload as UploadIcon, Add as AddIcon, Sort as SortIcon, Search as SearchIcon, ViewList as ViewListIcon, ViewModule as ViewModuleIcon } from '@mui/icons-material';
 import styles from './RecipeLibrary.module.css';
 import VerticalContainer from '../common/VerticalContainer/VerticalContainer';
 import RecipeAccordion from '../common/RecipeAccordion/RecipeAccordion';
@@ -31,6 +31,7 @@ const RecipeLibrary = () => {
   const [searchResults, setSearchResults] = useState<Recipe[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [nonRecipeNotice, setNonRecipeNotice] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'expanded' | 'list'>('expanded');
   
   // Get recipeId from URL params
   const targetRecipeId = searchParams.get('recipeId') ? parseInt(searchParams.get('recipeId') || '0', 10) : null;
@@ -267,6 +268,11 @@ const RecipeLibrary = () => {
   });
 
   const favoriteRecipes = sortedRecipes.filter(r => r.favorite);
+  
+  const toggleViewMode = () => {
+    setViewMode(prev => prev === 'list' ? 'expanded' : 'list');
+  };
+
 
 
 
@@ -408,26 +414,6 @@ const RecipeLibrary = () => {
         
         <Button 
           variant="outlined"
-          startIcon={<FilterIcon />}
-          onClick={() => sortRecipes('times_made')}
-          sx={{ 
-            borderColor: sortBy === 'times_made' ? '#2e7d32' : '#e0e0e0',
-            color: sortBy === 'times_made' ? '#2e7d32' : '#666',
-            backgroundColor: sortBy === 'times_made' ? '#f1f8e9' : 'transparent',
-            '&:hover': {
-              borderColor: sortBy === 'times_made' ? '#1b5e20' : '#bdbdbd',
-              backgroundColor: sortBy === 'times_made' ? '#e8f5e8' : '#f5f5f5'
-            },
-            borderRadius: 2,
-            padding: '8px 16px',
-            textTransform: 'none'
-          }}
-        >
-          Popular {sortBy === 'times_made' && (sortOrder === 'desc' ? '↓' : '↑')}
-        </Button>
-        
-        <Button 
-          variant="outlined"
           startIcon={<SortIcon />}
           onClick={() => sortRecipes('date_added')}
           sx={{ 
@@ -445,6 +431,26 @@ const RecipeLibrary = () => {
         >
           Date added {sortBy === 'date_added' && (sortOrder === 'desc' ? '↓' : '↑')}
         </Button>
+        
+        <Button 
+          variant="outlined"
+          startIcon={viewMode === 'list' ? <ViewModuleIcon /> : <ViewListIcon />}
+          onClick={toggleViewMode}
+          sx={{ 
+            borderColor: '#e0e0e0',
+            color: '#666',
+            backgroundColor: 'transparent',
+            '&:hover': {
+              borderColor: '#bdbdbd',
+              backgroundColor: '#f5f5f5'
+            },
+            borderRadius: 2,
+            padding: '8px 16px',
+            textTransform: 'none'
+          }}
+        >
+          {viewMode === 'list' ? 'Expanded View' : 'List View'}
+        </Button>
       </Box>
 
       {favoriteRecipes.length > 0 && (
@@ -459,7 +465,7 @@ const RecipeLibrary = () => {
 
               return (
                 <RecipeAccordion 
-                  key={`fav-${recipe.id}`}
+                  key={`fav-${recipe.id}-${viewMode}`}
                   recipeId={recipe.id}
                   title={recipe.name}
                   calories={calories}
@@ -469,6 +475,8 @@ const RecipeLibrary = () => {
                   onRecipeUpdated={refetch}
                   favorite={recipe.favorite}
                   initialOpen={targetRecipeId === recipe.id}
+                  variant={viewMode}
+                  imageUrl={recipe.image_url || ''}
                 >
                   <RecipeDetails
                     imageUrl={recipe.image_url || ''}
@@ -493,7 +501,7 @@ const RecipeLibrary = () => {
           
           return (
             <RecipeAccordion 
-              key={recipe.id}
+              key={`${recipe.id}-${viewMode}`}
               recipeId={recipe.id}
               title={recipe.name}
               calories={calories}
@@ -503,6 +511,8 @@ const RecipeLibrary = () => {
               onRecipeUpdated={refetch}
               favorite={recipe.favorite}
               initialOpen={targetRecipeId === recipe.id}
+              variant={viewMode}
+              imageUrl={recipe.image_url || ''}
             >
               <RecipeDetails
                 imageUrl={recipe.image_url || ''}

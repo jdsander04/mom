@@ -18,9 +18,24 @@ interface RecipeAccordionProps {
   favorite?: boolean
   onRecipeUpdated?: () => void
   initialOpen?: boolean
+  variant?: 'expanded' | 'list'
+  imageUrl?: string
 }
 
-const RecipeAccordion = ({ recipeId, title, calories, serves, children, sourceUrl, onRecipeDeleted, favorite = false, onRecipeUpdated, initialOpen = false }: RecipeAccordionProps) => {
+const RecipeAccordion = ({
+  recipeId,
+  title,
+  calories,
+  serves,
+  children,
+  sourceUrl,
+  onRecipeDeleted,
+  favorite = false,
+  onRecipeUpdated,
+  initialOpen = false,
+  variant = 'list',
+  imageUrl
+}: RecipeAccordionProps) => {
   const [isOpen, setIsOpen] = useState(initialOpen)
   const [isAdded, setIsAdded] = useState(false)
   const [currentQuantity, setCurrentQuantity] = useState(1)
@@ -187,53 +202,77 @@ const RecipeAccordion = ({ recipeId, title, calories, serves, children, sourceUr
     }
   }
 
-  return (
-    <div className={styles.accordion} ref={accordionRef}>
-      <button 
-        className={`${styles.header} ${isOpen ? styles.headerOpen : ''}`} 
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <div className={styles.headerContent}>
-          {sourceUrl ? (
-            <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className={`${styles.title} ${styles.titleLink}`}>
-              {title}
-            </a>
-          ) : (
-            <span className={styles.title}>{title}</span>
-          )}
-          
-          <div className={styles.rightSide}>
-            <span className={styles.calories}>{calories} cal</span>
-            <span className={styles.serves}>Serves {serves}</span>
-            <div className={styles.quantitySelector}>
-              <div 
-                className={styles.quantityButton}
-                onClick={(e) => handleQuantityChange(e, -1)}
-              >
-                -
-              </div>
-              <span className={styles.quantity}>{currentQuantity}</span>
-              <div 
-                className={styles.quantityButton}
-                onClick={(e) => handleQuantityChange(e, 1)}
-              >
-                +
-              </div>
-            </div>
-            <div 
-              className={`${styles.addButton} ${isAdded ? styles.added : ''}`}
-              onClick={handleAddClick}
-            >
-              {isAdded ? <RemoveShoppingCartIcon /> : <AddShoppingCartIcon />}
-            </div>
-            <div 
-              className={styles.deleteButton}
-              onClick={handleDeleteClick}
-            >
-              <Delete />
-            </div>
-          </div>
+  const accordionClassName = `${styles.accordion} ${variant === 'expanded' ? styles.expandedVariant : styles.listVariant}`
+  const headerClassName = `${styles.header} ${isOpen ? styles.headerOpen : ''}`
+
+  const rightSideControls = (
+    <div className={styles.rightSide}>
+      <span className={styles.calories}>{calories} cal</span>
+      <span className={styles.serves}>Serves {serves}</span>
+      <div className={styles.quantitySelector}>
+        <div
+          className={styles.quantityButton}
+          onClick={(e) => handleQuantityChange(e, -1)}
+        >
+          -
         </div>
+        <span className={styles.quantity}>{currentQuantity}</span>
+        <div
+          className={styles.quantityButton}
+          onClick={(e) => handleQuantityChange(e, 1)}
+        >
+          +
+        </div>
+      </div>
+      <div
+        className={`${styles.addButton} ${isAdded ? styles.added : ''}`}
+        onClick={handleAddClick}
+      >
+        {isAdded ? <RemoveShoppingCartIcon /> : <AddShoppingCartIcon />}
+      </div>
+      <div
+        className={styles.deleteButton}
+        onClick={handleDeleteClick}
+      >
+        <Delete />
+      </div>
+    </div>
+  )
+
+  const renderHeaderContent = () => {
+    return (
+      <div className={styles.headerContent}>
+        {variant === 'expanded' && (
+          <div className={styles.inlineThumbnail}>
+            {imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={imageUrl} alt={title} />
+            ) : (
+              <div className={styles.inlineThumbnailPlaceholder}>No image</div>
+            )}
+          </div>
+        )}
+        {sourceUrl ? (
+          <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className={`${styles.title} ${styles.titleLink}`}>
+            {title}
+          </a>
+        ) : (
+          <span className={styles.title}>{title}</span>
+        )}
+        {rightSideControls}
+      </div>
+    )
+  }
+
+  return (
+    <div className={accordionClassName} ref={accordionRef}>
+      <button
+        type="button"
+        className={headerClassName}
+        onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+      >
+        {renderHeaderContent()}
         <ExpandMore className={`${styles.arrow} ${isOpen ? styles.open : ''}`} />
       </button>
       {isOpen && (
