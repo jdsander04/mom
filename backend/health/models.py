@@ -46,10 +46,11 @@ class Budget(models.Model):
     def get_weekly_spent(cls, user):
         """Calculate total spent from past week's order history."""
         from cart.order_models import OrderHistory
-        from datetime import datetime, timedelta
+        from datetime import timedelta
         from django.db.models import Sum
+        from django.utils import timezone
         
-        week_ago = datetime.now() - timedelta(days=7)
+        week_ago = timezone.now() - timedelta(days=7)
         total = OrderHistory.objects.filter(
             user=user,
             created_at__gte=week_ago,
@@ -81,10 +82,11 @@ class UserNutritionSnapshot(models.Model):
         """
         
         from cart.order_models import OrderHistory
-        from datetime import datetime, timedelta
+        from datetime import timedelta
+        from django.utils import timezone
 
         # Get orders from the past week
-        week_ago = datetime.now() - timedelta(days=7)
+        week_ago = timezone.now() - timedelta(days=7)
         recent_orders = OrderHistory.objects.filter(
             user=user,
             created_at__gte=week_ago
