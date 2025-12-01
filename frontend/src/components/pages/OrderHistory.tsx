@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, Typography, Box, CircularProgress, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Box, CircularProgress, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
+import { ViewList as ViewListIcon, ViewModule as ViewModuleIcon } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
-import { apiService } from '../../services/api';
+import styles from './OrderHistory.module.css';
 
 interface OrderHistoryItem {
   id: number;
@@ -21,12 +22,15 @@ interface OrderHistoryItem {
   };
 }
 
+type ViewMode = 'card' | 'list';
+
 export default function OrderHistory() {
   const [orders, setOrders] = useState<OrderHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [priceDialogOpen, setPriceDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderHistoryItem | null>(null);
   const [priceInput, setPriceInput] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>('card');
   const { token } = useAuth();
 
   const reorderCart = async (orderId: number) => {
@@ -129,6 +133,26 @@ export default function OrderHistory() {
     }
   }, [token]);
 
+  const getOrderName = (order: OrderHistoryItem) => {
+    if (order.recipe_names && order.recipe_names.length > 0) {
+      return order.recipe_names[0];
+    }
+    return order.items_data?.title || 'Shopping List';
+  };
+
+  const getRecipeCountText = (count: number) => {
+    return count === 1 ? '1 recipe' : `${count} recipes`;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: '2-digit', 
+      day: '2-digit', 
+      year: 'numeric' 
+    });
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" p={4}>
@@ -139,128 +163,229 @@ export default function OrderHistory() {
 
   return (
     <>
-    <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Order History
-      </Typography>
-      
-      {orders.length === 0 ? (
-        <Card>
-          <CardContent sx={{ textAlign: 'center', py: 6 }}>
-            <Typography color="text.secondary">
-              No orders found. Start shopping to see your order history!
-            </Typography>
-          </CardContent>
-        </Card>
-      ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {orders.map((order) => (
-            <Card key={order.id}>
-              <CardContent>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  {order.top_recipe_image && (
-                    <Box sx={{ width: 80, height: 80, flexShrink: 0 }}>
-                      <img 
-                        src={order.top_recipe_image} 
-                        alt="Recipe" 
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }}
-                      />
-                    </Box>
-                  )}
-                  
-                  <Box sx={{ flex: 1 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                      <Typography variant="h6">
-                        {order.items_data?.title || 'Shopping List'}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {new Date(order.created_at).toLocaleDateString()}
-                      </Typography>
-                    </Box>
-                    
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                      {order.recipe_names?.length || 0} recipes • {order.items_data?.line_items?.length || 0} items
-                      {order.total_price && ` • $${order.total_price}`}
-                    </Typography>
-                    
-                    <Box sx={{ mb: 2 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>Recipes:</Typography>
-                      {order.recipe_names?.slice(0, 3).map((recipeName, index) => (
-                        <Typography key={index} variant="body2" sx={{ ml: 1 }}>
-                          • {recipeName}
-                        </Typography>
-                      )) || []}
-                      {(order.recipe_names?.length || 0) > 3 && (
-                        <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                          +{(order.recipe_names?.length || 0) - 3} more recipes
-                        </Typography>
-                      )}
-                    </Box>
-                    
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        onClick={() => reorderCart(order.id)}
-                      >
-                        Re-order
-                      </Button>
-                      
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={() => openPriceDialog(order)}
-                      >
-                        {order.total_price ? 'Edit Price' : 'Set Price'}
-                      </Button>
-                      
-                      {order.instacart_url && (
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() => window.open(order.instacart_url!, '_blank')}
-                        >
-                          View on Instacart
-                        </Button>
-                      )}
-                      
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        color="error"
-                        onClick={() => deleteOrder(order.id)}
-                      >
-                        Delete
-                      </Button>
-                    </Box>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          ))}
+      <div className={styles.container}>
+        <Box 
+          className={styles.headerRow}
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            marginBottom: '4px'
+          }}
+        >
+          <h1 className={styles.pageTitle}>Order History</h1>
+          <Button 
+            variant="outlined"
+            startIcon={viewMode === 'list' ? <ViewModuleIcon /> : <ViewListIcon />}
+            onClick={() => setViewMode(prev => prev === 'list' ? 'card' : 'list')}
+            sx={{ 
+              borderColor: '#e0e0e0',
+              color: '#666',
+              backgroundColor: 'transparent',
+              '&:hover': {
+                borderColor: '#bdbdbd',
+                backgroundColor: '#f5f5f5'
+              },
+              borderRadius: 2,
+              padding: '8px 16px',
+              textTransform: 'none',
+              fontSize: '0.875rem'
+            }}
+          >
+            {viewMode === 'list' ? 'Card view' : 'List view'}
+          </Button>
         </Box>
-      )}
-    </Box>
+        
+        {orders.length === 0 ? (
+          <div className={styles.emptyState}>
+            <p className={styles.emptyStateText}>
+              No orders found. Start shopping to see your order history!
+            </p>
+          </div>
+        ) : (
+          <div className={styles.ordersList}>
+            {orders.map((order) => (
+              <OrderHistoryCard
+                key={order.id}
+                order={order}
+                viewMode={viewMode}
+                getOrderName={getOrderName}
+                getRecipeCountText={getRecipeCountText}
+                formatDate={formatDate}
+                onReorder={reorderCart}
+                onOpenPriceDialog={openPriceDialog}
+                onDelete={deleteOrder}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     
-    <Dialog open={priceDialogOpen} onClose={() => setPriceDialogOpen(false)}>
-      <DialogTitle>Set Order Price</DialogTitle>
-      <DialogContent>
-        <TextField
-          autoFocus
-          margin="dense"
-          label="Price ($)"
-          type="number"
-          fullWidth
-          variant="outlined"
-          value={priceInput}
-          onChange={(e) => setPriceInput(e.target.value)}
-        />
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => setPriceDialogOpen(false)}>Cancel</Button>
-        <Button onClick={savePrice} variant="contained">Save</Button>
-      </DialogActions>
-    </Dialog>
+      <Dialog open={priceDialogOpen} onClose={() => setPriceDialogOpen(false)}>
+        <DialogTitle>Set Order Price</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Price ($)"
+            type="number"
+            fullWidth
+            variant="outlined"
+            value={priceInput}
+            onChange={(e) => setPriceInput(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPriceDialogOpen(false)}>Cancel</Button>
+          <Button onClick={savePrice} variant="contained">Save</Button>
+        </DialogActions>
+      </Dialog>
     </>
+  );
+}
+
+interface OrderHistoryCardProps {
+  order: OrderHistoryItem;
+  viewMode: ViewMode;
+  getOrderName: (order: OrderHistoryItem) => string;
+  getRecipeCountText: (count: number) => string;
+  formatDate: (dateString: string) => string;
+  onReorder: (orderId: number) => void;
+  onOpenPriceDialog: (order: OrderHistoryItem) => void;
+  onDelete: (orderId: number) => void;
+}
+
+function OrderHistoryCard({
+  order,
+  viewMode,
+  getOrderName,
+  getRecipeCountText,
+  formatDate,
+  onReorder,
+  onOpenPriceDialog,
+  onDelete
+}: OrderHistoryCardProps) {
+  const baseClassName = `${styles.orderCard} ${
+    viewMode === 'list' ? styles.orderCardList : styles.orderCardCard
+  }`;
+
+  if (viewMode === 'list') {
+    return (
+      <div className={baseClassName}>
+        <div className={styles.listContent}>
+          <div className={styles.listText}>
+            <h2 className={styles.orderName}>{getOrderName(order)}</h2>
+            <p className={styles.recipeCount}>
+              {getRecipeCountText(order.recipe_names?.length || 0)}
+            </p>
+          </div>
+          <div className={styles.listRight}>
+            <p className={styles.orderDate}>{formatDate(order.created_at)}</p>
+            <div className={styles.actionsContainer}>
+              <button
+                className={styles.reorderButton}
+                onClick={() => onReorder(order.id)}
+              >
+                RE-ORDER
+              </button>
+
+              <button
+                className={styles.setPriceButton}
+                onClick={() => onOpenPriceDialog(order)}
+              >
+                SET PRICE
+              </button>
+
+              {order.instacart_url && (
+                <button
+                  className={styles.viewInstacartButton}
+                  onClick={() => window.open(order.instacart_url!, '_blank')}
+                >
+                  VIEW ON INSTACART
+                </button>
+              )}
+
+              <button
+                className={styles.deleteButton}
+                onClick={() => onDelete(order.id)}
+              >
+                DELETE
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Card view (existing rich layout)
+  return (
+    <div className={baseClassName}>
+      <div className={styles.cardContent}>
+        {order.top_recipe_image && (
+          <img
+            src={order.top_recipe_image}
+            alt="Recipe"
+            className={styles.orderImage}
+          />
+        )}
+
+        <div className={styles.orderDetails}>
+          <div className={styles.orderHeader}>
+            <h2 className={styles.orderName}>{getOrderName(order)}</h2>
+            <p className={styles.orderDate}>{formatDate(order.created_at)}</p>
+          </div>
+
+          <p className={styles.recipeCount}>
+            {getRecipeCountText(order.recipe_names?.length || 0)}
+          </p>
+
+          {order.recipe_names && order.recipe_names.length > 0 && (
+            <div>
+              <p className={styles.recipesListTitle}>Recipes:</p>
+              <ul className={styles.recipesList}>
+                {order.recipe_names.map((recipeName, index) => (
+                  <li key={index} className={styles.recipeItem}>
+                    • {recipeName}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className={styles.actionsContainer}>
+            <button
+              className={styles.reorderButton}
+              onClick={() => onReorder(order.id)}
+            >
+              RE-ORDER
+            </button>
+
+            <button
+              className={styles.setPriceButton}
+              onClick={() => onOpenPriceDialog(order)}
+            >
+              SET PRICE
+            </button>
+
+            {order.instacart_url && (
+              <button
+                className={styles.viewInstacartButton}
+                onClick={() => window.open(order.instacart_url!, '_blank')}
+              >
+                VIEW ON INSTACART
+              </button>
+            )}
+
+            <button
+              className={styles.deleteButton}
+              onClick={() => onDelete(order.id)}
+            >
+              DELETE
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

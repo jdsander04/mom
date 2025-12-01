@@ -42,6 +42,15 @@ const FULL_WIDTH_CONTENT_STYLES = {
   flex: 1
 };
 
+const ORDER_HISTORY_CONTENT_STYLES = {
+  margin: '0 auto',
+  padding: '2rem',
+  maxWidth: '1200px',
+  width: '100%',
+  boxSizing: 'border-box',
+  display: 'block'
+};
+
 const PLANNER_CONTENT_STYLES = {
   margin: '0 auto',
   padding: '2rem',
@@ -59,10 +68,12 @@ const Layout = ({ children }: LayoutProps) => {
   const location = useLocation();
   const isCartPage = location.pathname === '/cart';
   const isPlannerPage = location.pathname === '/planner';
+  const isOrderHistoryPage = location.pathname === '/order-history';
 
   const getContentStyles = () => {
     if (isCartPage) return FULL_WIDTH_CONTENT_STYLES;
     if (isPlannerPage) return PLANNER_CONTENT_STYLES;
+    if (isOrderHistoryPage) return ORDER_HISTORY_CONTENT_STYLES;
     return DEFAULT_CONTENT_STYLES;
   };
 

@@ -33,6 +33,8 @@ def normalize_ingredient_for_instacart(name: str) -> str:
 		return 'eggs'
 	if name_lower == 'egg':
 		return 'eggs'
+	if name_lower == 'pepper':
+		return 'black pepper'
 	
 	return name
 
@@ -615,27 +617,50 @@ def create_instacart_list(request):
 	# Strip whitespace in case there are leading/trailing spaces
 	api_key = api_key.strip()
 	
-	# Format ingredients for Instacart API
-	line_items = []
-	for ingredient in combined.values():
-		line_items.append({
-			'name': ingredient['name'],
-			'quantity': int(ingredient['quantity']) if ingredient['quantity'].is_integer() else ingredient['quantity'],
-			'unit': ingredient['unit'] or 'item'
-		})
-	
-	# Create title with date and username
-	from datetime import datetime
-	current_date = datetime.now().strftime('%Y-%m-%d')
-	title = f"{current_date} - {request.user.username}"
-	
-	payload = {
-		'title': title,
-		'line_items': line_items
-	}
+	# Get enable_pantry_items from request, default to True
+	enable_pantry_items = request.data.get('enable_pantry_items', True)
 	
 	# Get recipe data for this order
 	cart_recipes = cart.recipes.select_related('recipe').all()
+	
+	# Use first recipe or create a combined recipe
+	if cart_recipes.count() == 1:
+		# Single recipe - use its data
+		recipe = cart_recipes[0].recipe
+		title = recipe.name
+		image_url = recipe.image_url or ''
+		instructions = [step.description for step in recipe.steps.order_by('order')]
+	else:
+		# Multiple recipes - create combined title
+		from datetime import datetime
+		current_date = datetime.now().strftime('%Y-%m-%d')
+		title = f"{current_date} - {request.user.username}"
+		image_url = cart_recipes[0].recipe.image_url if cart_recipes and cart_recipes[0].recipe.image_url else ''
+		instructions = [f"Prepare {cr.recipe.name}" for cr in cart_recipes]
+	
+	# Format ingredients for Instacart API
+	ingredients = []
+	for ingredient in combined.values():
+		ingredients.append({
+			'name': ingredient['name'],
+			'display_text': ingredient['name'].title(),
+			'measurements': [{
+				'quantity': ingredient['quantity'],
+				'unit': ingredient['unit'] or ''
+			}]
+		})
+	
+	payload = {
+		'title': title,
+		'image_url': image_url,
+		'link_type': 'recipe',
+		'instructions': instructions,
+		'ingredients': ingredients,
+		'landing_page_configuration': {
+			'enable_pantry_items': enable_pantry_items
+		}
+	}
+	
 	recipe_names = [cr.recipe.name for cr in cart_recipes]
 	
 	# Get top recipe image (first recipe with image)
@@ -665,9 +690,9 @@ def create_instacart_list(request):
 	)
 	
 	try:
-		logger.info(f'Making Instacart API request with {len(line_items)} items')
+		logger.info(f'Making Instacart API request with {len(ingredients)} items')
 		response = requests.post(
-			'https://connect.dev.instacart.tools/idp/v1/products/products_link',
+			'https://connect.dev.instacart.tools/idp/v1/products/recipe',
 			headers={
 				'Accept': 'application/json',
 				'Content-Type': 'application/json',
@@ -681,13 +706,17 @@ def create_instacart_list(request):
 		
 		if response.status_code == 200:
 			data = response.json()
+			# Try different possible URL field names
+			recipe_url = (data.get('recipe_url') or data.get('url') or 
+			             data.get('link') or data.get('recipe_link') or
+			             data.get('products_link_url') or data.get('recipe_page_url'))
 			# Update order history with Instacart URL
-			order_history.instacart_url = data.get('products_link_url')
+			order_history.instacart_url = recipe_url
 			order_history.save()
 			return Response({
 				'success': True,
-				'redirect_url': data.get('products_link_url'),
-				'message': f"Successfully created Instacart shopping list with {len(line_items)} items"
+				'redirect_url': recipe_url,
+				'message': f"Successfully created Instacart recipe with {len(ingredients)} items"
 			})
 		else:
 			try:
