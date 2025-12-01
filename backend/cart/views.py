@@ -956,10 +956,24 @@ def set_order_price(request, order_id):
 		return Response({'error': 'Price is required'}, status=400)
 	
 	try:
-		order.total_price = float(price)
+		from health.models import Budget
+		from decimal import Decimal
+		
+		new_price = Decimal(str(price))
+		old_price = order.total_price or Decimal('0')
+		price_difference = new_price - old_price
+		
+		# Update order price
+		order.total_price = new_price
 		order.save()
+		
+		# Update user's budget spent amount
+		budget, _ = Budget.objects.get_or_create(user=request.user)
+		budget.spent = (budget.spent or Decimal('0')) + price_difference
+		budget.save()
+		
 		return Response({'message': 'Price updated successfully'})
-	except ValueError:
+	except (ValueError, TypeError):
 		return Response({'error': 'Invalid price format'}, status=400)
 
 
