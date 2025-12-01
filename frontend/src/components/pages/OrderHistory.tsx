@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Box, CircularProgress, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
+import { ViewList as ViewListIcon, ViewModule as ViewModuleIcon } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import styles from './OrderHistory.module.css';
 
@@ -21,12 +22,15 @@ interface OrderHistoryItem {
   };
 }
 
+type ViewMode = 'card' | 'list';
+
 export default function OrderHistory() {
   const [orders, setOrders] = useState<OrderHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [priceDialogOpen, setPriceDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderHistoryItem | null>(null);
   const [priceInput, setPriceInput] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>('card');
   const { token } = useAuth();
 
   const reorderCart = async (orderId: number) => {
@@ -160,7 +164,37 @@ export default function OrderHistory() {
   return (
     <>
       <div className={styles.container}>
-        <h1 className={styles.pageTitle}>Order History</h1>
+        <Box 
+          className={styles.headerRow}
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            marginBottom: '4px'
+          }}
+        >
+          <h1 className={styles.pageTitle}>Order History</h1>
+          <Button 
+            variant="outlined"
+            startIcon={viewMode === 'list' ? <ViewModuleIcon /> : <ViewListIcon />}
+            onClick={() => setViewMode(prev => prev === 'list' ? 'card' : 'list')}
+            sx={{ 
+              borderColor: '#e0e0e0',
+              color: '#666',
+              backgroundColor: 'transparent',
+              '&:hover': {
+                borderColor: '#bdbdbd',
+                backgroundColor: '#f5f5f5'
+              },
+              borderRadius: 2,
+              padding: '8px 16px',
+              textTransform: 'none',
+              fontSize: '0.875rem'
+            }}
+          >
+            {viewMode === 'list' ? 'Card view' : 'List view'}
+          </Button>
+        </Box>
         
         {orders.length === 0 ? (
           <div className={styles.emptyState}>
@@ -171,77 +205,17 @@ export default function OrderHistory() {
         ) : (
           <div className={styles.ordersList}>
             {orders.map((order) => (
-              <div key={order.id} className={styles.orderCard}>
-                <div className={styles.cardContent}>
-                  {order.top_recipe_image && (
-                    <img 
-                      src={order.top_recipe_image} 
-                      alt="Recipe" 
-                      className={styles.orderImage}
-                    />
-                  )}
-                  
-                  <div className={styles.orderDetails}>
-                    <div className={styles.orderHeader}>
-                      <h2 className={styles.orderName}>
-                        {getOrderName(order)}
-                      </h2>
-                      <p className={styles.orderDate}>
-                        {formatDate(order.created_at)}
-                      </p>
-                    </div>
-                    
-                    <p className={styles.recipeCount}>
-                      {getRecipeCountText(order.recipe_names?.length || 0)}
-                    </p>
-                    
-                    {order.recipe_names && order.recipe_names.length > 0 && (
-                      <div>
-                        <p className={styles.recipesListTitle}>Recipes:</p>
-                        <ul className={styles.recipesList}>
-                          {order.recipe_names.map((recipeName, index) => (
-                            <li key={index} className={styles.recipeItem}>
-                              • {recipeName}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    
-                    <div className={styles.actionsContainer}>
-                      <button
-                        className={styles.reorderButton}
-                        onClick={() => reorderCart(order.id)}
-                      >
-                        RE-ORDER
-                      </button>
-                      
-                      <button
-                        className={styles.setPriceButton}
-                        onClick={() => openPriceDialog(order)}
-                      >
-                        SET PRICE
-                      </button>
-                      
-                      {order.instacart_url && (
-                        <button
-                          className={styles.viewInstacartButton}
-                          onClick={() => window.open(order.instacart_url!, '_blank')}
-                        >
-                          VIEW ON INSTACART
-                        </button>
-                      )}
-                      
-                      <button
-                        className={styles.deleteButton}
-                        onClick={() => deleteOrder(order.id)}
-                      >
-                        DELETE
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <OrderHistoryCard
+                key={order.id}
+                order={order}
+                viewMode={viewMode}
+                getOrderName={getOrderName}
+                getRecipeCountText={getRecipeCountText}
+                formatDate={formatDate}
+                onReorder={reorderCart}
+                onOpenPriceDialog={openPriceDialog}
+                onDelete={deleteOrder}
+              />
             ))}
           </div>
         )}
@@ -267,5 +241,151 @@ export default function OrderHistory() {
         </DialogActions>
       </Dialog>
     </>
+  );
+}
+
+interface OrderHistoryCardProps {
+  order: OrderHistoryItem;
+  viewMode: ViewMode;
+  getOrderName: (order: OrderHistoryItem) => string;
+  getRecipeCountText: (count: number) => string;
+  formatDate: (dateString: string) => string;
+  onReorder: (orderId: number) => void;
+  onOpenPriceDialog: (order: OrderHistoryItem) => void;
+  onDelete: (orderId: number) => void;
+}
+
+function OrderHistoryCard({
+  order,
+  viewMode,
+  getOrderName,
+  getRecipeCountText,
+  formatDate,
+  onReorder,
+  onOpenPriceDialog,
+  onDelete
+}: OrderHistoryCardProps) {
+  const baseClassName = `${styles.orderCard} ${
+    viewMode === 'list' ? styles.orderCardList : styles.orderCardCard
+  }`;
+
+  if (viewMode === 'list') {
+    return (
+      <div className={baseClassName}>
+        <div className={styles.listContent}>
+          <div className={styles.listText}>
+            <h2 className={styles.orderName}>{getOrderName(order)}</h2>
+            <p className={styles.recipeCount}>
+              {getRecipeCountText(order.recipe_names?.length || 0)}
+            </p>
+          </div>
+          <div className={styles.listRight}>
+            <p className={styles.orderDate}>{formatDate(order.created_at)}</p>
+            <div className={styles.actionsContainer}>
+              <button
+                className={styles.reorderButton}
+                onClick={() => onReorder(order.id)}
+              >
+                RE-ORDER
+              </button>
+
+              <button
+                className={styles.setPriceButton}
+                onClick={() => onOpenPriceDialog(order)}
+              >
+                SET PRICE
+              </button>
+
+              {order.instacart_url && (
+                <button
+                  className={styles.viewInstacartButton}
+                  onClick={() => window.open(order.instacart_url!, '_blank')}
+                >
+                  VIEW ON INSTACART
+                </button>
+              )}
+
+              <button
+                className={styles.deleteButton}
+                onClick={() => onDelete(order.id)}
+              >
+                DELETE
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Card view (existing rich layout)
+  return (
+    <div className={baseClassName}>
+      <div className={styles.cardContent}>
+        {order.top_recipe_image && (
+          <img
+            src={order.top_recipe_image}
+            alt="Recipe"
+            className={styles.orderImage}
+          />
+        )}
+
+        <div className={styles.orderDetails}>
+          <div className={styles.orderHeader}>
+            <h2 className={styles.orderName}>{getOrderName(order)}</h2>
+            <p className={styles.orderDate}>{formatDate(order.created_at)}</p>
+          </div>
+
+          <p className={styles.recipeCount}>
+            {getRecipeCountText(order.recipe_names?.length || 0)}
+          </p>
+
+          {order.recipe_names && order.recipe_names.length > 0 && (
+            <div>
+              <p className={styles.recipesListTitle}>Recipes:</p>
+              <ul className={styles.recipesList}>
+                {order.recipe_names.map((recipeName, index) => (
+                  <li key={index} className={styles.recipeItem}>
+                    • {recipeName}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className={styles.actionsContainer}>
+            <button
+              className={styles.reorderButton}
+              onClick={() => onReorder(order.id)}
+            >
+              RE-ORDER
+            </button>
+
+            <button
+              className={styles.setPriceButton}
+              onClick={() => onOpenPriceDialog(order)}
+            >
+              SET PRICE
+            </button>
+
+            {order.instacart_url && (
+              <button
+                className={styles.viewInstacartButton}
+                onClick={() => window.open(order.instacart_url!, '_blank')}
+              >
+                VIEW ON INSTACART
+              </button>
+            )}
+
+            <button
+              className={styles.deleteButton}
+              onClick={() => onDelete(order.id)}
+            >
+              DELETE
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

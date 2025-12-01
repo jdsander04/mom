@@ -11,6 +11,10 @@
   font-weight: normal;
 }
 
+.headerRow {
+  gap: 1rem;
+}
+
 .ordersList {
   display: flex;
   flex-direction: column;
@@ -27,9 +31,34 @@
   width: 100%;
 }
 
+.orderCardCard {
+}
+
+.orderCardList {
+  padding: 1rem 1.5rem;
+}
+
 .cardContent {
   display: flex;
   gap: 1.5rem;
+}
+
+.listContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.listText {
+  flex: 1;
+}
+
+.listRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
 }
 
 .orderImage {
