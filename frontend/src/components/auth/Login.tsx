@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, TextField, Button, Typography, Alert, InputAdornment } from '@mui/material';
 import { Person, Lock, ArrowForward } from '@mui/icons-material';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import loginImage from '../../assets/AdobeStock_307109106.jpeg';
 import momCartImage from '../../assets/mom-cart.png';
@@ -9,6 +9,7 @@ import './Login.css';
 
 const Login: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const initialMode = (location.state as { initialMode?: 'login' | 'signup' })?.initialMode || 'login';
   const [isLogin, setIsLogin] = useState(initialMode === 'login');
   
@@ -27,7 +28,14 @@ const Login: React.FC = () => {
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
   const [passwordMatchError, setPasswordMatchError] = useState('');
   const [maxLengthError, setMaxLengthError] = useState<string | null>(null);
-  const { login, signup } = useAuth();
+  const { login, signup, isAuthenticated } = useAuth();
+
+  // Redirect to home if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
 
   const validatePassword = (password: string): string[] => {
     const errors: string[] = [];
@@ -120,6 +128,8 @@ const Login: React.FC = () => {
       } else {
         await signup(formData.username, formData.password, formData.email);
       }
+      // Redirect to home page after successful login/signup
+      navigate('/');
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {
