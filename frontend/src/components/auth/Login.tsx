@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, Button, Typography, Alert, InputAdornment } from '@mui/material';
-import { Person, Lock, ArrowForward } from '@mui/icons-material';
+import { Box, TextField, Button, Typography, Alert, InputAdornment, IconButton } from '@mui/material';
+import { Person, ArrowForward, Visibility, VisibilityOff } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import loginImage from '../../assets/AdobeStock_307109106.jpeg';
@@ -12,7 +12,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const initialMode = (location.state as { initialMode?: 'login' | 'signup' })?.initialMode || 'login';
   const [isLogin, setIsLogin] = useState(initialMode === 'login');
-  
+
   useEffect(() => {
     setIsLogin(initialMode === 'login');
   }, [initialMode]);
@@ -28,6 +28,8 @@ const Login: React.FC = () => {
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
   const [passwordMatchError, setPasswordMatchError] = useState('');
   const [maxLengthError, setMaxLengthError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { login, signup, isAuthenticated } = useAuth();
 
   // Redirect to home if already authenticated
@@ -61,23 +63,23 @@ const Login: React.FC = () => {
     const value = e.target.value;
     const fieldName = e.target.name;
     const maxLength = fieldName === 'email' ? 50 : 30;
-    
+
     // Check if max length is reached
     if (value.length >= maxLength) {
-      const fieldLabel = fieldName === 'email' ? 'Email' : 
-                        fieldName === 'username' ? 'Username' : 
-                        fieldName === 'password' ? 'Password' : 'Re-enter Password';
+      const fieldLabel = fieldName === 'email' ? 'Email' :
+        fieldName === 'username' ? 'Username' :
+          fieldName === 'password' ? 'Password' : 'Re-enter Password';
       setMaxLengthError(`${fieldLabel} has reached the maximum length of ${maxLength} characters`);
     } else {
       setMaxLengthError(null);
     }
-    
+
     setFormData({
       ...formData,
       [fieldName]: value
     });
     setError('');
-    
+
     if (fieldName === 'password' && !isLogin) {
       const errors = validatePassword(value);
       setPasswordErrors(errors);
@@ -101,7 +103,7 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!isLogin) {
       const errors = validatePassword(formData.password);
       if (errors.length > 0) {
@@ -115,7 +117,7 @@ const Login: React.FC = () => {
         return;
       }
     }
-    
+
     setLoading(true);
     setError('');
     setPasswordErrors([]);
@@ -139,7 +141,7 @@ const Login: React.FC = () => {
 
   return (
     <Box className="login-container">
-      <Box 
+      <Box
         className="login-left-panel"
         sx={{
           '--login-bg-image': `url(${loginImage})`,
@@ -149,27 +151,27 @@ const Login: React.FC = () => {
           <img src={momCartImage} alt="Mom Cart" className="branding-image" />
           Mom
         </Box>
-        
+
         <Box className="copyright-text">
           © 2025 Mom. All Rights Reserved.
         </Box>
-        
+
         <Box className="decorative-shapes">
           <Box className="shape shape-1" />
           <Box className="shape shape-2" />
           <Box className="shape shape-3" />
         </Box>
       </Box>
-      
+
       <Box className="login-right-panel">
         <Box className="login-form-card">
           <Typography variant="h4" className="login-title">
             {isLogin ? 'Login' : 'Sign Up'}
           </Typography>
-          
+
           {error && <Alert severity="error" sx={{ mb: 2, mt: 2 }}>{error}</Alert>}
           {maxLengthError && <Alert severity="error" sx={{ mb: 2, mt: 2 }}>{maxLengthError}</Alert>}
-          
+
           <form onSubmit={handleSubmit} className="login-form">
             <Box className="input-wrapper">
               <Typography variant="body2" className="input-label">
@@ -199,7 +201,7 @@ const Login: React.FC = () => {
                 <Box className="input-underline" />
               </Box>
             </Box>
-            
+
             {!isLogin && (
               <Box className="input-wrapper">
                 <Typography variant="body2" className="input-label">
@@ -231,7 +233,7 @@ const Login: React.FC = () => {
                 </Box>
               </Box>
             )}
-            
+
             <Box className="input-wrapper">
               <Typography variant="body2" className="input-label">
                 Password
@@ -240,7 +242,7 @@ const Login: React.FC = () => {
                 <TextField
                   fullWidth
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={formData.password}
                   onChange={handleChange}
                   onFocus={() => setFocusedField('password')}
@@ -254,7 +256,13 @@ const Login: React.FC = () => {
                     disableUnderline: true,
                     endAdornment: (
                       <InputAdornment position="end">
-                        <Lock className="input-icon" />
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                          sx={{ color: '#6b7280' }}
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
                       </InputAdornment>
                     ),
                   }}
@@ -271,7 +279,7 @@ const Login: React.FC = () => {
                 </Box>
               )}
             </Box>
-            
+
             {!isLogin && (
               <Box className="input-wrapper">
                 <Typography variant="body2" className="input-label">
@@ -281,7 +289,7 @@ const Login: React.FC = () => {
                   <TextField
                     fullWidth
                     name="confirmPassword"
-                    type="password"
+                    type={showConfirmPassword ? "text" : "password"}
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     onFocus={() => setFocusedField('confirmPassword')}
@@ -295,7 +303,13 @@ const Login: React.FC = () => {
                       disableUnderline: true,
                       endAdornment: (
                         <InputAdornment position="end">
-                          <Lock className="input-icon" />
+                          <IconButton
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            edge="end"
+                            sx={{ color: '#6b7280' }}
+                          >
+                            {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
                         </InputAdornment>
                       ),
                     }}
@@ -309,12 +323,12 @@ const Login: React.FC = () => {
                 )}
               </Box>
             )}
-            
+
             <Box className="forgot-password-row">
-              <Typography 
-                variant="body2" 
+              <Typography
+                variant="body2"
                 className="forgot-password-link"
-                onClick={() => {/* Handle forgot password */}}
+                onClick={() => {/* Handle forgot password */ }}
                 sx={{ cursor: 'pointer' }}
               >
                 Forgot password? <span className="reset-text">Reset</span>
@@ -329,7 +343,7 @@ const Login: React.FC = () => {
                 {loading ? 'Loading...' : (isLogin ? 'Login' : 'Sign Up')}
               </Button>
             </Box>
-            
+
             <Button
               fullWidth
               variant="text"
