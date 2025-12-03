@@ -32,7 +32,7 @@ const RecipeLibrary = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [nonRecipeNotice, setNonRecipeNotice] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'expanded' | 'list'>('expanded');
-  
+
   // Get recipeId from URL params
   const targetRecipeId = searchParams.get('recipeId') ? parseInt(searchParams.get('recipeId') || '0', 10) : null;
 
@@ -44,12 +44,16 @@ const RecipeLibrary = () => {
       return false;
     }
   };
-  
+
   // Custom recipe form state
   const [recipeName, setRecipeName] = useState('');
   const [recipeServes, setRecipeServes] = useState<number | ''>('');
   const [ingredients, setIngredients] = useState<Ingredient[]>([{ name: '', quantity: '', unit: '' }]);
   const [directions, setDirections] = useState(['']);
+
+  // Edit recipe state
+  const [editRecipeDialogOpen, setEditRecipeDialogOpen] = useState(false);
+  const [editingRecipeId, setEditingRecipeId] = useState<number | null>(null);
 
   const { token } = useAuth();
   const { recipes, loading, error, refetch } = useRecipes();
@@ -57,7 +61,7 @@ const RecipeLibrary = () => {
   // Search functionality
   const performSearch = async (query: string) => {
     const trimmedQuery = query.trim();
-    
+
     if (!trimmedQuery) {
       setSearchResults([]);
       setIsSearching(false);
@@ -111,14 +115,14 @@ const RecipeLibrary = () => {
       setTimeout(() => setNonRecipeNotice(null), 5000);
       return;
     }
-    
+
     setSubmitting(true);
     try {
       const created = await apiService.createRecipe({
         recipe_source: 'url',
         url: newRecipeUrl
       });
-      
+
       setNewRecipeUrl('');
       setDialogOpen(false);
       refetch(); // Refresh the recipes list
@@ -159,11 +163,11 @@ const RecipeLibrary = () => {
 
   const addRecipeFromImage = async () => {
     if (!uploadedImage || submitting) return;
-    
+
     setSubmitting(true);
     try {
       const created = await apiService.createRecipeFromImage(uploadedImage);
-      
+
       setUploadedImage(null);
       setDialogOpen(false);
       refetch(); // Refresh the recipes list
@@ -204,33 +208,85 @@ const RecipeLibrary = () => {
 
   const saveCustomRecipe = async () => {
     if (!recipeName.trim() || submitting) return;
-    
+
     setSubmitting(true);
     try {
-      await apiService.createRecipe({
-        recipe_source: 'explicit',
-        name: recipeName,
-        serves: (typeof recipeServes === 'number' && recipeServes > 0) ? recipeServes : undefined,
-        ingredients: ingredients.filter(i => i.name.trim()).map((ingredient) => ({
-          name: ingredient.name.trim(),
-          quantity: ingredient.quantity === '' ? 0 : Number(ingredient.quantity),
-          unit: ingredient.unit.trim()
-        })),
-        steps: directions.filter(d => d.trim()).map((direction) => ({
-          description: direction
-        }))
-      });
-      
+      // Check if we're in edit mode
+      if (editingRecipeId) {
+        // Update existing recipe
+        await apiService.updateRecipe(editingRecipeId, {
+          name: recipeName,
+          serves: (typeof recipeServes === 'number' && recipeServes > 0) ? recipeServes : undefined,
+          ingredients: ingredients.filter(i => i.name.trim()).map((ingredient) => ({
+            name: ingredient.name.trim(),
+            quantity: ingredient.quantity === '' ? 0 : Number(ingredient.quantity),
+            unit: ingredient.unit.trim(),
+            original_text: `${ingredient.quantity === '' ? '' : ingredient.quantity} ${ingredient.unit} ${ingredient.name}`.trim()
+          })),
+          steps: directions.filter(d => d.trim()).map((direction, index) => ({
+            order: index + 1,
+            description: direction
+          }))
+        });
+        setEditRecipeDialogOpen(false);
+        setEditingRecipeId(null);
+      } else {
+        // Create new recipe
+        await apiService.createRecipe({
+          recipe_source: 'explicit',
+          name: recipeName,
+          serves: (typeof recipeServes === 'number' && recipeServes > 0) ? recipeServes : undefined,
+          ingredients: ingredients.filter(i => i.name.trim()).map((ingredient) => ({
+            name: ingredient.name.trim(),
+            quantity: ingredient.quantity === '' ? 0 : Number(ingredient.quantity),
+            unit: ingredient.unit.trim()
+          })),
+          steps: directions.filter(d => d.trim()).map((direction) => ({
+            description: direction
+          }))
+        });
+        setCustomRecipeDialogOpen(false);
+      }
+
+      // Reset form
       setRecipeName('');
       setRecipeServes('');
       setIngredients([{ name: '', quantity: '', unit: '' }]);
       setDirections(['']);
-      setCustomRecipeDialogOpen(false);
       refetch();
     } catch (error) {
       console.error('Failed to save custom recipe:', error);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleEditRecipe = async (recipeId: number) => {
+    try {
+      // Fetch the full recipe data
+      const recipe = await apiService.getRecipe(recipeId);
+
+      // Populate form with existing data
+      setRecipeName(recipe.name);
+      setRecipeServes(recipe.serves || '');
+
+      // Convert ingredients to editable format
+      const editableIngredients: Ingredient[] = recipe.ingredients?.map(ing => ({
+        name: ing.name,
+        quantity: ing.quantity || '',
+        unit: ing.unit || ''
+      })) || [{ name: '', quantity: '', unit: '' }];
+      setIngredients(editableIngredients.length > 0 ? editableIngredients : [{ name: '', quantity: '', unit: '' }]);
+
+      // Convert steps to editable format
+      const editableDirections = recipe.steps?.sort((a, b) => a.order - b.order).map(step => step.description) || [''];
+      setDirections(editableDirections.length > 0 ? editableDirections : ['']);
+
+      // Set edit mode and open dialog
+      setEditingRecipeId(recipeId);
+      setEditRecipeDialogOpen(true);
+    } catch (error) {
+      console.error('Failed to load recipe for editing:', error);
     }
   };
 
@@ -249,10 +305,10 @@ const RecipeLibrary = () => {
 
   // Determine which recipes to display and sort
   const recipesToDisplay = (searchQuery.trim() && searchQuery.trim().length >= 3) ? searchResults : recipes;
-  
+
   const sortedRecipes = [...recipesToDisplay].sort((a, b) => {
     let comparison = 0;
-    
+
     if (sortBy === 'date_added') {
       const dateA = new Date(a.date_added || 0).getTime();
       const dateB = new Date(b.date_added || 0).getTime();
@@ -262,13 +318,13 @@ const RecipeLibrary = () => {
       const timesB = b.times_made || 0;
       comparison = timesB - timesA; // Default: most made first
     }
-    
+
     // Apply sort order
     return sortOrder === 'asc' ? -comparison : comparison;
   });
 
   const favoriteRecipes = sortedRecipes.filter(r => r.favorite);
-  
+
   const toggleViewMode = () => {
     setViewMode(prev => prev === 'list' ? 'expanded' : 'list');
   };
@@ -283,11 +339,11 @@ const RecipeLibrary = () => {
 
   const getNutritionData = (nutrients: Recipe['nutrients']) => {
     const nutritionMap: { [key: string]: number } = {};
-    
+
     nutrients?.forEach(nutrient => {
       const macro = nutrient.macro;
       const mass = nutrient.mass;
-      
+
       // Map backend nutrient names to frontend nutrition interface
       switch (macro) {
         case 'calories':
@@ -322,14 +378,14 @@ const RecipeLibrary = () => {
           break;
       }
     });
-    
+
     return nutritionMap;
   };
 
-  const formatIngredients = (ingredients: Recipe['ingredients']) => 
+  const formatIngredients = (ingredients: Recipe['ingredients']) =>
     ingredients?.map(ing => ing.original_text || `${ing.quantity} ${ing.unit} ${ing.name}`.trim()) || [];
 
-  const formatInstructions = (steps: Recipe['steps']) => 
+  const formatInstructions = (steps: Recipe['steps']) =>
     steps?.sort((a, b) => a.order - b.order).map(step => step.description) || [];
 
   if (loading) {
@@ -339,7 +395,7 @@ const RecipeLibrary = () => {
       </div>
     );
   }
-  
+
   if (error) {
     return (
       <div className={styles.errorContainer}>
@@ -348,7 +404,7 @@ const RecipeLibrary = () => {
       </div>
     );
   }
-  
+
   if (!token) {
     return (
       <div className={styles.errorContainer}>
@@ -360,18 +416,18 @@ const RecipeLibrary = () => {
   return (
     <div className={styles.container}>
       <h1 className={styles.pageTitle}>Recipe Library</h1>
-      
-      <Box sx={{ 
-        display: 'flex', 
-        gap: 2, 
+
+      <Box sx={{
+        display: 'flex',
+        gap: 2,
         marginBottom: '8px',
         alignItems: 'center'
       }}>
-        <Button 
+        <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => setDialogOpen(true)}
-          sx={{ 
+          sx={{
             backgroundColor: '#2e7d32',
             '&:hover': {
               backgroundColor: '#1b5e20'
@@ -384,7 +440,7 @@ const RecipeLibrary = () => {
         >
           Add recipe
         </Button>
-        
+
         <TextField
           placeholder="Search recipes (min 3 chars)..."
           value={searchQuery}
@@ -411,12 +467,12 @@ const RecipeLibrary = () => {
             ),
           }}
         />
-        
-        <Button 
+
+        <Button
           variant="outlined"
           startIcon={<SortIcon />}
           onClick={() => sortRecipes('date_added')}
-          sx={{ 
+          sx={{
             borderColor: sortBy === 'date_added' ? '#2e7d32' : '#e0e0e0',
             color: sortBy === 'date_added' ? '#2e7d32' : '#666',
             backgroundColor: sortBy === 'date_added' ? '#f1f8e9' : 'transparent',
@@ -431,12 +487,12 @@ const RecipeLibrary = () => {
         >
           Date added {sortBy === 'date_added' && (sortOrder === 'desc' ? '↓' : '↑')}
         </Button>
-        
-        <Button 
+
+        <Button
           variant="outlined"
           startIcon={viewMode === 'list' ? <ViewModuleIcon /> : <ViewListIcon />}
           onClick={toggleViewMode}
-          sx={{ 
+          sx={{
             borderColor: '#e0e0e0',
             color: '#666',
             backgroundColor: 'transparent',
@@ -464,7 +520,7 @@ const RecipeLibrary = () => {
               const nutritionData = getNutritionData(recipe.nutrients);
 
               return (
-                <RecipeAccordion 
+                <RecipeAccordion
                   key={`fav-${recipe.id}-${viewMode}`}
                   recipeId={recipe.id}
                   title={recipe.name}
@@ -473,6 +529,7 @@ const RecipeLibrary = () => {
                   sourceUrl={recipe.source_url}
                   onRecipeDeleted={refetch}
                   onRecipeUpdated={refetch}
+                  onRecipeEdit={handleEditRecipe}
                   favorite={recipe.favorite}
                   initialOpen={targetRecipeId === recipe.id}
                   variant={viewMode}
@@ -498,9 +555,9 @@ const RecipeLibrary = () => {
           const instructions = formatInstructions(recipe.steps);
           const calories = getCalories(recipe.nutrients);
           const nutritionData = getNutritionData(recipe.nutrients);
-          
+
           return (
-            <RecipeAccordion 
+            <RecipeAccordion
               key={`${recipe.id}-${viewMode}`}
               recipeId={recipe.id}
               title={recipe.name}
@@ -509,6 +566,7 @@ const RecipeLibrary = () => {
               sourceUrl={recipe.source_url}
               onRecipeDeleted={refetch}
               onRecipeUpdated={refetch}
+              onRecipeEdit={handleEditRecipe}
               favorite={recipe.favorite}
               initialOpen={targetRecipeId === recipe.id}
               variant={viewMode}
@@ -525,7 +583,7 @@ const RecipeLibrary = () => {
         })}
         {sortedRecipes.length === 0 && !isSearching && (
           <Typography variant="body1" color="text.secondary">
-            {searchQuery.trim() 
+            {searchQuery.trim()
               ? searchQuery.trim().length < 3
                 ? "Enter at least 3 characters to search recipes."
                 : `No recipes found matching "${searchQuery}". Try a different search term.`
@@ -560,10 +618,10 @@ const RecipeLibrary = () => {
         </Box>
       )}
 
-      <Dialog 
-        open={dialogOpen} 
-        onClose={() => setDialogOpen(false)} 
-        maxWidth="md" 
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        maxWidth="md"
         fullWidth
         PaperProps={{
           sx: {
@@ -573,23 +631,23 @@ const RecipeLibrary = () => {
         }}
       >
         <Box sx={{ position: 'relative' }}>
-          <DialogTitle sx={{ 
-            fontSize: '1.5rem', 
-            fontWeight: 'bold', 
+          <DialogTitle sx={{
+            fontSize: '1.5rem',
+            fontWeight: 'bold',
             padding: '24px 24px 0 24px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center'
           }}>
             Add recipe
-            <IconButton 
+            <IconButton
               onClick={() => setDialogOpen(false)}
               sx={{ color: 'text.secondary' }}
             >
               <CloseIcon />
             </IconButton>
           </DialogTitle>
-          
+
           <DialogContent sx={{ padding: '24px' }}>
             {/* From online section */}
             <Box sx={{ mb: 3 }}>
@@ -682,7 +740,7 @@ const RecipeLibrary = () => {
           </DialogContent>
 
           <DialogActions sx={{ padding: '0 24px 24px 24px', justifyContent: 'flex-end' }}>
-            <Button 
+            <Button
               variant="contained"
               onClick={() => {
                 if (uploadedImage) {
@@ -708,10 +766,19 @@ const RecipeLibrary = () => {
       </Dialog>
 
       {/* Custom Recipe Dialog */}
-      <Dialog 
-        open={customRecipeDialogOpen} 
-        onClose={() => setCustomRecipeDialogOpen(false)} 
-        maxWidth="lg" 
+      <Dialog
+        open={customRecipeDialogOpen || editRecipeDialogOpen}
+        onClose={() => {
+          setCustomRecipeDialogOpen(false);
+          setEditRecipeDialogOpen(false);
+          setEditingRecipeId(null);
+          // Reset form
+          setRecipeName('');
+          setRecipeServes('');
+          setIngredients([{ name: '', quantity: '', unit: '' }]);
+          setDirections(['']);
+        }}
+        maxWidth="lg"
         fullWidth
         PaperProps={{
           sx: {
@@ -721,19 +788,28 @@ const RecipeLibrary = () => {
           }
         }}
       >
-        <DialogTitle sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
+        <DialogTitle sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
           fontSize: '1.5rem',
           fontWeight: 'bold',
           padding: '24px 24px 0 24px',
           color: '#2e7d32'
         }}>
-          Create Custom Recipe
-          <IconButton 
-            onClick={() => setCustomRecipeDialogOpen(false)}
-            sx={{ 
+          {editingRecipeId ? 'Edit Recipe' : 'Create Custom Recipe'}
+          <IconButton
+            onClick={() => {
+              setCustomRecipeDialogOpen(false);
+              setEditRecipeDialogOpen(false);
+              setEditingRecipeId(null);
+              // Reset form
+              setRecipeName('');
+              setRecipeServes('');
+              setIngredients([{ name: '', quantity: '', unit: '' }]);
+              setDirections(['']);
+            }}
+            sx={{
               color: 'text.secondary',
               '&:hover': {
                 backgroundColor: '#f5f5f5'
@@ -743,7 +819,7 @@ const RecipeLibrary = () => {
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ 
+        <DialogContent sx={{
           padding: '24px',
           overflow: 'auto',
           '&::-webkit-scrollbar': {
@@ -772,13 +848,13 @@ const RecipeLibrary = () => {
             onInstructionsChange={setDirections}
           />
         </DialogContent>
-        <DialogActions sx={{ 
+        <DialogActions sx={{
           padding: '16px 24px 24px 24px',
           justifyContent: 'space-between',
           borderTop: '1px solid #e0e0e0',
           backgroundColor: '#fafafa'
         }}>
-          <Button 
+          <Button
             onClick={() => setCustomRecipeDialogOpen(false)}
             sx={{
               color: '#666',
@@ -791,8 +867,8 @@ const RecipeLibrary = () => {
           >
             Cancel
           </Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             onClick={saveCustomRecipe}
             disabled={!recipeName.trim() || submitting}
             sx={{

@@ -17,6 +17,7 @@ interface RecipeAccordionProps {
   onRecipeDeleted?: () => void
   favorite?: boolean
   onRecipeUpdated?: () => void
+  onRecipeEdit?: (recipeId: number) => void
   initialOpen?: boolean
   variant?: 'expanded' | 'list'
   imageUrl?: string
@@ -32,6 +33,7 @@ const RecipeAccordion = ({
   onRecipeDeleted,
   favorite = false,
   onRecipeUpdated,
+  onRecipeEdit,
   initialOpen = false,
   variant = 'list',
   imageUrl
@@ -184,6 +186,12 @@ const RecipeAccordion = ({
     }
   }
 
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setMenuAnchorEl(null)
+    if (onRecipeEdit) onRecipeEdit(recipeId)
+  }
+
   const handleDeleteConfirm = async () => {
     if (!token) return
 
@@ -289,6 +297,7 @@ const RecipeAccordion = ({
               transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             >
               <MenuItem onClick={handleToggleFavorite}>{isFavorite ? 'Unfavorite' : 'Favorite'}</MenuItem>
+              <MenuItem onClick={handleEditClick}>Edit recipe</MenuItem>
               {sourceUrl && (
                 <MenuItem onClick={handleViewSource}>View source</MenuItem>
               )}
