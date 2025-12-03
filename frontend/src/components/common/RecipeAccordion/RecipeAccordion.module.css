@@ -159,6 +159,33 @@
   color: #f44336;
 }
 
+.favoriteButton {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin-right: .25rem;
+}
+
+.favoriteButton svg {
+  width: 24px;
+  height: 24px;
+  color: #666;
+}
+
+.favoriteButton.active svg {
+  color: #e91e63;
+}
+
+.favoriteButton:hover svg {
+  color: #e91e63;
+}
+
 .deleteButton {
   width: 32px;
   height: 32px;

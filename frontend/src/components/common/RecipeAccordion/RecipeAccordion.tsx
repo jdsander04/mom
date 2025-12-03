@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { ExpandMore, Delete, MoreVert } from '@mui/icons-material'
+import { ExpandMore, Delete, MoreVert, Favorite, FavoriteBorder } from '@mui/icons-material'
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart'
 import RemoveShoppingCartIcon from '@mui/icons-material/RemoveShoppingCart'
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton, Menu, MenuItem } from '@mui/material'
@@ -236,6 +236,12 @@ const RecipeAccordion = ({
         onClick={handleAddClick}
       >
         {isAdded ? <RemoveShoppingCartIcon /> : <AddShoppingCartIcon />}
+      </div>
+      <div
+        className={`${styles.favoriteButton} ${isFavorite ? styles.active : ''}`}
+        onClick={handleToggleFavorite}
+      >
+        {isFavorite ? <Favorite /> : <FavoriteBorder />}
       </div>
       <div
         className={styles.deleteButton}
