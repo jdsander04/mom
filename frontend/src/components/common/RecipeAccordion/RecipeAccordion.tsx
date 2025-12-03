@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { ExpandMore, Delete, MoreVert } from '@mui/icons-material'
+import { ExpandMore, Delete, MoreVert, Print } from '@mui/icons-material'
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart'
 import RemoveShoppingCartIcon from '@mui/icons-material/RemoveShoppingCart'
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton, Menu, MenuItem } from '@mui/material'
@@ -192,6 +192,62 @@ const RecipeAccordion = ({
     if (onRecipeEdit) onRecipeEdit(recipeId)
   }
 
+  const handlePrint = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setMenuAnchorEl(null)
+    if (!token) return
+
+    try {
+      const response = await fetch(`/api/recipes/${recipeId}/`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const recipe = await response.json()
+
+      const ingredients = recipe.ingredients?.map((ing: any) => 
+        ing.original_text || `${ing.quantity} ${ing.unit} ${ing.name}`.trim()
+      ) || []
+      const instructions = recipe.steps?.sort((a: any, b: any) => a.order - b.order).map((s: any) => s.description) || []
+
+      const printWindow = window.open('', '', 'width=800,height=600')
+      if (!printWindow) return
+
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>${title}</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; }
+              h1 { margin-bottom: 10px; }
+              .meta { color: #666; margin-bottom: 20px; }
+              img { max-width: 300px; height: auto; margin-bottom: 20px; }
+              h2 { margin-top: 20px; margin-bottom: 10px; font-size: 18px; }
+              ul, ol { margin: 10px 0; padding-left: 25px; }
+              li { margin: 8px 0; line-height: 1.5; }
+              @media print { body { padding: 10px; } }
+            </style>
+          </head>
+          <body>
+            <h1>${title}</h1>
+            <div class="meta"><strong>Serves:</strong> ${serves} | <strong>Calories:</strong> ${calories > 0 ? calories + ' cal per serving' : 'N/A'}</div>
+            ${imageUrl ? `<img src="${imageUrl}" alt="${title}" />` : ''}
+            <h2>Ingredients</h2>
+            <ul>${ingredients.map((ing: string) => `<li>${ing}</li>`).join('')}</ul>
+            <h2>Directions</h2>
+            <ol>${instructions.map((step: string) => `<li>${step}</li>`).join('')}</ol>
+          </body>
+        </html>
+      `)
+      printWindow.document.close()
+      printWindow.focus()
+      setTimeout(() => {
+        printWindow.print()
+        printWindow.close()
+      }, 250)
+    } catch (error) {
+      console.error('Failed to fetch recipe for printing:', error)
+    }
+  }
+
   const handleDeleteConfirm = async () => {
     if (!token) return
 
@@ -246,13 +302,14 @@ const RecipeAccordion = ({
         onClose={handleMenuClose}
         onClick={(e) => e.stopPropagation()}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
         <MenuItem onClick={handleToggleFavorite}>{isFavorite ? 'Unfavorite' : 'Favorite'}</MenuItem>
         <MenuItem onClick={handleEditClick}>Edit recipe</MenuItem>
         {sourceUrl && (
           <MenuItem onClick={handleViewSource}>View source</MenuItem>
         )}
+        <MenuItem onClick={handlePrint}>Print recipe</MenuItem>
         <MenuItem onClick={handleMenuDelete}>Delete recipe</MenuItem>
         <MenuItem onClick={(e) => { e.stopPropagation(); handleMenuClose(); }}>Close</MenuItem>
       </Menu>
