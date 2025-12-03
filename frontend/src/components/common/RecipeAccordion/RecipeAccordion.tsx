@@ -237,12 +237,25 @@ const RecipeAccordion = ({
       >
         {isAdded ? <RemoveShoppingCartIcon /> : <AddShoppingCartIcon />}
       </div>
-      <div
-        className={styles.deleteButton}
-        onClick={handleDeleteClick}
+      <IconButton size="small" onClick={handleMenuOpen}>
+        <MoreVert />
+      </IconButton>
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={Boolean(menuAnchorEl)}
+        onClose={handleMenuClose}
+        onClick={(e) => e.stopPropagation()}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <Delete />
-      </div>
+        <MenuItem onClick={handleToggleFavorite}>{isFavorite ? 'Unfavorite' : 'Favorite'}</MenuItem>
+        <MenuItem onClick={handleEditClick}>Edit recipe</MenuItem>
+        {sourceUrl && (
+          <MenuItem onClick={handleViewSource}>View source</MenuItem>
+        )}
+        <MenuItem onClick={handleMenuDelete}>Delete recipe</MenuItem>
+        <MenuItem onClick={(e) => { e.stopPropagation(); handleMenuClose(); }}>Close</MenuItem>
+      </Menu>
     </div>
   )
 
@@ -284,27 +297,6 @@ const RecipeAccordion = ({
       </button>
       {isOpen && (
         <div className={styles.content}>
-          <div className={styles.contentMenu} onClick={(e) => e.stopPropagation()}>
-            <IconButton size="small" onClick={handleMenuOpen}>
-              <MoreVert />
-            </IconButton>
-            <Menu
-              anchorEl={menuAnchorEl}
-              open={Boolean(menuAnchorEl)}
-              onClose={handleMenuClose}
-              onClick={(e) => e.stopPropagation()}
-              anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-            >
-              <MenuItem onClick={handleToggleFavorite}>{isFavorite ? 'Unfavorite' : 'Favorite'}</MenuItem>
-              <MenuItem onClick={handleEditClick}>Edit recipe</MenuItem>
-              {sourceUrl && (
-                <MenuItem onClick={handleViewSource}>View source</MenuItem>
-              )}
-              <MenuItem onClick={handleMenuDelete}>Delete recipe</MenuItem>
-              <MenuItem onClick={(e) => { e.stopPropagation(); handleMenuClose(); }}>Close</MenuItem>
-            </Menu>
-          </div>
           {children}
         </div>
       )}
