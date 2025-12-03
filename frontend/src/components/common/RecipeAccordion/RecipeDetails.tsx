@@ -1,4 +1,3 @@
-import React from 'react';
 import styles from './RecipeDetails.module.css';
 
 export interface Nutrition {
@@ -22,6 +21,20 @@ interface Props {
 }
 
 const RecipeDetails = ({ imageUrl, nutrition, ingredients = [], instructions = [] }: Props) => {
+  // Check if there's any meaningful nutritional data
+  const hasNutritionData = nutrition && (
+    (nutrition.calories !== undefined && nutrition.calories > 0) ||
+    (nutrition.fat !== undefined && nutrition.fat > 0) ||
+    (nutrition.saturatedFat !== undefined && nutrition.saturatedFat > 0) ||
+    (nutrition.unsaturatedFat !== undefined && nutrition.unsaturatedFat > 0) ||
+    (nutrition.cholesterol !== undefined && nutrition.cholesterol > 0) ||
+    (nutrition.sodium !== undefined && nutrition.sodium > 0) ||
+    (nutrition.carbs !== undefined && nutrition.carbs > 0) ||
+    (nutrition.fiber !== undefined && nutrition.fiber > 0) ||
+    (nutrition.sugar !== undefined && nutrition.sugar > 0) ||
+    (nutrition.protein !== undefined && nutrition.protein > 0)
+  );
+
   return (
     <div className={styles.details}>
       <div className={styles.left}>
@@ -32,19 +45,19 @@ const RecipeDetails = ({ imageUrl, nutrition, ingredients = [], instructions = [
           <div className={styles.placeholder}>No image</div>
         )}
 
-        {nutrition && (
+        {hasNutritionData && (
           <div className={styles.nutrition}>
             <div className={styles.nutritionTitle}>1 serving:</div>
-            {nutrition.calories !== undefined && <div>{Math.round(nutrition.calories)} calories</div>}
-            {nutrition.fat !== undefined && <div>{Math.round(nutrition.fat)}g fat</div>}
-            {nutrition.saturatedFat !== undefined && <div>{Math.round(nutrition.saturatedFat)}g saturated fat</div>}
+            {nutrition.calories !== undefined && nutrition.calories > 0 && <div>{Math.round(nutrition.calories)} calories</div>}
+            {nutrition.fat !== undefined && nutrition.fat > 0 && <div>{Math.round(nutrition.fat)}g fat</div>}
+            {nutrition.saturatedFat !== undefined && nutrition.saturatedFat > 0 && <div>{Math.round(nutrition.saturatedFat)}g saturated fat</div>}
             {nutrition.unsaturatedFat !== undefined && nutrition.unsaturatedFat > 0 && <div>{Math.round(nutrition.unsaturatedFat)}g unsaturated fat</div>}
-            {nutrition.cholesterol !== undefined && <div>{Math.round(nutrition.cholesterol)}mg cholesterol</div>}
-            {nutrition.sodium !== undefined && <div>{Math.round(nutrition.sodium)}mg sodium</div>}
-            {nutrition.carbs !== undefined && <div>{Math.round(nutrition.carbs)}g carbohydrate</div>}
-            {nutrition.fiber !== undefined && <div>{Math.round(nutrition.fiber)}g fiber</div>}
-            {nutrition.sugar !== undefined && <div>{Math.round(nutrition.sugar)}g sugar</div>}
-            {nutrition.protein !== undefined && <div>{Math.round(nutrition.protein)}g protein</div>}
+            {nutrition.cholesterol !== undefined && nutrition.cholesterol > 0 && <div>{Math.round(nutrition.cholesterol)}mg cholesterol</div>}
+            {nutrition.sodium !== undefined && nutrition.sodium > 0 && <div>{Math.round(nutrition.sodium)}mg sodium</div>}
+            {nutrition.carbs !== undefined && nutrition.carbs > 0 && <div>{Math.round(nutrition.carbs)}g carbohydrate</div>}
+            {nutrition.fiber !== undefined && nutrition.fiber > 0 && <div>{Math.round(nutrition.fiber)}g fiber</div>}
+            {nutrition.sugar !== undefined && nutrition.sugar > 0 && <div>{Math.round(nutrition.sugar)}g sugar</div>}
+            {nutrition.protein !== undefined && nutrition.protein > 0 && <div>{Math.round(nutrition.protein)}g protein</div>}
           </div>
         )}
       </div>

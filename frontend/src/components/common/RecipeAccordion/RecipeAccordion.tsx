@@ -148,8 +148,7 @@ const RecipeAccordion = ({
     setMenuAnchorEl(e.currentTarget)
   }
 
-  const handleMenuClose = (e?: React.MouseEvent) => {
-    if (e) e.stopPropagation()
+  const handleMenuClose = () => {
     setMenuAnchorEl(null)
   }
 
@@ -207,8 +206,8 @@ const RecipeAccordion = ({
 
   const rightSideControls = (
     <div className={styles.rightSide}>
-      <span className={styles.calories}>{calories} cal</span>
-      <span className={styles.serves}>Serves {serves}</span>
+      {calories > 0 && <span className={styles.calories}>{calories} cal</span>}
+      {serves > 0 && <span className={styles.serves}>Serves {serves}</span>}
       <div className={styles.quantitySelector}>
         <div
           className={styles.quantityButton}
@@ -294,13 +293,13 @@ const RecipeAccordion = ({
                 <MenuItem onClick={handleViewSource}>View source</MenuItem>
               )}
               <MenuItem onClick={handleMenuDelete}>Delete recipe</MenuItem>
-              <MenuItem onClick={handleMenuClose}>Close</MenuItem>
+              <MenuItem onClick={(e) => { e.stopPropagation(); handleMenuClose(); }}>Close</MenuItem>
             </Menu>
           </div>
           {children}
         </div>
       )}
-      
+
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle>Delete Recipe</DialogTitle>
         <DialogContent>
