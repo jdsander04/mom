@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { ExpandMore, Delete, MoreVert, Favorite, FavoriteBorder, Print } from '@mui/icons-material'
+import { ExpandMore, MoreVert, Favorite, FavoriteBorder } from '@mui/icons-material'
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart'
 import RemoveShoppingCartIcon from '@mui/icons-material/RemoveShoppingCart'
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton, Menu, MenuItem } from '@mui/material'
