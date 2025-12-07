@@ -31,8 +31,7 @@
   width: 100%;
 }
 
-.orderCardCard {
-}
+.orderCardCard {}
 
 .orderCardList {
   padding: 1rem 1.5rem;
@@ -197,3 +196,9 @@
   margin: 0;
 }
 
+.orderPrice {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2e7d32;
+  margin: 0;
+}

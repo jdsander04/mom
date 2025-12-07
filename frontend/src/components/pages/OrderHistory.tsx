@@ -42,7 +42,7 @@ export default function OrderHistory() {
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       if (response.ok) {
         alert('Order re-added to cart!');
       } else {
@@ -61,7 +61,7 @@ export default function OrderHistory() {
 
   const savePrice = async () => {
     if (!selectedOrder || !priceInput) return;
-    
+
     try {
       const response = await fetch(`/api/cart/order-history/${selectedOrder.id}/set-price/`, {
         method: 'POST',
@@ -71,10 +71,10 @@ export default function OrderHistory() {
         },
         body: JSON.stringify({ price: parseFloat(priceInput) })
       });
-      
+
       if (response.ok) {
-        setOrders(orders.map(order => 
-          order.id === selectedOrder.id 
+        setOrders(orders.map(order =>
+          order.id === selectedOrder.id
             ? { ...order, total_price: parseFloat(priceInput) }
             : order
         ));
@@ -87,7 +87,7 @@ export default function OrderHistory() {
 
   const deleteOrder = async (orderId: number) => {
     if (!confirm('Are you sure you want to delete this order?')) return;
-    
+
     try {
       const response = await fetch(`/api/cart/order-history/${orderId}/delete/`, {
         method: 'DELETE',
@@ -95,7 +95,7 @@ export default function OrderHistory() {
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       if (response.ok) {
         setOrders(orders.filter(order => order.id !== orderId));
       }
@@ -114,11 +114,11 @@ export default function OrderHistory() {
             'Authorization': `Bearer ${token}`
           }
         });
-        
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const orders = await response.json();
         setOrders(orders);
       } catch (error) {
@@ -146,10 +146,10 @@ export default function OrderHistory() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: '2-digit', 
-      day: '2-digit', 
-      year: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric'
     });
   };
 
@@ -164,21 +164,21 @@ export default function OrderHistory() {
   return (
     <>
       <div className={styles.container}>
-        <Box 
+        <Box
           className={styles.headerRow}
-          sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
             alignItems: 'center',
             marginBottom: '4px'
           }}
         >
           <h1 className={styles.pageTitle}>Order History</h1>
-          <Button 
+          <Button
             variant="outlined"
             startIcon={viewMode === 'list' ? <ViewModuleIcon /> : <ViewListIcon />}
             onClick={() => setViewMode(prev => prev === 'list' ? 'card' : 'list')}
-            sx={{ 
+            sx={{
               borderColor: '#e0e0e0',
               color: '#666',
               backgroundColor: 'transparent',
@@ -195,7 +195,7 @@ export default function OrderHistory() {
             {viewMode === 'list' ? 'Card view' : 'List view'}
           </Button>
         </Box>
-        
+
         {orders.length === 0 ? (
           <div className={styles.emptyState}>
             <p className={styles.emptyStateText}>
@@ -220,7 +220,7 @@ export default function OrderHistory() {
           </div>
         )}
       </div>
-    
+
       <Dialog open={priceDialogOpen} onClose={() => setPriceDialogOpen(false)}>
         <DialogTitle>Set Order Price</DialogTitle>
         <DialogContent>
@@ -265,9 +265,8 @@ function OrderHistoryCard({
   onOpenPriceDialog,
   onDelete
 }: OrderHistoryCardProps) {
-  const baseClassName = `${styles.orderCard} ${
-    viewMode === 'list' ? styles.orderCardList : styles.orderCardCard
-  }`;
+  const baseClassName = `${styles.orderCard} ${viewMode === 'list' ? styles.orderCardList : styles.orderCardCard
+    }`;
 
   if (viewMode === 'list') {
     return (
@@ -281,6 +280,9 @@ function OrderHistoryCard({
           </div>
           <div className={styles.listRight}>
             <p className={styles.orderDate}>{formatDate(order.created_at)}</p>
+            {order.total_price !== null && order.total_price !== undefined && (
+              <p className={styles.orderPrice}>${Number(order.total_price).toFixed(2)}</p>
+            )}
             <div className={styles.actionsContainer}>
               <button
                 className={styles.reorderButton}
@@ -333,7 +335,12 @@ function OrderHistoryCard({
         <div className={styles.orderDetails}>
           <div className={styles.orderHeader}>
             <h2 className={styles.orderName}>{getOrderName(order)}</h2>
-            <p className={styles.orderDate}>{formatDate(order.created_at)}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+              <p className={styles.orderDate}>{formatDate(order.created_at)}</p>
+              {order.total_price !== null && order.total_price !== undefined && (
+                <p className={styles.orderPrice}>${Number(order.total_price).toFixed(2)}</p>
+              )}
+            </div>
           </div>
 
           <p className={styles.recipeCount}>
