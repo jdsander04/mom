@@ -21,7 +21,7 @@ const HomePage = () => {
     // Check if recipe belongs to current user
     // Trending recipes (is_trending=true) always show the "Add to Library" dialog
     const isOwnRecipe = recipe.user_id && user && recipe.user_id === user.id && !recipe.is_trending;
-    
+
     if (isOwnRecipe) {
       // Navigate to recipe detail page if it's the user's own recipe
       navigate(`/recipes?recipeId=${recipe.id}`);
@@ -43,13 +43,12 @@ const HomePage = () => {
 
   const handleCopyRecipe = async () => {
     if (!selectedRecipe) return;
-    
+
     setCopying(true);
     try {
-      const result = await apiService.copyRecipe(selectedRecipe.id);
+      await apiService.copyRecipe(selectedRecipe.id);
       setCopyDialogOpen(false);
-      // Navigate to the copied recipe
-      navigate(`/recipes?recipeId=${result.id}`);
+
       // Refresh recipes to show the new copy
       refetch();
     } catch (error) {
@@ -68,7 +67,7 @@ const HomePage = () => {
 
   // Helper function to extract calories from nutrients
   const getCalories = (recipe: Recipe): number => {
-    const calorieNutrient = recipe.nutrients.find(n => 
+    const calorieNutrient = recipe.nutrients.find(n =>
       n.macro.toLowerCase().includes('calorie')
     );
     if (calorieNutrient) {
@@ -89,21 +88,21 @@ const HomePage = () => {
   };
 
   // Helper function to format ingredients for RecipeDetails
-  const formatIngredients = (ingredients: Recipe['ingredients']) => 
+  const formatIngredients = (ingredients: Recipe['ingredients']) =>
     ingredients?.map(ing => ing.original_text || `${ing.quantity} ${ing.unit} ${ing.name}`.trim()) || [];
 
   // Helper function to format instructions for RecipeDetails
-  const formatInstructions = (steps: Recipe['steps']) => 
+  const formatInstructions = (steps: Recipe['steps']) =>
     steps?.sort((a, b) => a.order - b.order).map(step => step.description) || [];
 
   // Helper function to get nutrition data for RecipeDetails
   const getNutritionData = (nutrients: Recipe['nutrients']) => {
     const nutritionMap: { [key: string]: number } = {};
-    
+
     nutrients?.forEach(nutrient => {
       const macro = nutrient.macro;
       const mass = nutrient.mass;
-      
+
       // Map backend nutrient names to frontend nutrition interface
       switch (macro) {
         case 'calories':
@@ -138,7 +137,7 @@ const HomePage = () => {
           break;
       }
     });
-    
+
     return nutritionMap;
   };
 
@@ -171,29 +170,29 @@ const HomePage = () => {
         <h1 key={`${section.title}-title`} className={styles.pageTitle}>
           {section.title}
         </h1>,
-        ...(section.recipes.length === 0 
+        ...(section.recipes.length === 0
           ? [
-              <p key={`${section.title}-empty`} className={styles.emptyDescription}>
-                {section.title === "Trending Recipes" 
-                  ? "No trending recipes available at the moment. Trending recipes are updated weekly from popular recipe sources."
-                  : "No recent recipes available. Recent recipes appear here as you add them to your library."}
-              </p>
-            ]
+            <p key={`${section.title}-empty`} className={styles.emptyDescription}>
+              {section.title === "Trending Recipes"
+                ? "No trending recipes available at the moment. Trending recipes are updated weekly from popular recipe sources."
+                : "No recent recipes available. Recent recipes appear here as you add them to your library."}
+            </p>
+          ]
           : section.recipes.map((recipe) => (
-              <RecipeCard
-                key={recipe.id}
-                title={recipe.name}
-                subtitle={recipe.description}
-                image={recipe.image_url || ''}
-                calories={getCalories(recipe)}
-                servings={getServings(recipe)}
-                onClick={() => handleRecipeClick(recipe)}
-                sourceUrl={recipe.source_url}
-              />
-            ))
+            <RecipeCard
+              key={recipe.id}
+              title={recipe.name}
+              subtitle={recipe.description}
+              image={recipe.image_url || ''}
+              calories={getCalories(recipe)}
+              servings={getServings(recipe)}
+              onClick={() => handleRecipeClick(recipe)}
+              sourceUrl={recipe.source_url}
+            />
+          ))
         )
       ])}
-      
+
       <Dialog open={copyDialogOpen} onClose={handleCancelCopy} maxWidth="md" fullWidth>
         <DialogTitle>Add Recipe to Your Library?</DialogTitle>
         <DialogContent>
@@ -215,9 +214,9 @@ const HomePage = () => {
           <Button onClick={handleCancelCopy} disabled={copying}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleCopyRecipe} 
-            variant="contained" 
+          <Button
+            onClick={handleCopyRecipe}
+            variant="contained"
             disabled={copying}
             sx={{
               backgroundColor: '#2e7d32',
