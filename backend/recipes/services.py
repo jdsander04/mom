@@ -451,18 +451,48 @@ def _get_recipe_from_llm(text: str) -> dict:
         )
         
         logger.info("LLM: Received response from OpenAI")
-        content = response.choices[0].message.content.strip()
-        logger.info(f'"POST https://api.openai.com/v1/chat/completions HTTP/1.1" 200 {len(content)}')
-        logger.debug(f"LLM: Raw response content: {content}")
+        content = response.choices[0].message.content
+        if content:
+            content = content.strip()
+        logger.info(f'"POST https://api.openai.com/v1/chat/completions HTTP/1.1" 200 {len(content) if content else 0}')
         
-        # Handle markdown code blocks
-        if content.startswith('```json'):
-            content = content[7:-3].strip()
-        elif content.startswith('```'):
+        if not content:
+            logger.error("LLM: Empty response from OpenAI")
+            raise ValueError("Empty response from OpenAI")
+        
+        # Log first 200 chars for debugging
+        logger.debug(f"LLM: Raw response content (first 200 chars): {content[:200]}")
+        
+        # Remove BOM if present
+        if content.startswith('\ufeff'):
+            content = content[1:]
+            logger.debug("LLM: Removed BOM from response")
+        
+        # Handle markdown code blocks - be more aggressive
+        if '```json' in content:
+            # Extract content between ```json and ```
+            start = content.find('```json') + 7
+            end = content.rfind('```')
+            if start > 6 and end > start:
+                content = content[start:end].strip()
+                logger.debug("LLM: Extracted JSON from ```json code block")
+        elif content.startswith('```') and content.endswith('```'):
+            # Extract content between ``` and ```
             content = content[3:-3].strip()
+            logger.debug("LLM: Extracted JSON from ``` code block")
         
-        result = json.loads(content)
-        logger.debug(f"LLM: Parsed JSON result: {result}")
+        # Additional cleanup - remove any leading/trailing whitespace and newlines
+        content = content.strip()
+        
+        # Try to parse JSON
+        try:
+            result = json.loads(content)
+            logger.debug(f"LLM: Parsed JSON result: {result}")
+        except json.JSONDecodeError as e:
+            logger.error(f"LLM: JSON parsing failed: {e}")
+            logger.error(f"LLM: Failed content (first 500 chars): {content[:500]}")
+            logger.error(f"LLM: Failed content repr: {repr(content[:200])}")
+            raise ValueError(f"Invalid JSON from OpenAI: {e}")
         
         # Ensure required fields exist with meaningful defaults
         if not isinstance(result, dict):
@@ -549,18 +579,48 @@ def _get_recipe_from_image(image_base64: str, image_format: str = "png") -> dict
         )
         
         logger.info("OCR: Received response from OpenAI")
-        content = response.choices[0].message.content.strip()
-        logger.info(f'"POST https://api.openai.com/v1/chat/completions HTTP/1.1" 200 {len(content)}')
-        logger.debug(f"OCR: Raw response content: {content}")
+        content = response.choices[0].message.content
+        if content:
+            content = content.strip()
+        logger.info(f'"POST https://api.openai.com/v1/chat/completions HTTP/1.1" 200 {len(content) if content else 0}')
         
-        # Handle markdown code blocks
-        if content.startswith('```json'):
-            content = content[7:-3].strip()
-        elif content.startswith('```'):
+        if not content:
+            logger.error("OCR: Empty response from OpenAI")
+            raise ValueError("Empty response from OpenAI")
+        
+        # Log first 200 chars for debugging
+        logger.debug(f"OCR: Raw response content (first 200 chars): {content[:200]}")
+        
+        # Remove BOM if present
+        if content.startswith('\ufeff'):
+            content = content[1:]
+            logger.debug("OCR: Removed BOM from response")
+        
+        # Handle markdown code blocks - be more aggressive
+        if '```json' in content:
+            # Extract content between ```json and ```
+            start = content.find('```json') + 7
+            end = content.rfind('```')
+            if start > 6 and end > start:
+                content = content[start:end].strip()
+                logger.debug("OCR: Extracted JSON from ```json code block")
+        elif content.startswith('```') and content.endswith('```'):
+            # Extract content between ``` and ```
             content = content[3:-3].strip()
+            logger.debug("OCR: Extracted JSON from ``` code block")
         
-        result = json.loads(content)
-        logger.debug(f"OCR: Parsed JSON result: {result}")
+        # Additional cleanup - remove any leading/trailing whitespace and newlines
+        content = content.strip()
+        
+        # Try to parse JSON
+        try:
+            result = json.loads(content)
+            logger.debug(f"OCR: Parsed JSON result: {result}")
+        except json.JSONDecodeError as e:
+            logger.error(f"OCR: JSON parsing failed: {e}")
+            logger.error(f"OCR: Failed content (first 500 chars): {content[:500]}")
+            logger.error(f"OCR: Failed content repr: {repr(content[:200])}")
+            raise ValueError(f"Invalid JSON from OpenAI: {e}")
         
         # Ensure required fields exist with meaningful defaults
         if not isinstance(result, dict):

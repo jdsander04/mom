@@ -324,15 +324,7 @@ const Login: React.FC = () => {
               </Box>
             )}
 
-            <Box className="forgot-password-row">
-              <Typography
-                variant="body2"
-                className="forgot-password-link"
-                onClick={() => {/* Handle forgot password */ }}
-                sx={{ cursor: 'pointer' }}
-              >
-                Forgot password? <span className="reset-text">Reset</span>
-              </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
               <Button
                 type="submit"
                 variant="contained"

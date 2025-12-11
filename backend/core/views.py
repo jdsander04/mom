@@ -92,6 +92,14 @@ def signup(request):
             details=f"The username '{username}' is already taken. Please choose a different username."
         ).to_response()
     
+    # Check if email already exists (only if email is provided)
+    if email and UserModel.objects.filter(email=email).exists():
+        return APIError(
+            error_code=ErrorCodes.RESOURCE_ALREADY_EXISTS,
+            message="Email already exists",
+            details=f"The email '{email}' is already registered. Please use a different email or try logging in."
+        ).to_response()
+    
     user = UserModel.objects.create_user(username=username, password=password, email=email)
     token, created = Token.objects.get_or_create(user=user)
     return Response({
