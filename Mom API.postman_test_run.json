@@ -1,0 +1,1567 @@
+{
+	"id": "bc4db6c5-cc18-4e28-9086-d256e5fe7d6c",
+	"name": "Mom API",
+	"timestamp": "2025-12-11T22:40:02.987Z",
+	"collection_id": "49301798-4b457a6d-d1ec-415d-bfb2-f892daf6c077",
+	"folder_id": 0,
+	"environment_id": "49301798-93c34aea-f44b-4269-9a14-073e4a102474",
+	"totalPass": 3,
+	"delay": 0,
+	"persist": true,
+	"status": "finished",
+	"startedAt": "2025-12-11T22:39:57.721Z",
+	"totalFail": 1,
+	"results": [
+		{
+			"id": "67f26e4a-ef48-477f-9720-89765b4f8e94",
+			"name": "auth account destroy",
+			"url": "http://localhost:8000/api/auth/account/",
+			"time": 51,
+			"responseCode": {
+				"code": 204,
+				"name": "No Content"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				51
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "7a8ca112-4f65-468d-a1c1-4ed809b9a0c8",
+			"name": "auth login create",
+			"url": "http://localhost:8000/api/auth/login/",
+			"time": 298,
+			"responseCode": {
+				"code": 400,
+				"name": "Bad Request"
+			},
+			"tests": {
+				"Status code is 200 or 201": false,
+				"Response time is less than 2000ms": true,
+				"Content-Type is present": true,
+				"Response is valid JSON": true
+			},
+			"testPassFailCounts": {
+				"Status code is 200 or 201": {
+					"pass": 0,
+					"fail": 1
+				},
+				"Response time is less than 2000ms": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Content-Type is present": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Response is valid JSON": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				298
+			],
+			"allTests": [
+				{
+					"Status code is 200 or 201": false,
+					"Response time is less than 2000ms": true,
+					"Content-Type is present": true,
+					"Response is valid JSON": true
+				}
+			]
+		},
+		{
+			"id": "243fd4e8-9988-4a3c-a6e4-e55e90f906a1",
+			"name": "auth logout create",
+			"url": "http://localhost:8000/api/auth/logout/",
+			"time": 54,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				54
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "6b8c2e18-9a24-4313-a345-a5f392cf8282",
+			"name": "auth signup create",
+			"url": "http://localhost:8000/api/auth/signup/",
+			"time": 58,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				58
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "359cf223-4a75-4715-8581-a5aa070c6d3b",
+			"name": "meal plan detail",
+			"url": "http://localhost:8000/api/calendar/7404/string/",
+			"time": 57,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				57
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "70bedadb-3212-4623-a61c-b35da0e73e39",
+			"name": "calendar create",
+			"url": "http://localhost:8000/api/calendar/7404/string/",
+			"time": 57,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				57
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "56996615-4a52-43ea-b237-fe76eb0c14fa",
+			"name": "calendar partial update",
+			"url": "http://localhost:8000/api/calendar/7404/string/",
+			"time": 57,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				57
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "2106dd1a-b0f0-45df-9ccc-3e4ba34a1173",
+			"name": "meal plan delete",
+			"url": "http://localhost:8000/api/calendar/7404/string/",
+			"time": 54,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				54
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "452145c7-dcf7-4718-8a0c-b4da725f3227",
+			"name": "meal plan list",
+			"url": "http://localhost:8000/api/calendar/7404/",
+			"time": 56,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				56
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "4fe00c1e-550b-4638-8e03-ac9b5e3e0330",
+			"name": "meal plan delete all",
+			"url": "http://localhost:8000/api/calendar/7404/",
+			"time": 57,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				57
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "8940b13f-03f5-4a38-9fd3-d0588502c156",
+			"name": "cart instacart create",
+			"url": "http://localhost:8000/api/cart/instacart/",
+			"time": 55,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				55
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "57e2ba77-0142-4fdb-993e-f81a1199ca52",
+			"name": "cart items create",
+			"url": "http://localhost:8000/api/cart/items/",
+			"time": 57,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				57
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "3503dfad-5270-42d0-a6ec-07f8809d4422",
+			"name": "cart items partial update",
+			"url": "http://localhost:8000/api/cart/items/",
+			"time": 58,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				58
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "4da5224c-f87d-401b-91f6-0af80d2fbb22",
+			"name": "cart items destroy",
+			"url": "http://localhost:8000/api/cart/items/",
+			"time": 58,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				58
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "1460d015-420c-4090-a021-475b8aee2c7f",
+			"name": "cart meal plans create",
+			"url": "http://localhost:8000/api/cart/meal-plans/",
+			"time": 57,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				57
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "bb637a7f-4e08-428d-b3ff-0a3df3f4f248",
+			"name": "cart order history delete destroy",
+			"url": "http://localhost:8000/api/cart/order-history/7404/delete/",
+			"time": 57,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				57
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "9616e277-397c-436e-b1fa-eabf39c0f636",
+			"name": "cart order history set price create",
+			"url": "http://localhost:8000/api/cart/order-history/7404/set-price/",
+			"time": 58,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				58
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "d42a11d6-f312-4b95-ba09-ad94d66c6ffd",
+			"name": "cart order history list",
+			"url": "http://localhost:8000/api/cart/order-history/",
+			"time": 58,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				58
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "28905a74-acbf-40c8-b319-bafb379dca6f",
+			"name": "cart recipes create",
+			"url": "http://localhost:8000/api/cart/recipes/",
+			"time": 56,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				56
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "05142b1a-15b3-44f6-991f-8876049ed669",
+			"name": "cart recipes partial update",
+			"url": "http://localhost:8000/api/cart/recipes/",
+			"time": 59,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				59
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "888ccd9a-ba9d-408c-acd6-73c85fe5d670",
+			"name": "cart recipes destroy",
+			"url": "http://localhost:8000/api/cart/recipes/",
+			"time": 58,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				58
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "419f6ca1-918e-4cce-9c3e-426f7c120aa1",
+			"name": "cart reorder create",
+			"url": "http://localhost:8000/api/cart/reorder/7404/",
+			"time": 57,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				57
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "6bebaa81-4e40-413b-855a-b2ed5e1193f2",
+			"name": "cart week create",
+			"url": "http://localhost:8000/api/cart/week/",
+			"time": 56,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				56
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "36dfc788-e77f-4372-a4d3-d2f7ca11acac",
+			"name": "cart retrieve",
+			"url": "http://localhost:8000/api/cart/",
+			"time": 57,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				57
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "3fe1c406-76a9-4845-8a6a-cf8848a638a6",
+			"name": "diet rest destroy",
+			"url": "http://localhost:8000/api/diet-rest/7404/",
+			"time": 60,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				60
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "5ac42f67-df29-4307-8541-c8f2a123785d",
+			"name": "diet rest retrieve",
+			"url": "http://localhost:8000/api/diet-rest",
+			"time": 58,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				58
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "8bde619f-73da-46ab-8b32-6c540ce5a553",
+			"name": "diet rest create",
+			"url": "http://localhost:8000/api/diet-rest",
+			"time": 61,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				61
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "f38dfdce-7419-411a-9e59-1453562f4d1e",
+			"name": "diet pref destroy",
+			"url": "http://localhost:8000/api/diet/pref/7404/",
+			"time": 59,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				59
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "f4183a99-4375-4ce6-b47a-d37cb72fe4e6",
+			"name": "diet pref retrieve",
+			"url": "http://localhost:8000/api/diet/pref",
+			"time": 58,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				58
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "c423a4d7-7917-4487-badd-4408ffb40362",
+			"name": "diet pref create",
+			"url": "http://localhost:8000/api/diet/pref",
+			"time": 58,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				58
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "b9de1234-c1b5-4b02-81ce-3cbc58140226",
+			"name": "diet suggestions retrieve",
+			"url": "http://localhost:8000/api/diet_suggestions/",
+			"time": 56,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				56
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "58e0eef2-9971-4051-8784-58048ba45be2",
+			"name": "health allergies list",
+			"url": "http://localhost:8000/api/health/allergies/",
+			"time": 61,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				61
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "cacf729b-40fc-4858-aabf-1410ff643b46",
+			"name": "health allergies create",
+			"url": "http://localhost:8000/api/health/allergies/",
+			"time": 62,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				62
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "13fecc7c-61f6-409d-af48-808c0c2e79bd",
+			"name": "health budget spent create",
+			"url": "http://localhost:8000/api/health/budget/spent/",
+			"time": 58,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				58
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "ab997396-f462-4fc6-a0c1-d876c3426b61",
+			"name": "health budget retrieve",
+			"url": "http://localhost:8000/api/health/budget/",
+			"time": 55,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				55
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "572227f3-da1d-4b60-b381-373ae7adceb3",
+			"name": "health budget create",
+			"url": "http://localhost:8000/api/health/budget/",
+			"time": 58,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				58
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "d5da5f6f-fd7d-4a51-ab47-f72d0aa3f585",
+			"name": "health nutrients list",
+			"url": "http://localhost:8000/api/health/nutrients/",
+			"time": 56,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				56
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "abaec1fe-6def-4217-ad21-b0dd89925902",
+			"name": "health nutrients create",
+			"url": "http://localhost:8000/api/health/nutrients/",
+			"time": 58,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				58
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "770c21c4-86a7-4a33-8491-251814f1db83",
+			"name": "health nutrition totals retrieve",
+			"url": "http://localhost:8000/api/health/nutrition-totals/",
+			"time": 56,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				56
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "7eb2fa1f-9ad4-4450-bc6c-d805dd3c1c63",
+			"name": "health retrieve",
+			"url": "http://localhost:8000/api/health/",
+			"time": 57,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				57
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "03dbd0fe-80a1-4d15-a3fb-3598ba697b1c",
+			"name": "ingredient suggestions retrieve",
+			"url": "http://localhost:8000/api/ingredient_suggestions/",
+			"time": 56,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				56
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "24ae7705-952c-4af9-a6bb-dc8a143c64d3",
+			"name": "Upload an image file",
+			"url": "http://localhost:8000/api/media/upload/",
+			"time": 56,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				56
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "7f2ab15e-bc18-424c-9240-caf855bfa53f",
+			"name": "preferences allergens delete destroy",
+			"url": "http://localhost:8000/api/preferences/allergens/string/delete/",
+			"time": 56,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				56
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "7d2ba04e-6b2c-46dc-b277-ee656d2f683a",
+			"name": "preferences allergens partial update",
+			"url": "http://localhost:8000/api/preferences/allergens/string/",
+			"time": 61,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				61
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "778b5df1-053e-40fd-bb72-ca3e8af0f1a4",
+			"name": "preferences allergens create",
+			"url": "http://localhost:8000/api/preferences/allergens/",
+			"time": 60,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				60
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "6f86e87f-63d1-47e5-813c-bb68b7f66ef9",
+			"name": "preferences diet suggestions retrieve",
+			"url": "http://localhost:8000/api/preferences/diet_suggestions/",
+			"time": 57,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				57
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "9b8e13db-7835-414d-9c52-0b3550357218",
+			"name": "preferences diets delete destroy",
+			"url": "http://localhost:8000/api/preferences/diets/string/delete/",
+			"time": 57,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				57
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "160dae45-4c2a-4641-8607-38cdf29bae70",
+			"name": "preferences diets partial update",
+			"url": "http://localhost:8000/api/preferences/diets/string/",
+			"time": 55,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				55
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "f5c8f1d5-9fe0-4c47-9f3b-db6a37400e08",
+			"name": "preferences diets create",
+			"url": "http://localhost:8000/api/preferences/diets/",
+			"time": 58,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				58
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "7d660319-967a-49c9-95bf-ee4382617d53",
+			"name": "preferences ingredient suggestions retrieve",
+			"url": "http://localhost:8000/api/preferences/ingredient_suggestions/",
+			"time": 57,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				57
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "4aec9b18-9304-4b86-94e6-eaae73568674",
+			"name": "preferences retrieve",
+			"url": "http://localhost:8000/api/preferences/",
+			"time": 56,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				56
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "b4ffaad1-4049-4a1e-8e82-0f486daa925a",
+			"name": "preferences update",
+			"url": "http://localhost:8000/api/preferences/",
+			"time": 59,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				59
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "8059e3fc-113b-4efc-9b4c-c4091ecfcba5",
+			"name": "recipe copy",
+			"url": "http://localhost:8000/api/recipes/7404/copy/",
+			"time": 56,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				56
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "c41c2b45-f700-4f11-a57f-8c75fc1080bd",
+			"name": "recipe made",
+			"url": "http://localhost:8000/api/recipes/7404/made/",
+			"time": 56,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				56
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "69559ea1-b54a-4cfc-adda-ddf44c1d9e51",
+			"name": "recipe detail",
+			"url": "http://localhost:8000/api/recipes/7404/",
+			"time": 56,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				56
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "015dc65f-2cff-4b12-aa68-1c1186547e37",
+			"name": "recipes partial update",
+			"url": "http://localhost:8000/api/recipes/7404/",
+			"time": 57,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				57
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "e8382a7e-b63b-4877-a486-28e2eb6cf998",
+			"name": "recipes destroy",
+			"url": "http://localhost:8000/api/recipes/7404/",
+			"time": 55,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				55
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "f62529b3-d9e9-4d8a-b0cf-5352e8f233ef",
+			"name": "recipe popular",
+			"url": "http://localhost:8000/api/recipes/popular/?limit=7404",
+			"time": 58,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				58
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "05efc3fc-aa74-4001-9005-ed6a39e813a2",
+			"name": "recipe search",
+			"url": "http://localhost:8000/api/recipes/search/?fuzziness=7404&limit=7404&q=string",
+			"time": 55,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				55
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "b9d711df-9c35-4992-a98b-75fd2ebe2945",
+			"name": "List available weeks with trending recipes",
+			"url": "http://localhost:8000/api/recipes/trending/weeks/",
+			"time": 58,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				58
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "6fa8545a-3183-4e80-bc28-49ce7567302d",
+			"name": "Get trending recipes",
+			"url": "http://localhost:8000/api/recipes/trending/?week=string",
+			"time": 61,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				61
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "26ca771c-1b2a-40b7-8cbb-0b525ec037fc",
+			"name": "recipe list",
+			"url": "http://localhost:8000/api/recipes/",
+			"time": 59,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				59
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "d43b84b6-9871-4751-ab07-2d5962773768",
+			"name": "recipes create",
+			"url": "http://localhost:8000/api/recipes/",
+			"time": 54,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				54
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "aa471b81-7cb0-46c1-a940-74c7bfaf5ee2",
+			"name": "schema retrieve",
+			"url": "http://localhost:8000/api/schema/?format=yaml&lang=ja",
+			"time": 57,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				57
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "b52fcd80-b686-4d74-afe2-b5ecb28ba3ef",
+			"name": "users me profile image file retrieve",
+			"url": "http://localhost:8000/api/users/me/profile-image/file/",
+			"time": 56,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				56
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "bc93445b-c937-4d6e-b052-82b1294c3a0a",
+			"name": "users me profile image retrieve",
+			"url": "http://localhost:8000/api/users/me/profile-image/",
+			"time": 55,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				55
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "6997190d-87bf-4c9e-aa29-cd27ee0b802a",
+			"name": "users me profile image update",
+			"url": "http://localhost:8000/api/users/me/profile-image/",
+			"time": 56,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				56
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "f95e342d-8e7d-4e11-9386-381d7d0f7537",
+			"name": "users me profile image partial update",
+			"url": "http://localhost:8000/api/users/me/profile-image/",
+			"time": 58,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				58
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "908edaf0-a813-4264-98fb-72fa4923411c",
+			"name": "users me profile image destroy",
+			"url": "http://localhost:8000/api/users/me/profile-image/",
+			"time": 58,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				58
+			],
+			"allTests": [
+				{}
+			]
+		}
+	],
+	"count": 1,
+	"totalTime": 4184,
+	"collection": {
+		"requests": [
+			{
+				"id": "67f26e4a-ef48-477f-9720-89765b4f8e94",
+				"method": "DELETE"
+			},
+			{
+				"id": "7a8ca112-4f65-468d-a1c1-4ed809b9a0c8",
+				"method": "POST"
+			},
+			{
+				"id": "243fd4e8-9988-4a3c-a6e4-e55e90f906a1",
+				"method": "POST"
+			},
+			{
+				"id": "6b8c2e18-9a24-4313-a345-a5f392cf8282",
+				"method": "POST"
+			},
+			{
+				"id": "359cf223-4a75-4715-8581-a5aa070c6d3b",
+				"method": "GET"
+			},
+			{
+				"id": "70bedadb-3212-4623-a61c-b35da0e73e39",
+				"method": "POST"
+			},
+			{
+				"id": "56996615-4a52-43ea-b237-fe76eb0c14fa",
+				"method": "PATCH"
+			},
+			{
+				"id": "2106dd1a-b0f0-45df-9ccc-3e4ba34a1173",
+				"method": "DELETE"
+			},
+			{
+				"id": "452145c7-dcf7-4718-8a0c-b4da725f3227",
+				"method": "GET"
+			},
+			{
+				"id": "4fe00c1e-550b-4638-8e03-ac9b5e3e0330",
+				"method": "DELETE"
+			},
+			{
+				"id": "8940b13f-03f5-4a38-9fd3-d0588502c156",
+				"method": "POST"
+			},
+			{
+				"id": "57e2ba77-0142-4fdb-993e-f81a1199ca52",
+				"method": "POST"
+			},
+			{
+				"id": "3503dfad-5270-42d0-a6ec-07f8809d4422",
+				"method": "PATCH"
+			},
+			{
+				"id": "4da5224c-f87d-401b-91f6-0af80d2fbb22",
+				"method": "DELETE"
+			},
+			{
+				"id": "1460d015-420c-4090-a021-475b8aee2c7f",
+				"method": "POST"
+			},
+			{
+				"id": "bb637a7f-4e08-428d-b3ff-0a3df3f4f248",
+				"method": "DELETE"
+			},
+			{
+				"id": "9616e277-397c-436e-b1fa-eabf39c0f636",
+				"method": "POST"
+			},
+			{
+				"id": "d42a11d6-f312-4b95-ba09-ad94d66c6ffd",
+				"method": "GET"
+			},
+			{
+				"id": "28905a74-acbf-40c8-b319-bafb379dca6f",
+				"method": "POST"
+			},
+			{
+				"id": "05142b1a-15b3-44f6-991f-8876049ed669",
+				"method": "PATCH"
+			},
+			{
+				"id": "888ccd9a-ba9d-408c-acd6-73c85fe5d670",
+				"method": "DELETE"
+			},
+			{
+				"id": "419f6ca1-918e-4cce-9c3e-426f7c120aa1",
+				"method": "POST"
+			},
+			{
+				"id": "6bebaa81-4e40-413b-855a-b2ed5e1193f2",
+				"method": "POST"
+			},
+			{
+				"id": "36dfc788-e77f-4372-a4d3-d2f7ca11acac",
+				"method": "GET"
+			},
+			{
+				"id": "3fe1c406-76a9-4845-8a6a-cf8848a638a6",
+				"method": "DELETE"
+			},
+			{
+				"id": "5ac42f67-df29-4307-8541-c8f2a123785d",
+				"method": "GET"
+			},
+			{
+				"id": "8bde619f-73da-46ab-8b32-6c540ce5a553",
+				"method": "POST"
+			},
+			{
+				"id": "f38dfdce-7419-411a-9e59-1453562f4d1e",
+				"method": "DELETE"
+			},
+			{
+				"id": "f4183a99-4375-4ce6-b47a-d37cb72fe4e6",
+				"method": "GET"
+			},
+			{
+				"id": "c423a4d7-7917-4487-badd-4408ffb40362",
+				"method": "POST"
+			},
+			{
+				"id": "b9de1234-c1b5-4b02-81ce-3cbc58140226",
+				"method": "GET"
+			},
+			{
+				"id": "58e0eef2-9971-4051-8784-58048ba45be2",
+				"method": "GET"
+			},
+			{
+				"id": "cacf729b-40fc-4858-aabf-1410ff643b46",
+				"method": "POST"
+			},
+			{
+				"id": "13fecc7c-61f6-409d-af48-808c0c2e79bd",
+				"method": "POST"
+			},
+			{
+				"id": "ab997396-f462-4fc6-a0c1-d876c3426b61",
+				"method": "GET"
+			},
+			{
+				"id": "572227f3-da1d-4b60-b381-373ae7adceb3",
+				"method": "POST"
+			},
+			{
+				"id": "d5da5f6f-fd7d-4a51-ab47-f72d0aa3f585",
+				"method": "GET"
+			},
+			{
+				"id": "abaec1fe-6def-4217-ad21-b0dd89925902",
+				"method": "POST"
+			},
+			{
+				"id": "770c21c4-86a7-4a33-8491-251814f1db83",
+				"method": "GET"
+			},
+			{
+				"id": "7eb2fa1f-9ad4-4450-bc6c-d805dd3c1c63",
+				"method": "GET"
+			},
+			{
+				"id": "03dbd0fe-80a1-4d15-a3fb-3598ba697b1c",
+				"method": "GET"
+			},
+			{
+				"id": "24ae7705-952c-4af9-a6bb-dc8a143c64d3",
+				"method": "POST"
+			},
+			{
+				"id": "7f2ab15e-bc18-424c-9240-caf855bfa53f",
+				"method": "DELETE"
+			},
+			{
+				"id": "7d2ba04e-6b2c-46dc-b277-ee656d2f683a",
+				"method": "PATCH"
+			},
+			{
+				"id": "778b5df1-053e-40fd-bb72-ca3e8af0f1a4",
+				"method": "POST"
+			},
+			{
+				"id": "6f86e87f-63d1-47e5-813c-bb68b7f66ef9",
+				"method": "GET"
+			},
+			{
+				"id": "9b8e13db-7835-414d-9c52-0b3550357218",
+				"method": "DELETE"
+			},
+			{
+				"id": "160dae45-4c2a-4641-8607-38cdf29bae70",
+				"method": "PATCH"
+			},
+			{
+				"id": "f5c8f1d5-9fe0-4c47-9f3b-db6a37400e08",
+				"method": "POST"
+			},
+			{
+				"id": "7d660319-967a-49c9-95bf-ee4382617d53",
+				"method": "GET"
+			},
+			{
+				"id": "4aec9b18-9304-4b86-94e6-eaae73568674",
+				"method": "GET"
+			},
+			{
+				"id": "b4ffaad1-4049-4a1e-8e82-0f486daa925a",
+				"method": "PUT"
+			},
+			{
+				"id": "8059e3fc-113b-4efc-9b4c-c4091ecfcba5",
+				"method": "POST"
+			},
+			{
+				"id": "c41c2b45-f700-4f11-a57f-8c75fc1080bd",
+				"method": "POST"
+			},
+			{
+				"id": "69559ea1-b54a-4cfc-adda-ddf44c1d9e51",
+				"method": "GET"
+			},
+			{
+				"id": "015dc65f-2cff-4b12-aa68-1c1186547e37",
+				"method": "PATCH"
+			},
+			{
+				"id": "e8382a7e-b63b-4877-a486-28e2eb6cf998",
+				"method": "DELETE"
+			},
+			{
+				"id": "f62529b3-d9e9-4d8a-b0cf-5352e8f233ef",
+				"method": "GET"
+			},
+			{
+				"id": "05efc3fc-aa74-4001-9005-ed6a39e813a2",
+				"method": "GET"
+			},
+			{
+				"id": "b9d711df-9c35-4992-a98b-75fd2ebe2945",
+				"method": "GET"
+			},
+			{
+				"id": "6fa8545a-3183-4e80-bc28-49ce7567302d",
+				"method": "GET"
+			},
+			{
+				"id": "26ca771c-1b2a-40b7-8cbb-0b525ec037fc",
+				"method": "GET"
+			},
+			{
+				"id": "d43b84b6-9871-4751-ab07-2d5962773768",
+				"method": "POST"
+			},
+			{
+				"id": "aa471b81-7cb0-46c1-a940-74c7bfaf5ee2",
+				"method": "GET"
+			},
+			{
+				"id": "b52fcd80-b686-4d74-afe2-b5ecb28ba3ef",
+				"method": "GET"
+			},
+			{
+				"id": "bc93445b-c937-4d6e-b052-82b1294c3a0a",
+				"method": "GET"
+			},
+			{
+				"id": "6997190d-87bf-4c9e-aa29-cd27ee0b802a",
+				"method": "PUT"
+			},
+			{
+				"id": "f95e342d-8e7d-4e11-9386-381d7d0f7537",
+				"method": "PATCH"
+			},
+			{
+				"id": "908edaf0-a813-4264-98fb-72fa4923411c",
+				"method": "DELETE"
+			}
+		]
+	}
+}
