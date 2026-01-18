@@ -1,0 +1,2030 @@
+openapi: 3.0.3
+info:
+  title: Mom API
+  version: 1.0.0
+  description: Recipe management API
+paths:
+  /api/auth/account/:
+    delete:
+      operationId: auth_account_destroy
+      tags:
+      - auth
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '204':
+          content:
+            application/json:
+              schema:
+                description: Account deleted successfully
+          description: ''
+  /api/auth/login/:
+    post:
+      operationId: auth_login_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                  format: password
+              required:
+              - username
+              - password
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Token returned on valid credentials
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Invalid credentials
+          description: ''
+  /api/auth/logout/:
+    post:
+      operationId: auth_logout_create
+      tags:
+      - auth
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Logged out successfully
+          description: ''
+  /api/auth/signup/:
+    post:
+      operationId: auth_signup_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                  format: password
+                email:
+                  type: string
+                  format: email
+              required:
+              - username
+              - password
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                description: User created successfully
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Username already exists
+          description: ''
+  /api/calendar/{userid}/:
+    get:
+      operationId: meal_plan_list
+      parameters:
+      - in: path
+        name: userid
+        schema:
+          type: integer
+        required: true
+      tags:
+      - calendar
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: List of meal plans
+          description: ''
+    delete:
+      operationId: meal_plan_delete_all
+      parameters:
+      - in: path
+        name: userid
+        schema:
+          type: integer
+        required: true
+      tags:
+      - calendar
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: All meal plans deleted successfully
+          description: ''
+  /api/calendar/{userid}/{date}/:
+    get:
+      operationId: meal_plan_detail
+      parameters:
+      - in: path
+        name: date
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: userid
+        schema:
+          type: integer
+        required: true
+      tags:
+      - calendar
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Meal plan details
+          description: ''
+    post:
+      operationId: calendar_create
+      parameters:
+      - in: path
+        name: date
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: userid
+        schema:
+          type: integer
+        required: true
+      tags:
+      - calendar
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                breakfast:
+                  type: array
+                  description: Breakfast items
+                lunch:
+                  type: array
+                  description: Lunch items
+                dinner:
+                  type: array
+                  description: Dinner items
+                snacks:
+                  type: array
+                  description: Snack items
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                description: Meal plan created successfully
+          description: ''
+    patch:
+      operationId: calendar_partial_update
+      parameters:
+      - in: path
+        name: date
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: userid
+        schema:
+          type: integer
+        required: true
+      tags:
+      - calendar
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                breakfast:
+                  type: array
+                  description: Breakfast items
+                lunch:
+                  type: array
+                  description: Lunch items
+                dinner:
+                  type: array
+                  description: Dinner items
+                snacks:
+                  type: array
+                  description: Snack items
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Meal plan updated successfully
+          description: ''
+    delete:
+      operationId: meal_plan_delete
+      parameters:
+      - in: path
+        name: date
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: userid
+        schema:
+          type: integer
+        required: true
+      tags:
+      - calendar
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Meal plan deleted successfully
+          description: ''
+  /api/cart/:
+    get:
+      operationId: cart_retrieve
+      tags:
+      - Cart
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Get cart contents
+          description: ''
+  /api/cart/instacart/:
+    post:
+      operationId: cart_instacart_create
+      description: Creates an Instacart shopping list from current cart contents and
+        returns a redirect URL
+      tags:
+      - Cart
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+              description: No request body required - uses current cart contents
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Instacart shopping list created successfully
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      properties:
+                        success:
+                          type: boolean
+                        redirect_url:
+                          type: string
+                          format: uri
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Bad request - API key not configured or Instacart API
+                  error
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      properties:
+                        success:
+                          type: boolean
+                        error:
+                          type: string
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                description: Service unavailable - Unable to connect to Instacart
+                  API
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      properties:
+                        success:
+                          type: boolean
+                        error:
+                          type: string
+          description: ''
+  /api/cart/items/:
+    post:
+      operationId: cart_items_create
+      tags:
+      - Cart
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recipe_id:
+                  type: integer
+                ingredient_id:
+                  type: integer
+                quantity:
+                  type: number
+              required:
+              - recipe_id
+              - ingredient_id
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                description: Item added to cart
+          description: ''
+    patch:
+      operationId: cart_items_partial_update
+      tags:
+      - Cart
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                item_id:
+                  type: integer
+                quantity:
+                  type: number
+              required:
+              - item_id
+              - quantity
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Item quantity updated
+          description: ''
+    delete:
+      operationId: cart_items_destroy
+      tags:
+      - Cart
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '204':
+          content:
+            application/json:
+              schema:
+                description: Item removed from cart
+          description: ''
+  /api/cart/meal-plans/:
+    post:
+      operationId: cart_meal_plans_create
+      tags:
+      - Cart
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dates:
+                  type: array
+                  items:
+                    type: string
+                    format: date
+                  description: Array of dates in YYYY-MM-DD format
+              required:
+              - dates
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                description: Meal plans added to cart
+          description: ''
+  /api/cart/order-history/:
+    get:
+      operationId: cart_order_history_list
+      description: Get user's order history
+      tags:
+      - Cart
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderHistory'
+          description: ''
+  /api/cart/order-history/{order_id}/delete/:
+    delete:
+      operationId: cart_order_history_delete_destroy
+      description: Delete an order from history
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Cart
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '204':
+          content:
+            application/json:
+              schema:
+                description: Order deleted
+          description: ''
+  /api/cart/order-history/{order_id}/set-price/:
+    post:
+      operationId: cart_order_history_set_price_create
+      description: Set the price for an order
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Cart
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Price updated
+          description: ''
+  /api/cart/recipes/:
+    post:
+      operationId: cart_recipes_create
+      tags:
+      - Cart
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recipe_id:
+                  type: integer
+                serving_size:
+                  type: number
+              required:
+              - recipe_id
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                description: Recipe added to cart
+          description: ''
+    patch:
+      operationId: cart_recipes_partial_update
+      tags:
+      - Cart
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recipe_id:
+                  type: integer
+                serving_size:
+                  type: number
+              required:
+              - recipe_id
+              - serving_size
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Recipe serving size updated
+          description: ''
+    delete:
+      operationId: cart_recipes_destroy
+      tags:
+      - Cart
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '204':
+          content:
+            application/json:
+              schema:
+                description: Recipe removed from cart
+          description: ''
+  /api/cart/reorder/{order_id}/:
+    post:
+      operationId: cart_reorder_create
+      description: Re-add a previous order to cart
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Cart
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                description: Order re-added to cart
+          description: ''
+  /api/cart/week/:
+    post:
+      operationId: cart_week_create
+      tags:
+      - Cart
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                start_date:
+                  type: string
+                  format: date
+                end_date:
+                  type: string
+                  format: date
+              required:
+              - start_date
+              - end_date
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                description: Week of meal plans added to cart
+          description: ''
+  /api/diet-rest:
+    get:
+      operationId: diet_rest_retrieve
+      tags:
+      - diet-rest
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: List of dietary restrictions
+          description: ''
+    post:
+      operationId: diet_rest_create
+      tags:
+      - diet-rest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+              required:
+              - name
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                description: Restriction created
+          description: ''
+  /api/diet-rest/{rest_id}/:
+    delete:
+      operationId: diet_rest_destroy
+      parameters:
+      - in: path
+        name: rest_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - diet-rest
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Restriction deleted
+          description: ''
+  /api/diet/pref:
+    get:
+      operationId: diet_pref_retrieve
+      description: GET list of user's preferences, POST to create one.
+      tags:
+      - diet
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: List of dietary preferences
+          description: ''
+    post:
+      operationId: diet_pref_create
+      description: GET list of user's preferences, POST to create one.
+      tags:
+      - diet
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+              required:
+              - name
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                description: Preference created
+          description: ''
+  /api/diet/pref/{pref_id}/:
+    delete:
+      operationId: diet_pref_destroy
+      parameters:
+      - in: path
+        name: pref_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - diet
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Preference deleted
+          description: ''
+  /api/diet_suggestions/:
+    get:
+      operationId: diet_suggestions_retrieve
+      description: Get all diet suggestions
+      tags:
+      - diet_suggestions
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: List of diet suggestions
+          description: ''
+  /api/health/:
+    get:
+      operationId: health_retrieve
+      tags:
+      - health
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/health/allergies/:
+    get:
+      operationId: health_allergies_list
+      tags:
+      - health
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Allergy'
+          description: ''
+    post:
+      operationId: health_allergies_create
+      tags:
+      - health
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Allergy'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Allergy'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Allergy'
+        required: true
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Allergy'
+          description: ''
+  /api/health/budget/:
+    get:
+      operationId: health_budget_retrieve
+      tags:
+      - health
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: health_budget_create
+      tags:
+      - health
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/health/budget/spent/:
+    post:
+      operationId: health_budget_spent_create
+      description: |-
+        POST { amount: number } -> increment the user's Budget.spent by amount.
+
+        This keeps a history-free running total of money spent that the frontend
+        can increment after placing an order. If the Budget record does not exist,
+        it will be created.
+      tags:
+      - health
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/health/nutrients/:
+    get:
+      operationId: health_nutrients_list
+      tags:
+      - health
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Nutrient'
+          description: ''
+    post:
+      operationId: health_nutrients_create
+      tags:
+      - health
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Nutrient'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Nutrient'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Nutrient'
+        required: true
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Nutrient'
+          description: ''
+  /api/health/nutrition-totals/:
+    get:
+      operationId: health_nutrition_totals_retrieve
+      tags:
+      - health
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/ingredient_suggestions/:
+    get:
+      operationId: ingredient_suggestions_retrieve
+      description: Get all ingredient suggestions
+      tags:
+      - ingredient_suggestions
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: List of ingredient suggestions
+          description: ''
+  /api/media/upload/:
+    post:
+      operationId: media_upload_create
+      description: Upload an image file and receive back just the image URL. This
+        endpoint does NOT create any recipe or trigger recipe processing.
+      summary: Upload an image file
+      tags:
+      - media
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 'Image file to upload (jpg, png, gif, webp, bmp). Maximum
+                    file size: 10MB.'
+              required:
+              - file
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Image uploaded successfully, URL returned
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      properties:
+                        image_url:
+                          type: string
+                          format: uri
+                          example: /media/uploads/images/recipe_1234567890.jpg
+                      required:
+                      - image_url
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Bad request - invalid file
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      properties:
+                        error:
+                          type: string
+                          example: Invalid file format
+                        details:
+                          type: string
+                          example: The file is not a valid image. Please upload a
+                            PNG, JPEG, or other supported image format.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Authentication required
+          description: ''
+        '413':
+          content:
+            application/json:
+              schema:
+                description: File too large
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      properties:
+                        error:
+                          type: string
+                          example: File size exceeds limit
+                        details:
+                          type: string
+                          example: Maximum file size is 10MB
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                description: Internal server error
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      properties:
+                        error:
+                          type: string
+                          example: Failed to upload image
+                        details:
+                          type: string
+                          example: The image could not be saved to storage. Please
+                            try again.
+          description: ''
+  /api/preferences/:
+    get:
+      operationId: preferences_retrieve
+      tags:
+      - preferences
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: User preferences
+          description: ''
+    put:
+      operationId: preferences_update
+      tags:
+      - preferences
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                diets:
+                  type: array
+                  items:
+                    type: string
+                allergens:
+                  type: array
+                  items:
+                    type: string
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Preferences updated
+          description: ''
+  /api/preferences/allergens/:
+    post:
+      operationId: preferences_allergens_create
+      tags:
+      - preferences
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                value:
+                  type: string
+              required:
+              - value
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Allergen added
+          description: ''
+  /api/preferences/allergens/{item_id}/:
+    patch:
+      operationId: preferences_allergens_partial_update
+      parameters:
+      - in: path
+        name: item_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - preferences
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                value:
+                  type: string
+              required:
+              - value
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Allergen updated
+          description: ''
+  /api/preferences/allergens/{item_id}/delete/:
+    delete:
+      operationId: preferences_allergens_delete_destroy
+      parameters:
+      - in: path
+        name: item_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - preferences
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Allergen deleted
+          description: ''
+  /api/preferences/diet_suggestions/:
+    get:
+      operationId: preferences_diet_suggestions_retrieve
+      tags:
+      - preferences
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Diet suggestions
+          description: ''
+  /api/preferences/diets/:
+    post:
+      operationId: preferences_diets_create
+      tags:
+      - preferences
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                value:
+                  type: string
+              required:
+              - value
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Diet added
+          description: ''
+  /api/preferences/diets/{item_id}/:
+    patch:
+      operationId: preferences_diets_partial_update
+      parameters:
+      - in: path
+        name: item_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - preferences
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                value:
+                  type: string
+              required:
+              - value
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Diet updated
+          description: ''
+  /api/preferences/diets/{item_id}/delete/:
+    delete:
+      operationId: preferences_diets_delete_destroy
+      parameters:
+      - in: path
+        name: item_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - preferences
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Diet deleted
+          description: ''
+  /api/preferences/ingredient_suggestions/:
+    get:
+      operationId: preferences_ingredient_suggestions_retrieve
+      tags:
+      - preferences
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Ingredient suggestions
+          description: ''
+  /api/recipes/:
+    get:
+      operationId: recipe_list
+      tags:
+      - recipes
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: List of recipes
+          description: ''
+    post:
+      operationId: recipes_create
+      tags:
+      - recipes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+              - type: object
+                properties:
+                  recipe_source:
+                    type: string
+                    enum:
+                    - url
+                  url:
+                    type: string
+                    example: https://example.com/recipe
+                required:
+                - recipe_source
+                - url
+              - type: object
+                properties:
+                  recipe_source:
+                    type: string
+                    enum:
+                    - explicit
+                  name:
+                    type: string
+                    example: Chocolate Chip Cookies
+                  description:
+                    type: string
+                    example: Classic cookies
+                  image_url:
+                    type: string
+                    format: uri
+                    example: /media/uploads/images/1_437d4f2c.png
+                    description: Optional image URL for the recipe
+                  serves:
+                    type: integer
+                    example: 4
+                  ingredients:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        quantity:
+                          type: number
+                        unit:
+                          type: string
+                  steps:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        description:
+                          type: string
+                        order:
+                          type: integer
+                          description: Optional step order (defaults to array index
+                            + 1)
+                required:
+                - recipe_source
+              - type: object
+                properties:
+                  recipe_source:
+                    type: string
+                    enum:
+                    - file
+                  file:
+                    type: string
+                    format: binary
+                    description: Image file containing recipe
+                required:
+                - recipe_source
+                - file
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                recipe_source:
+                  type: string
+                  enum:
+                  - file
+                file:
+                  type: string
+                  format: binary
+                  description: Image file containing recipe
+              required:
+              - recipe_source
+              - file
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                description: Recipe created successfully (may be a placeholder if
+                  processing async)
+                content:
+                  application/json:
+                    example:
+                      id: 1
+                      name: Processing recipe from image...
+                      description: Recipe OCR extraction in progress. Please wait.
+                      image_url: /media/recipe_images/1_abc123.png
+                      status: processing
+                      ingredients: []
+                      steps: []
+          description: ''
+  /api/recipes/{recipe_id}/:
+    get:
+      operationId: recipe_detail
+      parameters:
+      - in: path
+        name: recipe_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - recipes
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Recipe details
+                content:
+                  application/json:
+                    example:
+                      id: 1
+                      name: Recipe Name
+                      description: Recipe description
+                      ingredients:
+                      - name: flour
+                        quantity: 2
+                        unit: cups
+                      steps:
+                      - description: Mix ingredients
+          description: ''
+    patch:
+      operationId: recipes_partial_update
+      parameters:
+      - in: path
+        name: recipe_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - recipes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Recipe name
+                description:
+                  type: string
+                  description: Recipe description
+                serves:
+                  type: integer
+                  description: Number of servings
+                ingredients:
+                  type: array
+                  description: Updated ingredients list
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      quantity:
+                        type: number
+                      unit:
+                        type: string
+                steps:
+                  type: array
+                  description: Updated cooking steps
+                  items:
+                    type: object
+                    properties:
+                      description:
+                        type: string
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Recipe updated successfully
+          description: ''
+    delete:
+      operationId: recipes_destroy
+      parameters:
+      - in: path
+        name: recipe_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - recipes
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Recipe deleted successfully
+          description: ''
+  /api/recipes/{recipe_id}/copy/:
+    post:
+      operationId: recipe_copy
+      parameters:
+      - in: path
+        name: recipe_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - recipes
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                description: Recipe copied successfully
+                content:
+                  application/json:
+                    example:
+                      id: 2
+                      name: Spaghetti Bolognese
+                      description: Hearty meat sauce
+                      message: Recipe copied to your library
+          description: ''
+  /api/recipes/{recipe_id}/made/:
+    post:
+      operationId: recipe_made
+      parameters:
+      - in: path
+        name: recipe_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - recipes
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Recipe times_made incremented successfully
+                content:
+                  application/json:
+                    example:
+                      message: Recipe made count updated
+                      times_made: 3
+          description: ''
+  /api/recipes/popular/:
+    get:
+      operationId: recipe_popular
+      parameters:
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: 'Maximum number of recipes to return (default: 10, max: 100)'
+      tags:
+      - recipes
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Globally popular recipes sorted by times_made
+                content:
+                  application/json:
+                    example:
+                      results:
+                      - id: 1
+                        name: Spaghetti Bolognese
+                        description: Hearty meat sauce
+                        image_url: https://example.com/spag.jpg
+                        source_url: https://example.com/recipe
+                        date_added: '2025-10-31T12:00:00Z'
+                        times_made: 42
+                        serves: 4
+                      total: 1
+          description: ''
+  /api/recipes/search/:
+    get:
+      operationId: recipe_search
+      parameters:
+      - in: query
+        name: fuzziness
+        schema:
+          type: integer
+        description: 'Fuzziness level: 0=exact, 1=word-based, 2=typo-tolerant (default:
+          2)'
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: 'Maximum number of results to return (default: 50)'
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Search query for recipe name and description
+        required: true
+      tags:
+      - recipes
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Search results with relevance scores
+                content:
+                  application/json:
+                    example:
+                      results:
+                      - id: 1
+                        name: Chocolate Chip Cookies
+                        description: Classic homemade cookies
+                        image_url: https://example.com/image.jpg
+                        times_made: 5
+                        score: 0.95
+                      total: 1
+                      query: chocolate
+                      fuzziness: 2
+          description: ''
+  /api/recipes/trending/:
+    get:
+      operationId: trending_recipes_list
+      description: Get trending recipes for a specific week. If no week is provided,
+        returns the most recent week.
+      summary: Get trending recipes
+      parameters:
+      - in: query
+        name: week
+        schema:
+          type: string
+        description: Week in format YYYY-WW (e.g., "2025-01"). If not provided, returns
+          most recent week.
+      tags:
+      - recipes
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: List of trending recipes for the specified week
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      properties:
+                        week:
+                          type: string
+                          example: 2025-01
+                        week_start_date:
+                          type: string
+                          format: date
+                          example: '2025-01-06'
+                        recipes:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              spoonacular_id:
+                                type: integer
+                              title:
+                                type: string
+                              description:
+                                type: string
+                              image_url:
+                                type: string
+                              source_url:
+                                type: string
+                              ready_in_minutes:
+                                type: integer
+                              servings:
+                                type: integer
+                              position:
+                                type: integer
+                              recipe_data:
+                                type: object
+                        count:
+                          type: integer
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: No trending recipes found for the specified week
+          description: ''
+  /api/recipes/trending/weeks/:
+    get:
+      operationId: trending_recipes_weeks
+      description: Get a list of all weeks that have trending recipes available.
+      summary: List available weeks with trending recipes
+      tags:
+      - recipes
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: List of available weeks
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      properties:
+                        weeks:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              week:
+                                type: string
+                                example: 2025-01
+                              week_start_date:
+                                type: string
+                                format: date
+                                example: '2025-01-06'
+                              recipe_count:
+                                type: integer
+                                example: 10
+                        count:
+                          type: integer
+          description: ''
+  /api/schema/:
+    get:
+      operationId: schema_retrieve
+      description: |-
+        OpenApi3 schema for this API. Format can be selected via content negotiation.
+
+        - YAML: application/vnd.oai.openapi
+        - JSON: application/vnd.oai.openapi+json
+      parameters:
+      - in: query
+        name: format
+        schema:
+          type: string
+          enum:
+          - json
+          - yaml
+      - in: query
+        name: lang
+        schema:
+          type: string
+          enum:
+          - af
+          - ar
+          - ar-dz
+          - ast
+          - az
+          - be
+          - bg
+          - bn
+          - br
+          - bs
+          - ca
+          - ckb
+          - cs
+          - cy
+          - da
+          - de
+          - dsb
+          - el
+          - en
+          - en-au
+          - en-gb
+          - eo
+          - es
+          - es-ar
+          - es-co
+          - es-mx
+          - es-ni
+          - es-ve
+          - et
+          - eu
+          - fa
+          - fi
+          - fr
+          - fy
+          - ga
+          - gd
+          - gl
+          - he
+          - hi
+          - hr
+          - hsb
+          - hu
+          - hy
+          - ia
+          - id
+          - ig
+          - io
+          - is
+          - it
+          - ja
+          - ka
+          - kab
+          - kk
+          - km
+          - kn
+          - ko
+          - ky
+          - lb
+          - lt
+          - lv
+          - mk
+          - ml
+          - mn
+          - mr
+          - ms
+          - my
+          - nb
+          - ne
+          - nl
+          - nn
+          - os
+          - pa
+          - pl
+          - pt
+          - pt-br
+          - ro
+          - ru
+          - sk
+          - sl
+          - sq
+          - sr
+          - sr-latn
+          - sv
+          - sw
+          - ta
+          - te
+          - tg
+          - th
+          - tk
+          - tr
+          - tt
+          - udm
+          - ug
+          - uk
+          - ur
+          - uz
+          - vi
+          - zh-hans
+          - zh-hant
+      tags:
+      - schema
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/vnd.oai.openapi:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/yaml:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/vnd.oai.openapi+json:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/users/me/profile-image/:
+    get:
+      operationId: users_me_profile_image_retrieve
+      tags:
+      - users
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          description: No response body
+    put:
+      operationId: users_me_profile_image_update
+      tags:
+      - users
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          description: No response body
+    patch:
+      operationId: users_me_profile_image_partial_update
+      tags:
+      - users
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          description: No response body
+    delete:
+      operationId: users_me_profile_image_destroy
+      tags:
+      - users
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/users/me/profile-image/file/:
+    get:
+      operationId: users_me_profile_image_file_retrieve
+      tags:
+      - users
+      security:
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          description: No response body
+components:
+  schemas:
+    Allergy:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+      required:
+      - id
+      - name
+    Nutrient:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        value:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - name
+      - value
+    OrderHistory:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        instacart_url:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 500
+        items_data: {}
+        recipe_names: {}
+        top_recipe_image:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 500
+        nutrition_data: {}
+        total_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+      required:
+      - created_at
+      - id
+      - items_data
+  securitySchemes:
+    tokenAuth:
+      type: http
+      scheme: bearer
