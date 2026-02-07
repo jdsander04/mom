@@ -2,6 +2,12 @@
 
 Mom is a comprehensive application designed to streamline recipe management, meal planning, and grocery shopping. It combines a robust Django backend with a modern React frontend to provide a seamless user experience for organizing culinary activities.
 
+# Deployment
+
+Mom is currently self hosted and accessable at [mom.js-tiles.dev](https://mom.js-tiles.dev)
+
+Exposed using cloudflared and containerized using podman
+
 ## Features
 
 - **Recipe Management**: Create, edit, and organize your favorite recipes.
