@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import type { ReactNode } from 'react';
 import { apiService } from '../services/api';
 import type { Cart, CartRecipe, CartItem } from '../types/cart';
 
@@ -60,14 +61,14 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const removeRecipe = async (recipeId: number) => {
     const removedRecipe = cart.recipes.find(recipe => recipe.recipe_id === recipeId);
     if (!removedRecipe) return;
-    
+
     setUndoAction({ type: 'recipe', data: removedRecipe });
-    
+
     // Optimistic update
     setCart(prev => ({
       recipes: prev.recipes.filter(recipe => recipe.recipe_id !== recipeId)
     }));
-    
+
     try {
       await apiService.removeRecipeFromCart(recipeId);
     } catch (error) {
@@ -80,7 +81,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const removeItem = async (itemId: number) => {
     let removedItem: CartItem | undefined;
     let recipeId: number | undefined;
-    
+
     for (const recipe of cart.recipes) {
       const item = recipe.ingredients.find(item => item.id === itemId);
       if (item) {
@@ -89,11 +90,11 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         break;
       }
     }
-    
+
     if (!removedItem || !recipeId) return;
-    
+
     setUndoAction({ type: 'item', data: removedItem, recipeId });
-    
+
     // Optimistic update
     setCart(prev => ({
       recipes: prev.recipes.map(recipe => ({
@@ -101,7 +102,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         ingredients: recipe.ingredients.filter(item => item.id !== itemId)
       }))
     }));
-    
+
     try {
       await apiService.removeItemFromCart(itemId);
       // Don't refresh cart here - let undo handle it
@@ -132,9 +133,9 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const undoRemoval = async () => {
     if (!undoAction) return;
-    
+
     console.log('Undoing removal:', undoAction);
-    
+
     try {
       if (undoAction.type === 'recipe') {
         const recipe = undoAction.data as CartRecipe;
@@ -142,20 +143,20 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         setCart(prev => ({
           recipes: [...prev.recipes, recipe]
         }));
-        
+
         // Then sync with backend by adding recipe and individual ingredients
         await apiService.addRecipeToCart(recipe.recipe_id, recipe.serving_size);
-        
+
         // Get the newly added recipe to find default ingredient IDs
         const updatedCart = await apiService.getCart();
         const addedRecipe = updatedCart.recipes.find(r => r.recipe_id === recipe.recipe_id);
-        
+
         if (addedRecipe) {
           // Remove all default ingredients
           for (const item of addedRecipe.ingredients) {
             await apiService.removeItemFromCart(item.id);
           }
-          
+
           // Add back only the original ingredients with their quantities
           for (const originalItem of recipe.ingredients) {
             if (originalItem.recipe_ingredient_id) {
@@ -187,7 +188,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       await refreshCart(); // Revert local changes on error
     }
   };
-  
+
   const clearUndo = () => {
     setUndoAction(null);
     // Refresh cart when undo is cleared to sync with backend
@@ -200,7 +201,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const removeBulkItems = async (itemIds: number[]) => {
     const removedItems: BulkItem[] = [];
-    
+
     // Collect all items to be removed with their recipe IDs
     for (const recipe of cart.recipes) {
       for (const item of recipe.ingredients) {
@@ -210,12 +211,12 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         }
       }
     }
-    
+
     if (removedItems.length === 0) return;
-    
+
     console.log('Setting bulk undo action with items:', removedItems);
     setUndoAction({ type: 'bulk', data: removedItems });
-    
+
     // Optimistic update
     setCart(prev => ({
       recipes: prev.recipes.map(recipe => ({
@@ -223,7 +224,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         ingredients: recipe.ingredients.filter(item => !itemIds.includes(item.id))
       }))
     }));
-    
+
     try {
       // Remove items from backend
       for (const itemId of itemIds) {

@@ -3,7 +3,7 @@ import { useCartContext } from '../../contexts/CartContext';
 import type { CartRecipe, CartItem } from '../../types/cart';
 import { getShortErrorMessage, type APIError } from '../../utils/errorHandler';
 import OrderSummary from './OrderSummary';
-import InstacartPricePopup from './InstacartPricePopup';
+
 import UndoPopup from '../UndoPopup';
 import styles from './Cart.module.css';
 import {
@@ -22,7 +22,7 @@ import {
 } from '../Icons';
 
 export default function Cart() {
-  const { cart, loading, undoAction, updateServingSize, removeRecipe, updateItemQuantity, updateItemUnit, removeItem, removeBulkItems, refreshCart, undoRemoval, clearUndo } = useCartContext();
+  const { cart, loading, undoAction, updateServingSize, removeRecipe, updateItemQuantity, removeItem, removeBulkItems, refreshCart, undoRemoval, clearUndo } = useCartContext();
   const [orderSummaryOpen, setOrderSummaryOpen] = useState(false);
   const [selectedProvider] = useState('instacart');
   const [collapsedRecipes, setCollapsedRecipes] = useState<Set<number>>(new Set());
@@ -84,10 +84,10 @@ export default function Cart() {
   const handleUpdateItemQuantity = async (itemId: number, quantity: number) => {
     setLoadingItems(prev => new Set(prev).add(itemId));
     setErrorMessage('');
-    
+
     // Check if quantity is being reduced to 0 (item removal)
     const willRemove = quantity <= 0;
-    
+
     try {
       if (willRemove) {
         await removeItem(itemId);
@@ -145,64 +145,31 @@ export default function Cart() {
     }
   };
 
-  const handleUpdateItemUnit = async (itemId: number, unit: string) => {
-    setLoadingItems(prev => new Set(prev).add(itemId));
-    setErrorMessage('');
-    try {
-      await updateItemUnit(itemId, unit);
-      await refreshCart();
-    } catch (error) {
-      const errorMsg = getShortErrorMessage(error as APIError);
-      setErrorMessage(errorMsg);
-      console.error('Failed to update item unit:', error);
-    } finally {
-      setLoadingItems(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(itemId);
-        return newSet;
-      });
-    }
-  };
 
-  const commonUnits = [
-    '', 'cup', 'cups', 'tablespoon', 'tablespoons', 'tbsp', 'teaspoon', 'teaspoons', 'tsp',
-    'ounce', 'ounces', 'oz', 'pound', 'pounds', 'lb', 'gram', 'grams', 'g', 'kilogram', 'kilograms', 'kg',
-    'milliliter', 'milliliters', 'ml', 'liter', 'liters', 'l', 'fluid ounce', 'fluid ounces', 'fl oz',
-    'piece', 'pieces', 'pcs', 'clove', 'cloves', 'slice', 'slices', 'can', 'cans', 'package', 'packages',
-    'pinch', 'dash', 'to taste', 'as needed'
-  ];
+
+
 
   const filteredIngredients = (ingredients: CartItem[]) => {
     // Sort ingredients alphabetically by name
-    const sorted = [...ingredients].sort((a, b) => 
+    const sorted = [...ingredients].sort((a, b) =>
       a.name.toLowerCase().localeCompare(b.name.toLowerCase())
     );
-    
+
     // Filter by search term if provided
     if (!searchTerm) return sorted;
-    return sorted.filter(item => 
+    return sorted.filter(item =>
       item.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   };
 
-  
 
-  // Open the Instacart price popup after an order is confirmed
-  const [instacartPriceOpen, setInstacartPriceOpen] = useState(false);
+
+
 
   const handleOrderConfirmed = () => {
     // close the order summary - price popup disabled
     setOrderSummaryOpen(false);
     // setInstacartPriceOpen(true); // Disabled - use order history to set price
-  };
-
-  const handlePriceSaved = async (amount: number) => {
-    // Optionally refresh cart or other user info after saving
-    try {
-      await refreshCartRef.current();
-    } catch (e) {
-      // ignore refresh errors here
-    }
   };
 
   if (loading) return <div className={styles.loading}>Loading cart...</div>;
@@ -221,7 +188,7 @@ export default function Cart() {
           </div>
         )}
       </div>
-      
+
       {!cart || !cart.recipes || cart.recipes.length === 0 ? (
         <div className={styles.empty}>
           <div className={styles.emptyIcon}>
@@ -262,7 +229,7 @@ export default function Cart() {
                 <PackageIcon size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
                 Instacart
               </div>
-              <button 
+              <button
                 onClick={() => setOrderSummaryOpen(true)}
                 className={styles.orderButton}
               >
@@ -271,7 +238,7 @@ export default function Cart() {
               </button>
             </div>
           </div>
-          
+
           <div className={styles.searchContainer}>
             <div className={styles.searchWrapper}>
               <input
@@ -286,162 +253,149 @@ export default function Cart() {
               </span>
             </div>
           </div>
-          
+
           <div className={styles.mainContent}>
             <div className={styles.recipesSection}>
-            {cart.recipes.map((recipe: CartRecipe) => {
-              const isCollapsed = collapsedRecipes.has(recipe.recipe_id);
-              const filteredItems = filteredIngredients(recipe.ingredients);
-              return (
-                <div key={recipe.recipe_id} className={styles.recipeCard}>
-                  <div className={styles.recipeHeader}>
-                    <div className={styles.recipeInfo}>
-                      <div className={styles.recipeImage}>
-                        <UtensilsIcon size={32} />
-                      </div>
-                      <div className={styles.recipeTitleSection}>
-                        <div className={styles.titleRow}>
-                          <h3 className={styles.recipeTitle}>{recipe.name}</h3>
-                          <div className={styles.servingControls}>
-                            <label>Quantity:</label>
-                            <input
-                              type="number"
-                              min="1"
-                              step="1"
-                              value={Math.round(recipe.serving_size)}
-                              onChange={(e) => handleUpdateMultiples(recipe.recipe_id, parseInt(e.target.value) || 1)}
-                              className={styles.servingInput}
-                            />
-                            <span className={styles.servingLabel}>x recipe</span>
+              {cart.recipes.map((recipe: CartRecipe) => {
+                const isCollapsed = collapsedRecipes.has(recipe.recipe_id);
+                const filteredItems = filteredIngredients(recipe.ingredients);
+                return (
+                  <div key={recipe.recipe_id} className={styles.recipeCard}>
+                    <div className={styles.recipeHeader}>
+                      <div className={styles.recipeInfo}>
+                        <div className={styles.recipeImage}>
+                          <UtensilsIcon size={32} />
+                        </div>
+                        <div className={styles.recipeTitleSection}>
+                          <div className={styles.titleRow}>
+                            <h3 className={styles.recipeTitle}>{recipe.name}</h3>
+                            <div className={styles.servingControls}>
+                              <label>Quantity:</label>
+                              <input
+                                type="number"
+                                min="1"
+                                step="1"
+                                value={Math.round(recipe.serving_size)}
+                                onChange={(e) => handleUpdateMultiples(recipe.recipe_id, parseInt(e.target.value) || 1)}
+                                className={styles.servingInput}
+                              />
+                              <span className={styles.servingLabel}>x recipe</span>
+                            </div>
+                          </div>
+                          <div className={styles.recipeSummary}>
+                            <ClipboardIcon size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                            {recipe.ingredients.length} ingredients
                           </div>
                         </div>
-                        <div className={styles.recipeSummary}>
-                          <ClipboardIcon size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
-                          {recipe.ingredients.length} ingredients
-                        </div>
+                      </div>
+                      <div className={styles.recipeControls}>
+                        <button
+                          onClick={() => toggleRecipeCollapse(recipe.recipe_id)}
+                          className={styles.collapseBtn}
+                          title={isCollapsed ? 'Show ingredients' : 'Hide ingredients'}
+                        >
+                          {isCollapsed ? '▼' : '▲'}
+                        </button>
+                        <button
+                          onClick={() => handleRemoveRecipe(recipe.recipe_id)}
+                          className={styles.removeRecipeBtn}
+                          title="Remove recipe"
+                        >
+                          <TrashIcon size={18} />
+                        </button>
                       </div>
                     </div>
-                    <div className={styles.recipeControls}>
-                      <button 
-                        onClick={() => toggleRecipeCollapse(recipe.recipe_id)}
-                        className={styles.collapseBtn}
-                        title={isCollapsed ? 'Show ingredients' : 'Hide ingredients'}
-                      >
-                        {isCollapsed ? '▼' : '▲'}
-                      </button>
-                      <button 
-                        onClick={() => handleRemoveRecipe(recipe.recipe_id)}
-                        className={styles.removeRecipeBtn}
-                        title="Remove recipe"
-                      >
-                        <TrashIcon size={18} />
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {!isCollapsed && (
-                    <div className={styles.ingredientsSection}>
-                      <div className={styles.ingredientsList}>
-                        {filteredItems.map((item: CartItem) => {
-                          const displayQuantity = item.quantity === 0 ? 'Add amount' : `${item.quantity} ${item.unit || ''}`;
-                          const isChecked = selectedItems.has(item.id);
-                          return (
-                            <div key={item.id} className={`${styles.ingredientItem} ${loadingItems.has(item.id) ? styles.loading : ''} ${isChecked ? styles.checked : ''}`}>
-                              <div className={styles.ingredientMainRow}>
-                                <label className={styles.ingredientLeft}>
-                                  <input
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    onChange={() => toggleItemSelection(item.id)}
-                                    className={styles.itemCheckbox}
-                                  />
-                                  <span className={styles.itemName}>{item.name}</span>
-                                </label>
-                                
-                                <div className={styles.ingredientRight}>
-                                  <button 
-                                    onClick={() => handleUpdateItemQuantity(item.id, Math.max(0, item.quantity - 0.1))}
-                                    className={styles.quantityBtn}
-                                    disabled={loadingItems.has(item.id)}
-                                    aria-label="Decrease quantity"
+
+                    {!isCollapsed && (
+                      <div className={styles.ingredientsSection}>
+                        <div className={styles.ingredientsList}>
+                          {filteredItems.map((item: CartItem) => {
+                            const isChecked = selectedItems.has(item.id);
+                            return (
+                              <div key={item.id} className={`${styles.ingredientItem} ${loadingItems.has(item.id) ? styles.loading : ''} ${isChecked ? styles.checked : ''}`}>
+                                <div className={styles.ingredientMainRow}>
+                                  <label className={styles.ingredientLeft}>
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => toggleItemSelection(item.id)}
+                                      className={styles.itemCheckbox}
+                                    />
+                                    <span className={styles.itemName}>{item.name}</span>
+                                  </label>
+
+                                  <div className={styles.ingredientRight}>
+                                    <button
+                                      onClick={() => handleUpdateItemQuantity(item.id, Math.max(0, item.quantity - 0.1))}
+                                      className={styles.quantityBtn}
+                                      disabled={loadingItems.has(item.id)}
+                                      aria-label="Decrease quantity"
+                                    >
+                                      −
+                                    </button>
+                                    <input
+                                      type="number"
+                                      value={item.quantity || ''}
+                                      onChange={(e) => {
+                                        const value = parseFloat(e.target.value) || 0;
+                                        handleUpdateItemQuantity(item.id, value);
+                                      }}
+                                      className={styles.quantityInput}
+                                      disabled={loadingItems.has(item.id)}
+                                      min="0"
+                                      step="0.1"
+                                    />
+                                    <span className={styles.unitText}>{item.unit || ''}</span>
+                                    <button
+                                      onClick={() => handleUpdateItemQuantity(item.id, item.quantity + 0.1)}
+                                      className={styles.quantityBtn}
+                                      disabled={loadingItems.has(item.id)}
+                                      aria-label="Increase quantity"
+                                    >
+                                      +
+                                    </button>
+                                    <button
+                                      onClick={() => handleRemoveItem(item.id)}
+                                      className={styles.removeBtn}
+                                      disabled={loadingItems.has(item.id)}
+                                      aria-label="Remove ingredient"
+                                    >
+                                      {loadingItems.has(item.id) ? (
+                                        <HourglassIcon size={16} />
+                                      ) : (
+                                        <TrashIcon size={16} />
+                                      )}
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div className={styles.ingredientActions}>
+                                  <button
+                                    onClick={() => handleUpdateItemQuantity(item.id, item.quantity * 0.5)}
+                                    className={styles.quickBtn}
+                                    title="Half quantity"
                                   >
-                                    −
+                                    ½×
                                   </button>
-                                  <input
-                                    type="number"
-                                    value={item.quantity || ''}
-                                    onChange={(e) => {
-                                      const value = parseFloat(e.target.value) || 0;
-                                      handleUpdateItemQuantity(item.id, value);
-                                    }}
-                                    className={styles.quantityInput}
-                                    disabled={loadingItems.has(item.id)}
-                                    min="0"
-                                    step="0.1"
-                                  />
-                                  <select
-                                    value={item.unit || ''}
-                                    onChange={(e) => handleUpdateItemUnit(item.id, e.target.value)}
-                                    className={styles.unitSelect}
-                                    disabled={loadingItems.has(item.id)}
+                                  <button
+                                    onClick={() => handleUpdateItemQuantity(item.id, item.quantity * 2)}
+                                    className={styles.quickBtn}
+                                    title="Double quantity"
                                   >
-                                    <option value="">Unit</option>
-                                    {commonUnits.filter(unit => unit !== '').map((unit) => (
-                                      <option key={unit} value={unit}>
-                                        {unit}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <button 
-                                    onClick={() => handleUpdateItemQuantity(item.id, item.quantity + 0.1)}
-                                    className={styles.quantityBtn}
-                                    disabled={loadingItems.has(item.id)}
-                                    aria-label="Increase quantity"
-                                  >
-                                    +
-                                  </button>
-                                  <button 
-                                    onClick={() => handleRemoveItem(item.id)}
-                                    className={styles.removeBtn}
-                                    disabled={loadingItems.has(item.id)}
-                                    aria-label="Remove ingredient"
-                                  >
-                                    {loadingItems.has(item.id) ? (
-                                      <HourglassIcon size={16} />
-                                    ) : (
-                                      <TrashIcon size={16} />
-                                    )}
+                                    2×
                                   </button>
                                 </div>
                               </div>
-                              
-                              <div className={styles.ingredientActions}>
-                                <button 
-                                  onClick={() => handleUpdateItemQuantity(item.id, item.quantity * 0.5)}
-                                  className={styles.quickBtn}
-                                  title="Half quantity"
-                                >
-                                  ½×
-                                </button>
-                                <button 
-                                  onClick={() => handleUpdateItemQuantity(item.id, item.quantity * 2)}
-                                  className={styles.quickBtn}
-                                  title="Double quantity"
-                                >
-                                  2×
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                    )}
+                  </div>
+                );
+              })}
             </div>
-            
+
             <div className={styles.sidebar}>
               <div className={styles.cartSummaryCard}>
                 <h3 className={styles.cardTitle}>
@@ -459,7 +413,7 @@ export default function Cart() {
                   </div>
                 </div>
               </div>
-              
+
               <div className={styles.quickActionsCard}>
                 <h3 className={styles.cardTitle}>
                   <ZapIcon size={18} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} />
@@ -480,8 +434,8 @@ export default function Cart() {
           </div>
         </>
       )}
-      
-      <OrderSummary 
+
+      <OrderSummary
         open={orderSummaryOpen}
         onClose={() => setOrderSummaryOpen(false)}
         onConfirmOrder={handleOrderConfirmed}
@@ -491,14 +445,8 @@ export default function Cart() {
         clearUndo={clearUndo}
       />
 
-      {/* InstacartPricePopup disabled - use order history to set price
-      <InstacartPricePopup
-        open={instacartPriceOpen}
-        onClose={() => setInstacartPriceOpen(false)}
-        onSaved={handlePriceSaved}
-      />
-      */}
-      
+
+
       {undoAction && (
         <UndoPopup
           type={undoAction.type}

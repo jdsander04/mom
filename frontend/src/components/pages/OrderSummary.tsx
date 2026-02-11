@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton } from '@mui/material';
+import { Dialog, DialogContent, Button, IconButton } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useCartContext } from '../../contexts/CartContext';
 import { apiService } from '../../services/api';
@@ -49,7 +49,7 @@ export default function OrderSummary({ open, onClose, onConfirmOrder, selectedPr
 
   const combineIngredients = (): CombinedIngredient[] => {
     const combined: { [key: string]: CombinedIngredient } = {};
-    
+
     cart.recipes.forEach((recipe: CartRecipe) => {
       recipe.ingredients.forEach((item: CartItem) => {
         const key = `${item.name}-${item.unit}`;
@@ -113,7 +113,7 @@ export default function OrderSummary({ open, onClose, onConfirmOrder, selectedPr
           <CloseIcon />
         </IconButton>
       </div>
-      
+
       <DialogContent className={styles.content}>
         {loading ? (
           <div className={styles.loading}>Loading...</div>
@@ -153,7 +153,7 @@ export default function OrderSummary({ open, onClose, onConfirmOrder, selectedPr
                         {ingredient.quantity.toFixed(1)} {ingredient.unit}
                       </span>
                     </div>
-                    <button 
+                    <button
                       onClick={() => removeIngredient(ingredient)}
                       className={styles.removeButton}
                       title="Remove ingredient"
@@ -170,8 +170,8 @@ export default function OrderSummary({ open, onClose, onConfirmOrder, selectedPr
 
       <div className={styles.actions}>
         <Button onClick={onClose} className={styles.cancelButton}>Cancel</Button>
-        <Button 
-          variant="contained" 
+        <Button
+          variant="contained"
           onClick={handleConfirmOrder}
           disabled={loading || instacartLoading || cart.recipes.length === 0}
           className={styles.orderButton}
@@ -189,7 +189,7 @@ export default function OrderSummary({ open, onClose, onConfirmOrder, selectedPr
           )}
         </Button>
       </div>
-      
+
       {undoAction && (
         <UndoPopup
           type={undoAction.type}

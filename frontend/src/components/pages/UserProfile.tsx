@@ -19,13 +19,12 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import SaveIcon from '@mui/icons-material/Save';
 import { useAuth } from '../../contexts/AuthContext';
 import { apiService } from '../../services/api';
 
 type LocalItem = { id: string; value: string; serverId?: number };
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = '/api';
 
 function serverToLocalPref(p: any): LocalItem {
   return { id: Date.now().toString() + Math.random().toString(36).slice(2, 6), value: p.name ?? '', serverId: p.id };
@@ -84,7 +83,7 @@ export default function UserProfile() {
   const [itemStatus, setItemStatus] = useState<Record<string, 'idle' | 'saving' | 'deleting' | 'error'>>({});
   const [itemError, setItemError] = useState<Record<string, string>>({});
   const [saveAllStatus, setSaveAllStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
-  const [saveAllError, setSaveAllError] = useState<string | null>(null);
+  const [, setSaveAllError] = useState<string | null>(null);
 
   const setStatus = (id: string, status: 'idle' | 'saving' | 'deleting' | 'error') =>
     setItemStatus((s) => ({ ...s, [id]: status }));
@@ -290,7 +289,7 @@ export default function UserProfile() {
     try {
       setUploading(true);
       await apiService.uploadProfileImage(selectedFile);
-      await refreshAvatar().catch(() => {});
+      await refreshAvatar().catch(() => { });
       setSelectedFile(null);
       // Refresh page to show updated avatar
       window.location.reload();
@@ -496,7 +495,7 @@ export default function UserProfile() {
                     size="small"
                   />
                   {itemStatus[plan.id] === 'error' ? (
-                    <IconButton onClick={() => {/* no-op: show retry below */}} color="error">
+                    <IconButton onClick={() => {/* no-op: show retry below */ }} color="error">
                       <RefreshIcon />
                     </IconButton>
                   ) : null}
@@ -558,7 +557,7 @@ export default function UserProfile() {
                     size="small"
                   />
                   {itemStatus[all.id] === 'error' ? (
-                    <IconButton onClick={() => {/* show retry action below */}} color="error">
+                    <IconButton onClick={() => {/* show retry action below */ }} color="error">
                       <RefreshIcon />
                     </IconButton>
                   ) : null}

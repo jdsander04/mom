@@ -1,0 +1,87 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: django-backend-prod
+    volumes:
+      - static_volume:/app/staticfiles:Z
+      # Media might be on S3/Minio, but if local fallback is needed:
+      # - media_volume:/app/media:Z
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - db
+      - redis
+      - minio
+    restart: always
+
+  celery:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile.prod # Can reuse prod image
+    container_name: celery-worker-prod
+    command: celery -A core worker --loglevel=info
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - db
+      - redis
+      - backend
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: nginx-frontend-prod
+    ports:
+      - "8081:80"
+    volumes:
+      - static_volume:/app/staticfiles:Z # Mount static files to serve
+    depends_on:
+      - backend
+    restart: always
+
+  db:
+    image: postgres:15
+    container_name: postgres-db-prod
+    restart: always
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres_user
+      POSTGRES_PASSWORD: r56ty78urftghujifrtghuj
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data:Z
+    # No ports exposed
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis-prod
+    restart: always
+    volumes:
+      - redis_data_prod:/data:Z
+    # No ports exposed
+
+  minio:
+    image: minio/minio
+    container_name: minio-prod
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio_data_prod:/data:Z
+    # No ports exposed (Backend proxies if needed, or internal only)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+volumes:
+  postgres_data_prod:
+  redis_data_prod:
+  minio_data_prod:
+  static_volume:

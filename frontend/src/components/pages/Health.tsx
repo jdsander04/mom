@@ -5,7 +5,6 @@ import styles from './Health.module.css';
 
 const API_BASE = '/api/health';
 
-type Allergy = { id: number; name: string; description?: string };
 type Nutrient = { id: number; name: string; description?: string; value?: number };
 type Budget = { weekly_budget: number; spent: number };
 
@@ -19,8 +18,6 @@ const Health: React.FC = () => {
   const [totalCalories, setTotalCalories] = useState<number | null>(null);
 
   // local form state
-  const [newNutrientName, setNewNutrientName] = useState('');
-  const [newNutrientValue, setNewNutrientValue] = useState<string>('');
   const [weeklyBudgetInput, setWeeklyBudgetInput] = useState<string>('');
 
   const { token } = useAuth() as any;
@@ -76,7 +73,7 @@ const Health: React.FC = () => {
 
   async function saveBudget() {
     const payload = { weekly_budget: parseFloat(weeklyBudgetInput || '0') };
-  const res = await fetch(API_BASE + '/budget/', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(payload) });
+    const res = await fetch(API_BASE + '/budget/', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(payload) });
     if (!res.ok) { setError('Failed to save budget'); return; }
     const json = await res.json();
     // coerce decimals returned as strings into numbers

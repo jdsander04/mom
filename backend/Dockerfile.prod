@@ -1,0 +1,23 @@
+# --- Backend Production (Django + Gunicorn) ---
+FROM public.ecr.aws/docker/library/python:3.12-alpine
+
+# Set work directory
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt /app/requirements.txt
+# Install gunicorn along with requirements
+RUN pip install --no-cache-dir -r requirements.txt gunicorn
+
+# Copy project
+COPY . .
+
+# Collect static files
+# We need to set dummy env vars because django checks them during start up
+RUN SECRET_KEY=dummy DB_HOST=dummy python manage.py collectstatic --noinput
+
+# Expose Django port (internal only)
+EXPOSE 8000
+
+# Run server with Gunicorn
+CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]

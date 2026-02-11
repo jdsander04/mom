@@ -140,11 +140,6 @@ const RecipeAccordion = ({
     }
   }
 
-  const handleDeleteClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setDeleteDialogOpen(true)
-  }
-
   const handleMenuOpen = (e: React.MouseEvent<HTMLElement>) => {
     e.stopPropagation()
     setMenuAnchorEl(e.currentTarget)
@@ -203,7 +198,7 @@ const RecipeAccordion = ({
       })
       const recipe = await response.json()
 
-      const ingredients = recipe.ingredients?.map((ing: any) => 
+      const ingredients = recipe.ingredients?.map((ing: any) =>
         ing.original_text || `${ing.quantity} ${ing.unit} ${ing.name}`.trim()
       ) || []
       const instructions = recipe.steps?.sort((a: any, b: any) => a.order - b.order).map((s: any) => s.description) || []

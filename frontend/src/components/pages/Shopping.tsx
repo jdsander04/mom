@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Button,
+import {
+  Box,
+  Typography,
   CircularProgress,
   Alert,
   Avatar
 } from '@mui/material';
-import { 
+import {
   Close as CloseIcon,
   OpenInNew as OpenInNewIcon,
   ShoppingCart as ShoppingCartIcon
@@ -18,17 +17,17 @@ import type { Recipe } from '../../types/recipe';
 import styles from './Shopping.module.css';
 
 const Shopping = () => {
-  const { cartRecipes, loading, error, updateRecipeQuantity, removeRecipeFromCart, clearCart } = useCart();
+  const { cartRecipes, loading, error, updateRecipeQuantity, removeRecipeFromCart } = useCart();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [recipesLoading, setRecipesLoading] = useState(false);
 
   useEffect(() => {
     const fetchRecipes = async () => {
       if (cartRecipes.length === 0) return;
-      
+
       setRecipesLoading(true);
       try {
-        const recipePromises = cartRecipes.map(cartRecipe => 
+        const recipePromises = cartRecipes.map((cartRecipe: any) =>
           apiService.getRecipe(cartRecipe.recipe_id)
         );
         const fetchedRecipes = await Promise.all(recipePromises);
@@ -52,7 +51,7 @@ const Shopping = () => {
   };
 
   const calculateTotalCalories = (recipe: Recipe, quantity: number) => {
-    const totalCalories = recipe.nutrients.reduce((sum, nutrient) => {
+    const totalCalories = recipe.nutrients.reduce((sum: number, nutrient: any) => {
       if (nutrient.macro.toLowerCase().includes('calorie')) {
         return sum + nutrient.mass;
       }
@@ -108,8 +107,8 @@ const Shopping = () => {
           </Box>
         ) : (
           recipes.map((recipe) => {
-            const cartRecipe = cartRecipes.find(cr => cr.recipe_id === recipe.id);
-            const quantity = cartRecipe?.quantity || 1;
+            const cartRecipe = cartRecipes.find((cr: any) => cr.recipe_id === recipe.id);
+            const quantity = cartRecipe?.serving_size || 1;
             const totalCalories = calculateTotalCalories(recipe, quantity);
             const servings = getServings(recipe);
 
@@ -120,7 +119,7 @@ const Shopping = () => {
                   <div className={styles.headerContent}>
                     {/* Quantity Controls */}
                     <div className={styles.quantitySelector}>
-                      <button 
+                      <button
                         className={styles.quantityButton}
                         onClick={() => handleQuantityChange(recipe.id, quantity - 1)}
                         disabled={quantity <= 1}
@@ -128,7 +127,7 @@ const Shopping = () => {
                         -
                       </button>
                       <span className={styles.quantity}>{quantity}</span>
-                      <button 
+                      <button
                         className={styles.quantityButton}
                         onClick={() => handleQuantityChange(recipe.id, quantity + 1)}
                       >
@@ -149,7 +148,7 @@ const Shopping = () => {
                     <button className={styles.actionButton}>
                       <OpenInNewIcon />
                     </button>
-                    <button 
+                    <button
                       className={styles.removeButton}
                       onClick={() => removeRecipeFromCart(recipe.id)}
                     >
@@ -173,21 +172,6 @@ const Shopping = () => {
           })
         )}
       </Box>
-
-      {/* Send to Cart Button */}
-      {recipes.length > 0 && (
-        <Box className={styles.sendToCartContainer}>
-          <Button
-            variant="contained"
-            size="large"
-            className={styles.sendToCartButton}
-            onClick={clearCart}
-            startIcon={<ShoppingCartIcon />}
-          >
-            Send to Cart
-          </Button>
-        </Box>
-      )}
     </Box>
   );
 };
