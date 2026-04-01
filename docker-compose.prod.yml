@@ -50,7 +50,7 @@ services:
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres_user
-      POSTGRES_PASSWORD: r56ty78urftghujifrtghuj
+      POSTGRES_PASSWORD: 
     volumes:
       - postgres_data_prod:/var/lib/postgresql/data:Z
     # No ports exposed
