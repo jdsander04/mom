@@ -185,6 +185,7 @@ const RecipeLibrary = () => {
             // If recipe has been updated to a real name, stop polling
             if (r && r.name && !r.name.toLowerCase().includes('processing')) {
               clearInterval(timer);
+              refetch();
               return;
             }
           } catch (e) {
